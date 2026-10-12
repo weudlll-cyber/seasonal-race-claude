@@ -12,6 +12,8 @@
 //      workflows name the SAME major — the image must ship what CI tested;
 //   2. that major is not below FLOOR. FLOOR is the oldest Node line still receiving security fixes
 //      when this was written; raise it when that line reaches its end of life.
+// AUDIT-1 A7-02 (2026-10-12) added a third: the `engines` floor a source install is told about, in
+// all three package.json files, is exactly `>=FLOOR` — it said `>=20` for months after 20 ended.
 // ============================================================
 
 import { test } from 'node:test';
@@ -42,6 +44,17 @@ test('the image ships the Node major CI tests', () => {
 
 test(`that major still receives security fixes (>= ${FLOOR})`, () => {
   assert.ok(imageMajors[0] >= FLOOR, `Node ${imageMajors[0]} is past its end of life`);
+});
+
+// Each path is written as `join(ROOT, '<path>')` on purpose: that is the form `scripts/lib/dataReach.mjs`
+// recognises, so a change to any of the three manifests selects the script suite that runs this test.
+const MANIFESTS = [join(ROOT, 'package.json'), join(ROOT, 'client/package.json'), join(ROOT, 'server/package.json')];
+
+test(`the three manifests declare the source-install floor as engines >=${FLOOR}`, () => {
+  for (const manifest of MANIFESTS) {
+    const { engines } = JSON.parse(readFileSync(manifest, 'utf8'));
+    assert.equal(engines?.node, `>=${FLOOR}`, `${manifest} engines.node`);
+  }
 });
 
 // AUDIT-1 A5: the npm bundled with the base image carried every package advisory trivy found in the

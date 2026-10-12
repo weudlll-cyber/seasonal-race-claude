@@ -3,7 +3,7 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-12**, from PART ONE's **twenty-six** rows. ★ **The owner's AUDIT-1 decisions of 2026-10-12 closed eight rows** (branch `fix/audit-1-decisions-server`): an explicit `RA_TRUST_PROXY` (A5M-07), allow-listed record fields and bounded numbers (A5M-13), a 10-character minimum for new passwords (A5M-15), `RA_RACES_WAL` for the race store (A10-02), a health check that sees a damaged account store (A10-05), a damaged sessions file moved aside instead of stopping the server (A10-07), no `defaultWinners` on new tracks (A2-14) and a test for the race-source migration (A4-04) — thirty-four to **twenty-six**. ★ **The AUDIT-1 cleanup (piece B) opened two rows**: comment fixes held back by the measured-stamp guard (a decision for the owner), and the rest it left on purpose — thirty-two to **thirty-four**. ★ **AUDIT-1 opened thirty-one rows on 2026-10-09**: the complete audit (reports/release/AUDIT-1.md) left 29 decisions for the owner and two pieces of test hygiene; its security fixes were merged first (`980b13d4`) and its safe cleanups are their own piece — one to **thirty-two**. ★ **Two rows closed on 2026-10-08**: the race store keeps every race for ever, as decided that day (about 10 KB a race, SOAK-1), and the shipped `docker-compose.yml` now rotates its log (json-file, 10 MB × 5) — three to **one**. ★ **The track-backups row closed on 2026-10-08 (TRACK-BACKUP-RETENTION-1, merged)**: the newest 20 backups per track are kept, older ones of that track removed at each new backup — four to **three**. ★ **Two rows closed on 2026-10-08 (VERIFY-OFF-MAIN-1, merged)**: a verify replays on a worker thread, so the server's thread is held 17–27 ms instead of seconds, and the connection errors it caused are gone (0 in the 2-hour A/B arm) — six to **four**. ★ **The period-evaluation row closed on 2026-10-08 (BOUNDED-EVAL-1, merged)**: the evaluation streams two fields per race; byte-identical answers; retained heap flat, live heap 423 → 74 MiB at 15,215 races — seven to **six**. ★ **The developer-displays row closed on 2026-10-08**: the owner accepted the test-aids switch on the production preview, and it is merged together with the winners-setting removal — eight to **seven**. ★ **`0xC0000142` closed on 2026-10-08** by the owner's decision on the SOAK-1 part C evidence (0 git children over 16,093 saves, no process-creation error, commit and branch right 10 of 10); the late `+dirty` mark is a recorded limitation of the Windows dev server — nine to **eight**. ★ **SOAK-1 opened six rows on 2026-10-07**: a 9-hour soak of the Docker image and a static audit of the server (reports/release/SOAK-1.md) — three to **nine**. ★ **The two server defects closed on 2026-10-06 (SERVER-DEFECTS-1)**: both fixed and merged — four to **three**. ★ **The tidy list (row C) closed on 2026-10-06 (TIDY-C-3)**: every route documented, the unimported exports decided one by one, the two `minTargetScreenPx` settings told apart — four to **three**; documenting the routes found two server defects, opened as one row the same day — three to **four**. ★ **`B-UX2`, THE DEV SCREEN'S REORGANISATION, closed on 2026-10-05 (DEVSCREEN-CHAPTERS-1)**: seven chapters and a fixed sidebar, 348 controls, built and merged after the owner looked at the rebuilt screen that day — five to **four**. ★ **FRAME DROPS AT 80 RACERS closed on 2026-10-05 (FRAME-DROPS-80)**: four fixes built, measured and merged, after the owner looked at the drawing changes that day — six to **five**. ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS opened on 2026-10-05** (FRAME-DROPS-80, branch `perf/frame-drops-80`) — five to **six**. ★ **EXACT FIELD SIZE closed on 2026-10-04 (EXACT-FIELD-SIZE-1)**: built and merged the same day — six to **five**. ★ **The owner's decisions of 2026-10-04 (recorded by DECISIONS-2026-10-04)** closed three rows — B4 (the default binding stays), PERSONAL DATA (no deletion function) and B6 (folded into the developer-displays row) — and opened one, EXACT FIELD SIZE: eight to **six**. ★ **The period evaluation closed on 2026-10-04 (PERIOD-EVALUATION-1)**: built and merged, after the owner looked at it that day — nine to **eight**. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
+Re-derived on **2026-10-12**, from PART ONE's **twelve** rows. ★ **The owner's AUDIT-1 decisions of 2026-10-12 — the server piece** (merged as `a0640c1f`) closed eight rows: A5M-07 (`RA_TRUST_PROXY`), A5M-13 (record allow-lists and the editors' bounds), A5M-15 (a 10-character minimum for new passwords), A10-02 (`RA_RACES_WAL`, off by default), A10-05 (health answers 503 when the account store cannot be read), A10-07 (a damaged sessions file is moved aside and a fresh one started), A2-14 (new tracks no longer write `defaultWinners`) and A4-04 (the race-source migration test) — twenty to **twelve**. ★ **The same decisions — the repository piece** (branch `chore/audit-1-decisions-repo`) closed nineteen rows and opened five. Closed: A5T-02 (root `sharp` 0.35, `npm audit` clean), A5T-06 (master ruleset: no force-push, no deletion), A5T-07 (Dependabot alerts, private vulnerability reporting, `SECURITY.md`), A5T-08 (SHA pinning required), A7-02 (Node 22 floor, held by a test), A3-25 (this page's §2-§5, item by item), A2-50 (invariant 3 normalised), A4-02 and A4-03 (test headroom, cwd-independent tests), and both cleanup rows (the held-back comment fixes applied and the two stamps re-stamped as unchanged; the rest closed item by item); and eight decided *left as is* — A5M-12, A5M-14, A5M-16, A6-06, A12, A9-01, A3-22, A6-03. Opened: the `SECURITY.md` contact e-mail, the `viewer-invariants` gate that records zero frames and passes, and three items this page carried with no row behind them (pause and resume, the Phase V sittings, the `Q-19` flake) — thirty-four to **twenty**. A7-03 stays, re-titled *after v1.0.0, one package at a time*. ★ **The AUDIT-1 cleanup (piece B) opened two rows**: comment fixes held back by the measured-stamp guard (a decision for the owner), and the rest it left on purpose — thirty-two to **thirty-four**. ★ **AUDIT-1 opened thirty-one rows on 2026-10-09**: the complete audit (reports/release/AUDIT-1.md) left 29 decisions for the owner and two pieces of test hygiene; its security fixes were merged first (`980b13d4`) and its safe cleanups are their own piece — one to **thirty-two**. ★ **Two rows closed on 2026-10-08**: the race store keeps every race for ever, as decided that day (about 10 KB a race, SOAK-1), and the shipped `docker-compose.yml` now rotates its log (json-file, 10 MB × 5) — three to **one**. ★ **The track-backups row closed on 2026-10-08 (TRACK-BACKUP-RETENTION-1, merged)**: the newest 20 backups per track are kept, older ones of that track removed at each new backup — four to **three**. ★ **Two rows closed on 2026-10-08 (VERIFY-OFF-MAIN-1, merged)**: a verify replays on a worker thread, so the server's thread is held 17–27 ms instead of seconds, and the connection errors it caused are gone (0 in the 2-hour A/B arm) — six to **four**. ★ **The period-evaluation row closed on 2026-10-08 (BOUNDED-EVAL-1, merged)**: the evaluation streams two fields per race; byte-identical answers; retained heap flat, live heap 423 → 74 MiB at 15,215 races — seven to **six**. ★ **The developer-displays row closed on 2026-10-08**: the owner accepted the test-aids switch on the production preview, and it is merged together with the winners-setting removal — eight to **seven**. ★ **`0xC0000142` closed on 2026-10-08** by the owner's decision on the SOAK-1 part C evidence (0 git children over 16,093 saves, no process-creation error, commit and branch right 10 of 10); the late `+dirty` mark is a recorded limitation of the Windows dev server — nine to **eight**. ★ **SOAK-1 opened six rows on 2026-10-07**: a 9-hour soak of the Docker image and a static audit of the server (reports/release/SOAK-1.md) — three to **nine**. ★ **The two server defects closed on 2026-10-06 (SERVER-DEFECTS-1)**: both fixed and merged — four to **three**. ★ **The tidy list (row C) closed on 2026-10-06 (TIDY-C-3)**: every route documented, the unimported exports decided one by one, the two `minTargetScreenPx` settings told apart — four to **three**; documenting the routes found two server defects, opened as one row the same day — three to **four**. ★ **`B-UX2`, THE DEV SCREEN'S REORGANISATION, closed on 2026-10-05 (DEVSCREEN-CHAPTERS-1)**: seven chapters and a fixed sidebar, 348 controls, built and merged after the owner looked at the rebuilt screen that day — five to **four**. ★ **FRAME DROPS AT 80 RACERS closed on 2026-10-05 (FRAME-DROPS-80)**: four fixes built, measured and merged, after the owner looked at the drawing changes that day — six to **five**. ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS opened on 2026-10-05** (FRAME-DROPS-80, branch `perf/frame-drops-80`) — five to **six**. ★ **EXACT FIELD SIZE closed on 2026-10-04 (EXACT-FIELD-SIZE-1)**: built and merged the same day — six to **five**. ★ **The owner's decisions of 2026-10-04 (recorded by DECISIONS-2026-10-04)** closed three rows — B4 (the default binding stays), PERSONAL DATA (no deletion function) and B6 (folded into the developer-displays row) — and opened one, EXACT FIELD SIZE: eight to **six**. ★ **The period evaluation closed on 2026-10-04 (PERIOD-EVALUATION-1)**: built and merged, after the owner looked at it that day — nine to **eight**. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
 conflict-marker row: the hook now refuses them — thirteen to **twelve**. ★ **The 2026-10-03 hygiene pass opened one row**:
 the pre-commit hook does not detect committed conflict markers (a proposal, not built) — twelve to
 **thirteen**. ★ **The comeback-runaway row closed on 2026-10-03**
@@ -54,9 +54,9 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–1903) holds exactly TWENTY-SIX unchecked `- [ ]` rows** — one in *Delivering to someone
-else*, twenty-five in *AUDIT-1 — what the audit of 2026-10-09 leaves open*.
-*(Re-counted 2026-10-12 after eight AUDIT-1 rows closed.)* Every current count on this page says twenty-six.
+(lines 15–1876) holds exactly TWELVE unchecked `- [ ]` rows** — one in *Delivering to someone
+else*, eleven in *AUDIT-1 — what the audit of 2026-10-09 leaves open*.
+*(Re-counted 2026-10-12 after the server and repository pieces of the AUDIT-1 decisions.)* Every current count on this page says twelve.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -84,7 +84,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — twenty-six rows, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — twelve rows, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -96,46 +96,30 @@ because nobody looked.**
 
 **AUDIT-1 (2026-10-09) — security and access, his word:**
 
-2. A5M-12 — per-user write limits or a disk alarm.
-3. A5M-14 — whether tracks, brands, racers and player groups become team-scoped.
-4. A5M-16 — a per-account sign-in failure counter.
-5. A5T-02 — root `sharp` 0.34 → 0.35 (dev scripts only).
-6. A5T-06 — protect master.
-7. A5T-07 — Dependabot alerts, private vulnerability reporting, a SECURITY.md contact.
-8. A5T-08 — require SHA pinning in the Actions settings.
-9. A6-06 — the GPL-3.0-only session store in an AGPL-3.0-or-later project.
-
-**AUDIT-1 — robustness, his word:**
-
-10. A12 — retention for player names in stored races and for backup archives.
+2. SECURITY.md contact e-mail — follows the domain; until then GitHub's private vulnerability
+   reporting.
 
 **AUDIT-1 — visible changes, his eye:**
 
-11. A8-01 — Dev Screen contrast and labels.
-12. A8-02 — Track Editor select labels.
-13. A8-03 — the setup screen's 3 px overflow at 390 px.
-14. A3-19 — the three German alerts users see.
-15. A2 — Dev Screen info texts that contradict the shipped settings.
-16. A9-01 — code-split the 1 MB client bundle.
+3. A8-01 — Dev Screen contrast and labels.
+4. A8-02 — Track Editor select labels.
+5. A8-03 — the setup screen's 3 px overflow at 390 px.
+6. A3-19 — the three German alerts users see.
+7. A2 — Dev Screen info texts that contradict the shipped settings.
 
 **AUDIT-1 — records and decisions:**
 
-17. A2-50 — `viewerProbe.js` invariant 3 (a probable bug in a diagnostic).
-18. A3-22 — CLAUDE.md's inventory and `fingerprints.json`.
-19. A3-25 — the un-struck items on this page's §2-§5.
-20. A6-03 — whether to shrink the repository history.
-21. A7-02 — raise the source-install floor to Node 22.
-22. A7-03 — the major upgrades (React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13).
+8. A7-03 — the major upgrades, after v1.0.0, one package at a time.
 
-**AUDIT-1 — test hygiene, no decision:**
+**Found on 2026-10-12 while re-measuring A2-50:**
 
-23. A4-02 — two Dev Screen test hooks with thin headroom under load.
-24. A4-03 — seven tests that depend on the working directory.
+9. The `viewer-invariants` gate records zero frames and still prints PASS.
 
-**AUDIT-1 — what the cleanup could not land:**
+**Carried over from this page's §2-§5 (A3-25, 2026-10-12):**
 
-25. B — comment fixes held back by the measured-stamp guard: re-measure or re-stamp (his word).
-26. B — the rest left on purpose (hull renames, unlocated items, a few German words).
+10. Pause and resume a running race (`B-UX-Pause`) — unbuilt.
+11. The Phase V verification sittings — his eye, on shipped work.
+12. `Q-19` — the editor-test flake, narrowed (0 in 82) and not closed.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
@@ -158,7 +142,7 @@ fabricated result would reproduce the fabrication faithfully. Now in
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
 
-★★ **NOT EMPTY SINCE 2026-10-09: AUDIT-1's decisions are rows 2-22 of §0** (eight of them closed on 2026-10-12). They are listed there,
+★★ **NOT EMPTY SINCE 2026-10-09: AUDIT-1's remaining decisions are rows 2-8 of §0 (re-numbered 2026-10-12).** They are listed there,
 not repeated here, because §0 is the one list; the text below is the record of how this section
 emptied before.
 
@@ -251,7 +235,7 @@ is not.
 | ~~Share one slider component across three dev-screen sections~~ — ★ **DONE 2026-09-24 (PIECE 3b)** | done | `RangeSlider` at `client/src/screens/DevScreen/components/`; three instances collapsed. The count was three INSTANCES across TWO sections; recorded as such |
 | ~~Add tooltips to the fields that have none~~ — ★ **DONE 2026-09-24 (PIECE 3c)** | done | All six named sections (SystemSettings, RaceTuning, ConfigExport, SurfaceClassManager, UserManagement, ChangePassword); reused the existing `InfoTooltip` |
 | ~~Move the racer config folder out of the engine tree~~ — ★ **DONE 2026-09-24 (PIECE 5)** | done | 80 files moved from `client/src/modules/racer-types/` to `client/src/racer-types/`; 29 external importers + 13 scripts re-pathed; RACE HULL stayed at 202 |
-| Pause and resume a running race | a block | — |
+| Pause and resume a running race — ★ **BACKED BY A PART ONE ROW since 2026-10-12 (A3-25)**: still unbuilt (`B-UX-Pause`) | a block | no pause or resume path in `client/src/screens/RaceScreen/` (searched 2026-10-12) |
 | ~~★ **A guard that callers build the frame camera through `frameCameraInputs`** rather than by hand~~ — ★ **DONE 2026-09-24 (PIECE 6)** | done | `scripts/check-frame-camera-inputs.mjs` scans object keys `anchorRacerIndex:` / `comebackLockedRacerIndex:` / `runInArrived:` outside the ONE home. Sabotage-proven. LOUD-FAILURE rule upheld |
 | ~~A helper that cleans up the `.git/worktrees` stubs~~ — ★ **DONE 2026-09-24 (Q-28)** | done | `scripts/worktree-stubs.mjs`; **all 18 dead stubs removed**. Only ever touches `.git/` — never a checkout, because of the junction hazard. 6 tests |
 | ~~★ **Nothing records which migrations an instance has already applied**~~ — ★ **DONE 2026-09-24 (PIECE 4)** | done | `scripts/migrate.mjs` + `migrate.test.mjs` (8 tests including sabotage). Runner refuses to run any id twice; observable-state fallback backfills the ledger for instances that ran the standalone script first. `DEPLOYMENT.md` step 6 now names one command |
@@ -283,10 +267,15 @@ claim meant, but the task is six sections and not one.
 **1 · Verification sittings for work that already shipped** — loading a saved player list, a track with
 missing geometry being refused, backup→restore→reset end to end, dev-screen sections, physics and
 collisions, storage edge cases, fullscreen and sprites.
-→ [BACKLOG.md](BACKLOG.md) Phase V, `docs/BACKLOG.md:1743`
+→ [BACKLOG.md](BACKLOG.md) PART ONE, the `V-1` … `V-9` entries (Phase V)
+★ **BACKED BY A PART ONE ROW since 2026-10-12 (A3-25)**, and the address corrected: it named
+`docs/BACKLOG.md:1743`, which is *Re-apply --jobs parallelism cleanly*.
 
-**2 · The 0.75 decisive phase from SHIP-THE-NIGHT**, still owed his eye — *"He chose the value; he has
-not seen it run."*
+~~**2 · The 0.75 decisive phase from SHIP-THE-NIGHT**, still owed his eye~~ — ★ **CLOSED 2026-10-12
+(A3-25): SUPERSEDED.** The shipped value is no longer 0.75. SHIP-OWNER-COSMETIC-1 made the owner's own
+camera settings the shipped defaults (`062f5bb2`, merged and minted on 2026-10-02 after his look), and
+among them `outcomePhaseThreshold` went 0.75 → 0.65. There is no 0.75 left to look at. The entry as
+it stood: *"He chose the value; he has not seen it run."*
 ★ **NO BACKLOG ROW BACKS THIS.** `docs/BACKLOG.md` does not carry the subject at all, so it is open
 on this page alone. Recorded rather than resolved: giving it a row is a change nobody asked for, and
 deleting a thing his eye is genuinely owed would be worse.
@@ -294,7 +283,11 @@ deleting a thing his eye is genuinely owed would be worse.
 ★ **Address corrected 2026-09-25**: this row pointed at `reports/night/SHIP-THE-NIGHT.md`, which does
 not exist. The report is under `reports/evolution/`.
 
-**3 · `archive/front-group` (`87a08af4`)** — the one camera branch of four genuinely not in master.
+~~**3 · `archive/front-group` (`87a08af4`)** — the one camera branch of four genuinely not in master.~~
+★ **CLOSED 2026-10-12 (A3-25): NOTHING IS OWED.** [TAGS.md](TAGS.md) records it as built and retired
+without ever shipping, superseded by CONTENDER-ZOOM-1 (the corridor was the wrong quantity in both
+directions, [DEAD-ENDS.md](DEAD-ENDS.md) §N); the tag keeps the code as a record and its reports are
+on master. A retired design is not an eye-test waiting to happen.
 → `docs/TAGS.md:622`
 ★ **NO BACKLOG ROW BACKS THIS EITHER** — it lives in `docs/TAGS.md` and nowhere else. Same treatment
 and same reason as the row above.
@@ -321,9 +314,9 @@ is not.
 | --- | --- |
 | ~~Does the company guarantee hold on a spread-out field?~~ — ★ **MEASURED 2026-09-25 as [COMPANY-SPREAD-FIELD-1](../reports/evolution/COMPANY-SPREAD-FIELD-1.md).** At the shipped headcount the spread-tercile binding is LIGHT on the four closed tracks (0–11%) and 5–19% on space-sprint with widening 1.00–2.61×; at the earlier pack-only recommendation 11–63% with widening 2.14–4.38×. His 5 stands | done |
 | ~~"Road edge out of frame" as a standing number~~ — ★★ **DONE 2026-09-24: it is 77.3%** | done | 195,135 of 252,428 corridor frames over 10 tracks x 10 seeds; searound 36.2% to mountainstreet 97.6%. The instrument is committed with its data. **Whether 77.3% is bad is his eye, not this number** |
-| Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50). Never *fixed* — nothing was changed |
+| Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** — ★ **BACKED BY A PART ONE ROW since 2026-10-12 (A3-25)**, with 62 more green CI client-suite runs counted (0 in 82) | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50; 0.98^82 = 19%). Never *fixed* — nothing was changed |
 | ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **CLOSED: measured, then DECIDED by the owner 2026-09-23 — the backgrounds KEEP their quality** | zero image bytes in the bundle; per-track median 3.61 MB, worst 9.69 MB (`river-run`), which **stays**. No re-encoding. |
-| ★★ **NARROWED 2026-09-24, NOT closed — and the conditional in the brief FIRED.** The group-of-three part is superseded by the owner's ruling of 2026-09-23; what remains is **4 SOLO breakaways and 9 PAIRS** | see below |
+| ~~★★ **NARROWED 2026-09-24, NOT closed — and the conditional in the brief FIRED.** The group-of-three part is superseded by the owner's ruling of 2026-09-23; what remains is **4 SOLO breakaways and 9 PAIRS**~~ — ★ **CLOSED (A3-25 struck it 2026-10-12): the owner's two decisions of 2026-09-24** accepted the pairs at the measured rates and closed the breakaway thread, the four solos kept as accepted remainder ([BACKLOG.md](BACKLOG.md) PART TWO) | see below |
 
 ★★★ **THE "WHY ARE THE WORST RACES WORSE" ITEM WAS NOT CLOSED AS MOOT, BECAUSE IT IS NOT.** It was
 put up for closure on the grounds that the owner watched the worst race — `city-circuit` seed 30, a
@@ -346,6 +339,12 @@ never been decided and must not be interpolated, so nobody can say whether they 
 
 ★ CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races are chasers who overshot,
 and put nothing in its place.
+
+★★ **CLOSED THE NEXT DAY — the paragraph above is the record of 2026-09-24 morning, kept as it
+stood.** On 2026-09-24 the owner accepted a breakaway held by two at the measured rates, and closed
+the breakaway thread with the four solos as accepted remainder. Both decisions are rows in
+[BACKLOG.md](BACKLOG.md) PART TWO (*Closed by the owner's decisions of 2026-09-24*); A3-25 struck the
+table row above on 2026-10-12.
 
 ---
 
@@ -384,9 +383,9 @@ untested**, and nothing here changes that.
 | ~~**No UPGRADE path**~~ — ★★ **CLOSED** by the same merge `616f6ea8` | `DEPLOYMENT.md` gained *Backing up, and upgrading*: eight steps in the order they are done, **ending with how to go back**. An upgrade procedure without a way back is a one-way door. | `docs/DEPLOYMENT.md` | **done** |
 | ~~**`DEPLOYMENT.md` is not executable as written**~~ — ★★ **ALL FOUR CLOSED**, checked one at a time, by merge `842371e6` | **(a)** it never said to install dependencies — `npm ci --prefix` now appears four times; **(b)** `openssl` is named at `:82` as absent from a default Windows box; **(c)** *"Node 20 or newer"*, taken from the declared `engines`; **(d)** the `RA_BOOTSTRAP_TOKEN` prefix defect — it is `export`ed now, so the printed setup `curl` no longer sends an empty token. | `docs/DEPLOYMENT.md` | **done** |
 | ~~**No browser test runs in CI, dev or production**~~ — ★★ **CLOSED 2026-09-23 (DELIVERY-BROWSER-GATE-1), and NARROWED rather than deleted** | A browser now runs automatically: `.github/workflows/browser-gate.yml` builds the client and runs the PRODUCTION arm's curated fast set on every push to master, daily, and on demand — proven stable first (5 runs on an unchanged tree, 5 of 5 green, 82 tests, no retries) and therefore allowed to BLOCK a pushed commit. ★★ **WIDENED 2026-09-25 and the SCOPE question is CLOSED: the gate now covers 10 specs — every one that does not wait for a real race — at 110 tests and 3.8 min, against 7 / 82 / 3.1 before.** One list (`client/package.json:54`), whose only consumer is the post-merge workflow. ★ The three FAILING prod-arm specs were deliberately left out and keep their own open row. ★ The pre-merge half is not merely undone but impossible as a wiring job — the pre-merge gate runs NO Playwright specs at all (`verify.mjs:257`, `GATE_GUARD = "viewer-invariants"`) — and the decision is to not build one. → [BROWSER-GATE-PREMERGE-1.md](../reports/evolution/BROWSER-GATE-PREMERGE-1.md); the rest stay night work by R12a. It does not run on `pull_request` or on feature branches, so a browser regression is caught at master rather than before it. | run `35903843784`, attempts 1–5; the widened set measured locally 2026-09-25, 110 passed / 0 failed | **CLOSED — the gate covers every non-race-waiting spec** |
-| **Going online — one subject** (was four rows: no public address, VPS deployment, `RA_PUBLIC_ORIGIN`, admin auth hardening) | ★★ **THE PURCHASE IS NECESSARY AND NOT SUFFICIENT.** `docker-compose.yml` has exactly ONE service and no TLS-terminating proxy; DEPLOY-NOTES.md:195-200 lists FOUR more things that do not exist yet and are still needed after the domain arrives. ★★ **And the risk is not what was written:** sign-in does NOT stop working over plain HTTP — `RA_COOKIE_SECURE=false` is honoured explicitly (`server/src/auth/session.js:23-29`); that claim holds only if the cookie is left `Secure`, the production default. The real cost is that the password and the session cross the wire readable. ★ The proxy is deliberately NOT chosen (DEPLOY-NOTES.md:173-178). ★ Auth narrowed to two checkable items: CSP is off (`server/src/app.js:37`), and no written pre-exposure bar exists live in `docs/`. | `git grep racearena.example.com`; `scripts/configure.mjs` | **his word + a purchase, then four build items** |
-| **HTTPS is not arranged** | Over plain HTTP, `Secure` cookies are never returned, so sign-in does not merely become insecure — it stops working. Needs a domain, a proxy choice (Caddy or nginx+certbot) and a decision on where `RA_DATA_DIR` lives. | `docs/DEPLOY-NOTES.md:173` | **his word, then a block** |
-| **`deploy.yml.disabled` cannot be revived by renaming** | All four of its stated blockers still stand; `scripts/deploy.sh` does not exist. | `ls` on both paths | **a block** |
+| **Going online — one subject** (was four rows: no public address, VPS deployment, `RA_PUBLIC_ORIGIN`, admin auth hardening) — ★ **backed by PART ONE's GOING ONLINE row** (§0 row 1; re-checked 2026-10-12, A3-25) | ★★ **THE PURCHASE IS NECESSARY AND NOT SUFFICIENT.** `docker-compose.yml` has exactly ONE service and no TLS-terminating proxy; DEPLOY-NOTES.md:195-200 lists FOUR more things that do not exist yet and are still needed after the domain arrives. ★★ **And the risk is not what was written:** sign-in does NOT stop working over plain HTTP — `RA_COOKIE_SECURE=false` is honoured explicitly (`server/src/auth/session.js:23-29`); that claim holds only if the cookie is left `Secure`, the production default. The real cost is that the password and the session cross the wire readable. ★ The proxy is deliberately NOT chosen (DEPLOY-NOTES.md:173-178). ★ Auth narrowed to two checkable items: CSP is off (`server/src/app.js:37`), and no written pre-exposure bar exists live in `docs/`. | `git grep racearena.example.com`; `scripts/configure.mjs` | **his word + a purchase, then four build items** |
+| ~~**HTTPS is not arranged**~~ — ★ **STRUCK 2026-10-12 (A3-25): it is the GOING ONLINE row above**, which carries the domain, the proxy and HTTPS as one subject. Its claim that sign-in *stops working* over plain HTTP was corrected there (`RA_COOKIE_SECURE=false` is honoured; the real cost is that the password and the session are readable on the wire). | ~~Over plain HTTP, `Secure` cookies are never returned, so sign-in does not merely become insecure — it stops working. Needs a domain, a proxy choice (Caddy or nginx+certbot) and a decision on where `RA_DATA_DIR` lives.~~ | `docs/DEPLOY-NOTES.md:173` | folded into the row above |
+| ~~**`deploy.yml.disabled` cannot be revived by renaming**~~ — ★ **STRUCK 2026-10-12 (A3-25): CLOSED 2026-09-25 (TRUTH-UP-1)** — the file says of itself that it is a record, not a pipeline, and the row had no closing condition anyone wants ([BACKLOG.md](BACKLOG.md) PART TWO) | ~~All four of its stated blockers still stand; `scripts/deploy.sh` does not exist.~~ | `ls` on both paths | **closed** |
 
 **★ SETTLED, so nobody re-opens them:**
 **The licence is decided** — `AGPL-3.0-or-later`, chosen by the owner on 2026-09-01, full unmodified

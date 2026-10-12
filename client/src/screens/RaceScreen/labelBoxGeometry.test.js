@@ -17,7 +17,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { labelBoxHeight, labelOffsetAbove, labelBoxWidth } from './nameTagLayout.js';
 
 describe('the label box has one definition (CLEANUP-BEFORE-NUMBERS-1)', () => {
@@ -45,8 +45,9 @@ describe('the label box has one definition (CLEANUP-BEFORE-NUMBERS-1)', () => {
 
   it('is not re-typed as a literal in the renderer', () => {
     // The drift this exists to catch: somebody adding `fontPx * 1.18` back rather than importing.
+    // Resolved next to this file (AUDIT-1 A4-03), so the working directory does not matter.
     const src = readFileSync(
-      join(process.cwd(), 'src/screens/RaceScreen/drawing/racerRendering.js'),
+      fileURLToPath(new URL('./drawing/racerRendering.js', import.meta.url)),
       'utf8'
     );
     expect(src).toMatch(/from '\.\.\/nameTagLayout\.js'/);

@@ -76,7 +76,7 @@ describe('computeDirectorCeiling (additive boost-headroom + naturalness clamp)',
     expect(computeDirectorCeiling(MAX, MEAN, 0.08)).toBeCloseTo(bandMax + 0.08, 12);
   });
 
-  it('hard-clamps to NATURALNESS_CEILING (1.20) so no config/band can breach the ±20% leitplanke', () => {
+  it('hard-clamps to NATURALNESS_CEILING (1.20) so no config/band can breach the ±20% guardrail', () => {
     // Construct a band whose max factor is 1.15, then add 0.10 → 1.25 → clamps to 1.20.
     expect(computeDirectorCeiling(1.15, 1.0, 0.1)).toBe(NATURALNESS_CEILING);
     // Even an absurd headroom cannot exceed the clamp.

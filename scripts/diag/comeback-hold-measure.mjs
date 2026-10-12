@@ -10,7 +10,7 @@
 // This script reuses everything that instrument reuses and adds only those two records:
 //   · `scripts/lib/raceDriver.mjs` — resolveIdentity / loadTracks / buildRace / runRace, unedited
 //   · `scripts/lib/cameraPlanDelivery.mjs` — the driver already delivers the race plan to the
-//     director the way the product does (raceDriver.mjs:574); this script only READS the plan
+//     director the way the product does (raceDriver.mjs:575); this script only READS the plan
 //   · the BROWSER's outcome-phase flag, wrapped exactly as comeback-beats.mjs does it
 //     (`--outcome=browser`, its default), so the comeback shot is offered when it is in the browser
 //   · the director's own `_lastTransitionReason` (CameraDirector.js) — why each transition
@@ -51,12 +51,12 @@
 //     Quick Test fills an empty player list from the chosen set; `current` has 70 names, so an
 //     80-racer Quick Test needs `long` or `mixed`)
 //   · `--duration-out=<file>` — one row per CAST comebacker per race (the cast is read from the race
-//     plan's own `getCameraPlan()`, racePlanner.js:1935, role 'comebacker'):
-//       steering START  = the frame the plan casts him (racePlanner.js:1193, isHeroChoreographed)
+//     plan's own `getCameraPlan()`, racePlanner.js:1938, role 'comebacker'):
+//       steering START  = the frame the plan casts him (racePlanner.js:1196, isHeroChoreographed)
 //       steering END    = his hand-off: a HELD comebacker at his curve's `releaseAt`
-//                         (`getHeldRelease()`, racePlanner.js:1287 `heldFree`); otherwise, if his drawn
+//                         (`getHeldRelease()`, racePlanner.js:1290 `heldFree`); otherwise, if his drawn
 //                         place is in the top band (<= BAND_EDGES[0]), at `choreoReleaseProgress`
-//                         (racePlanner.js:1279-1282 `released`, read from DEFAULT_RACE_DYNAMICS_CONFIG);
+//                         (racePlanner.js:1282-1285 `released`, read from DEFAULT_RACE_DYNAMICS_CONFIG);
 //                         otherwise he is steered to the finish and the row says so
 //       his rank at steering start, at the comeback shot's start (if one locked on him), and at the
 //       finish; and the first frame he holds 3rd place or better after each of the two starts

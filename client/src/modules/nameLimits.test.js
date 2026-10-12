@@ -15,7 +15,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   PLAYER_NAME_MAX_LENGTH,
   isNameLengthValid,
@@ -23,7 +24,9 @@ import {
   nameTooLongMessage,
 } from '../../../shared/nameLimits.mjs';
 
-const REPO = join(process.cwd(), '..');
+// The repository root, resolved from this file (client/src/modules/) rather than from the working
+// directory (AUDIT-1 A4-03), so the test passes from `client/` and from the root alike.
+const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const read = (p) => readFileSync(join(REPO, p), 'utf8');
 
 describe('the limit has ONE home (NAME-LIMIT-1)', () => {

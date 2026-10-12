@@ -5,13 +5,13 @@
 // browser supplies runs a world no player sees, and nothing in the tree could say so.
 //
 // WHAT HAPPENED. `createRacePlan` takes its behaviour from one config object. The browser builds
-// that object at raceCore.js:257 — it is the reference, because it is what a player runs. FIVE other
+// that object at raceCore.js:261 — it is the reference, because it is what a player runs. FIVE other
 // places build their own: the two arms of the parity guard (`browserPlanConfig` / `simPlanConfig` in
 // scripts/parity/goldenRunner.mjs), the fairness instrument (scripts/sim-fairness.mjs) and two
 // diagnostics under scripts/diag/. Every one of them had silently fallen behind:
 //
 //   · all five omitted the gap brake's four keys and `trajectoryTransitionDuration`, so
-//     `_computeGapLeaderBrake` returned at its guard (racePlanner.js:904) and the mechanism could
+//     `_computeGapLeaderBrake` returned at its guard (racePlanner.js:907) and the mechanism could
 //     not run AT ALL — the fairness instrument measured 0 firings and reported "fair" for a race
 //     the browser does not run the moment the owner switches that brake on;
 //   · four of the five also omitted `pathLengthPx`, the brake's distance unit;

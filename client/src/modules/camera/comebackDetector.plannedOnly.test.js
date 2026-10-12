@@ -9,7 +9,7 @@
 // WHAT THIS FILE OWNS: the owner's decision of 2026-09-19 — **a comeback is shown when one was
 // PLANNED, not when one happens** — in the two halves it actually has.
 //
-//   PART ONE. The DRAWN WINNER is `sovereign-lead` (`heroCurveGenerator.js:648`) and must not reach
+//   PART ONE. The DRAWN WINNER is `sovereign-lead` (`heroCurveGenerator.js:650`) and must not reach
 //     `_cast`. Nothing was added to `comebackDetector.js` to make that true: the match at `:110` is
 //     an equality test and already admits exactly one string. So without this file the rename is
 //     protected by nothing, and a later hand widening the match to
@@ -59,7 +59,7 @@ describe('PART ONE — the drawn winner is `sovereign-lead` and the camera does 
   });
 
   it('2 — a `sovereign-lead` is NOT cast, and leaves the cast EMPTY rather than small', () => {
-    // `finalRank: 1` is the drawn winner specifically — the racer `heroCurveGenerator.js:648`
+    // `finalRank: 1` is the drawn winner specifically — the racer `heroCurveGenerator.js:650`
     // emitted as `comebacker` until 2026-09-19 and who took 29 of 153 COMEBACK_ZOOM shots over 200
     // races. Empty, not small: PART TWO is what that emptiness then means.
     const d = withHeroes([{ index: 7, role: 'sovereign-lead', finalRank: 1, beats: [] }], [7]);

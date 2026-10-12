@@ -89,7 +89,7 @@ export class ComebackDetector {
     // ★★ THE MATCH IS EXACT, AND THAT IS WHAT EXCLUDES THE `pursuer` — 2026-09-18.
     //
     // The generator casts three kinds of racer from the B1 pool: the drawn winner
-    // (`heroCurveGenerator.js:648`), the STAGED comebacker (`:688`) and the unstaged front-group
+    // (`heroCurveGenerator.js:650`), the STAGED comebacker (`:690`) and the unstaged front-group
     // pursuer (`:722`). ★★ SINCE 2026-09-19 ONLY THE STAGED ONE IS `'comebacker'`; the other two are
     // `'sovereign-lead'` and `'pursuer'` and neither reaches `_cast`.
     //

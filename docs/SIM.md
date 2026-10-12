@@ -181,12 +181,12 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/raceCore.js` | the REAL race init + per-step advance, extracted from screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM. |
 | `modules/raceDynamicsConfig.js` | Storage CRUD for race-dynamics (re-roll) tuning config. |
 | `modules/raceGovernor.js` | The PULK-phase contest director. |
-| `modules/raceLengths.js` | the ONE source for the racer-LENGTH unit. |
+| `modules/raceLengths.js` | The ONE source for the racer-LENGTH unit. |
 | `modules/raceNumbers.js` | RACE-NUMBERS-1 |
 | `modules/raceOverrun.test.js` | HISTORY-MISSING-2 |
 | `modules/raceParams.js` | ONE-HOME-RACE-PARAMS-1 — the sprite geometry every `createRaceFromIdentity` caller has to derive before it can call. |
 | `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
-| `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
+| `modules/raceStep.js` | The ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
 | `modules/racerNames.js` | THE quick-test roster. |
 | `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
 | `modules/rowLayoutConfig.js` | Storage CRUD for D7c row-start layout config. |

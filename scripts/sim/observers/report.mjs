@@ -75,7 +75,7 @@ function buildDiagnosticTables(rawRows, rowStats) {
 
   // ── Table A ─────────────────────────────────────────────────────────────────
   lines.push("");
-  lines.push("#### A — Bereichstreue");
+  lines.push("#### A — Band fidelity");
   lines.push("");
   lines.push("| target band | assigned | hits | rate |");
   lines.push("|---|---|---|---|");

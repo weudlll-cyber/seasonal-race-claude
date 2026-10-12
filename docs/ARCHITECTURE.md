@@ -1228,7 +1228,7 @@ verified at the cited source.
   `raceStep.js` (verified: grep is empty); the DevScreen section and the stored key were purged
   (an old-schema `world.json` that still carries `raceZoneConfig` makes the sim ABORT — golden G3).
 - **areaBonus phase-split lives in `racePlanner.js`** and is applied by both engines (browser + sim);
-  it is zero for every racer from the chaos boundary onward (`racePlanner.js:999-1005`).
+  it is zero for every racer from the chaos boundary onward (`racePlanner.js:1002-1008`).
 - **`headlessRaceSimulator.js` is a SIMPLIFIED STATISTICAL MODEL, not the game.** It self-declares this
   (its header): it deliberately OMITS `trajectoryMult`, `areaBonusMult`, `governorMult` and the racer
   type's `speedMultiplier`, and uses a circular world approximation. It exists only to measure the

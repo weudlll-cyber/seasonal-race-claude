@@ -82,8 +82,8 @@ address to GitHub).
 | a name in a browser's race history | clear that browser's site data |
 | a name in a backup | delete the backup; an archive cannot be edited |
 
-★ **Retention is a decision the owner has left open**: the row *AUDIT-1 A12 · retention* in
-[BACKLOG.md](BACKLOG.md) PART ONE, covering player names in stored races and backup archives. Stored races are kept forever **by design**:
+★ **Retention was decided on 2026-10-12: left as is** — the row *AUDIT-1 A12 · retention*, covering
+player names in stored races and backup archives, is in [BACKLOG.md](BACKLOG.md) PART TWO. Stored races are kept forever **by design**:
 it was decided on 2026-10-08 that the race store keeps every race. If an event needs names removed
 later, the honest options today are not entering real names, or not using the stored-race history for
 that event.

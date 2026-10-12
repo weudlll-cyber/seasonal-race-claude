@@ -23,12 +23,12 @@
 //
 // ★ CORRECTED 2026-09-18. This said "the role label is 'comebacker' for both the held comebacker and
 // the fall-back one". That stopped being true when the unstaged one was renamed `pursuer`
-// (`heroCurveGenerator.js:722`). The filter below now takes BOTH roles ON PURPOSE: this block exists
+// (`heroCurveGenerator.js:724`). The filter below now takes BOTH roles ON PURPOSE: this block exists
 // to COMPARE held against unstaged, so narrowing it to `comebacker` would silently delete one of its
 // two arms. `held` remains the thing that separates them, exactly as before.
 //
 // ★★ AND THE UNSTAGED ARM GOT SMALLER ON 2026-09-19, WHICH IS A CORRECTION AND NOT A REGRESSION.
-// Until then the DRAWN WINNER (`heroCurveGenerator.js:648`) was also labelled `comebacker` and was
+// Until then the DRAWN WINNER (`heroCurveGenerator.js:650`) was also labelled `comebacker` and was
 // not held, so this filter swept him into the "unstaged" arm alongside the pursuer — two different
 // racers under one heading, which is exactly what the sentence above claims not to be doing. He is
 // `sovereign-lead` now and drops out, so the two arms are finally the two this header names. A run

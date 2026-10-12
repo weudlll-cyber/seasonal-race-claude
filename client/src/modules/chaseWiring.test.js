@@ -21,13 +21,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
-// ★ Read from the working directory, not from `import.meta.url`: under vitest that URL is not a
-// `file:` URL and `fileURLToPath` throws — which is how the first version of this guard failed for
-// a reason that had nothing to do with what it asserts. Vitest runs with cwd = client/.
-const modPath = (f) => join(process.cwd(), 'src', 'modules', f);
+// Resolved from this file's own location (AUDIT-1 A4-03), so the guard passes whatever directory
+// vitest is started from — `client/` or the repository root with `--root client`.
+const HERE = dirname(fileURLToPath(import.meta.url));
+const modPath = (f) => join(HERE, f);
 
 const KEYS = ['chaseAfterOutcomeEnabled', 'chaseAfterOutcomeSelection', 'chaseAfterOutcomeSlots'];
 

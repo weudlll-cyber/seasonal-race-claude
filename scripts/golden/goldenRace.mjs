@@ -103,7 +103,7 @@ export function runGoldenRace(race, sharedConfigs) {
   const configs = sharedConfigs;
 
   // The geometry, from the fixture's own numbers. `getPosition` — the only shape method the engine
-  // calls (raceCore.js:385) — uses the CENTER spline and the declared width, so those are what the
+  // calls (raceCore.js:389) — uses the CENTER spline and the declared width, so those are what the
   // fixture pins. Inner and outer are handed the same points: EditorShape builds splines from them,
   // and nothing on the race path reads either.
   const shape = new EditorShape({
