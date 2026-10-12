@@ -1883,8 +1883,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
       better-sqlite3 13 — each a migration, none a security fix today. *(verify: a decision per
       package)*
-- [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
-      covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
 
 ### Test hygiene (no decision needed; not urgent)
 
@@ -1928,6 +1926,19 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A4-04 · the race-source migration has no test — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** built on `fix/audit-1-decisions-server`.
+      `server/src/races/migrateRaceSource.test.js` builds a realistic pre-RACE-SOURCE-1 database
+      from fixtures (12 races of two teams through the real store, shared rosters and racer types,
+      the index and the immutability triggers, then the column dropped), migrates a COPY twice: the
+      first run adds the column and keeps every row (all legacy rows NULL, read as unmarked); the
+      second reports `skipped` and changes nothing — the same rows, the same schema and the same
+      SHA-256 of the file. Also: a dry run writes nothing, a missing file creates nothing, and the
+      migrated rows stay immutable. Sabotage: the `hasRaceSourceColumn` guard removed — the second
+      run throws `duplicate column name: race_source`. The row as it stood: **AUDIT-1 A4-04 · the
+      race-source migration has no test** (`migrateRaceSource.js`, 0 % covered; it already ran on
+      his database). *(verify: a test that runs it twice on a copy)*
 
 - [x] **AUDIT-1 A5M-15 · the only password rule is "not blank" — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`. A
