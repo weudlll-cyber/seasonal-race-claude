@@ -179,7 +179,7 @@ point the brake becomes the larger number. A configuration may brake a racer far
 and nothing in the code objects.
 
 ★★ **CLOSED 2026-09-24 (NIGHT-2026-09-24C, the owner's decision of 2026-09-23): THE SLOW SIDE NOW
-HAS A LEITPLANKE.** `NATURALNESS_FLOOR = 0.8` in `raceGovernor.js`, the mirror of
+HAS A GUARDRAIL.** `NATURALNESS_FLOOR = 0.8` in `raceGovernor.js`, the mirror of
 `NATURALNESS_CEILING = 1.2`, with `computeDirectorFloor()` and `assertNaturalnessFloor()` beside
 `computeDirectorCeiling()`.
 

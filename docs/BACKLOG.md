@@ -1890,19 +1890,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
       run with a parallel `docker build`)*
 
-### What the cleanup (piece B) could not land
-
-- [ ] **AUDIT-1 B · the rest left on purpose.** A2-25 and A2-26 (variables holding seconds named "Ms")
-      are in engine-hull scripts, where a rename is a code change; A2-60's unquoted items could not be
-      located without the group-B notes; A2-04 and A2-05 (header conventions in `scripts/` and tests);
-      A3-20 (`check-language-closed`'s declared scope changes when verify selects it); A3-24, -26, -27
-      (OPEN.md items, which are row A3-25's decision). Also found while cleaning, not in the audit:
-      single German words the language guard cannot see — a report table heading
-      (`scripts/sim/observers/report.mjs`, around line 78), a log line (`scripts/sim-fairness.mjs`,
-      around line 5713), and two comments (`client/src/modules/raceGovernor.js:38`, inside the
-      stamped closure; `DynamicsTuningSection.jsx`, around line 1230). *(verify: each item closed or
-      struck with a reason)*
-
 ---
 
 # PART TWO — CLOSED
@@ -1913,6 +1900,33 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 B · the rest left on purpose — CLOSED 2026-10-12, item by item (branch
+      `chore/audit-1-decisions-repo`).** The fate of each:
+      - **The German words — fixed.** The report table heading in `scripts/sim/observers/report.mjs`
+        ("#### A — Band fidelity"), the log line in `scripts/sim-fairness.mjs` ("Report → …"), the
+        comment in `DynamicsTuningSection.jsx` ("option B"), and `raceGovernor.js`'s comments
+        ("guardrail", with the held-back comment fixes). The same word in two test descriptions and in
+        `docs/RACE-ACTION.md` §6 went with them. Neither the heading nor the log line feeds anything
+        fingerprinted: the world fingerprint hashes `fairness-data.json`'s `rawData`, not the Markdown
+        report or the console. **Left:** the `RangeError` message in `raceGovernor.js`
+        (`assertNaturalnessFloor`) still says "leitplanke" — it is a string in the engine hull, so
+        changing it is a code change, not a comment fix; and the German identifiers `sollBereich` /
+        `bereichBounds`, which are data keys in the sim's output and are named as such in
+        `check-language-closed`'s own header.
+      - **A2-25, A2-26 — left:** variables holding seconds named "Ms" in engine-hull scripts; a rename
+        there is a code change.
+      - **A2-60 — left:** its unquoted items cannot be located without the group-B notes.
+      - **A2-04, A2-05 — left:** the header conventions of `scripts/` and of tests are conventions of
+        their own.
+      - **A3-20 — left:** `check-language-closed`'s declared scope decides when `verify` selects it, so
+        widening the declaration is a routing change, not a cleanup.
+      - **A3-24, A3-26, A3-27 — handed to A3-25 and settled there:** the OPEN.md title date already
+        agrees with its header (2026-10-09); the stale HTTPS line and the Phase V address are dealt
+        with in the A3-25 pass over OPEN.md §2-§5.
+      The row as it stood: **the rest left on purpose** — A2-25/-26, A2-60, A2-04/-05, A3-20,
+      A3-24/-26/-27, and single German words the language guard cannot see (a report table heading,
+      a log line, two comments). *(verify: each item closed or struck with a reason)*
 
 - [x] **AUDIT-1 A4-03 · the seven cwd-relative tests resolve from their own file — CLOSED 2026-10-12
       (branch `chore/audit-1-decisions-repo`).** `buildIdentityReason`, `buildIdentitySource`,
