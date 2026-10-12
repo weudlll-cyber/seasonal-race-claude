@@ -2360,7 +2360,7 @@
     "id": "dtSmoothingAlpha",
     "idKind": "configKey",
     "tier": "advanced",
-    "infoText": "Smooths uneven browser frame times before they move the camera and effects. Higher is a smoother camera that reacts later to real frame-rate changes; zero uses the raw timing. The race itself is not affected.",
+    "infoText": "Smooths uneven browser frame times before they drive the track effects. Higher is steadier effects that react later to real frame-rate changes; zero uses the raw timing. The camera always follows the raw timing, and the race itself is not affected.",
     "textStatus": "REWRITTEN"
   },
   {
