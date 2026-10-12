@@ -54,6 +54,10 @@ none of it should be relied on until it is merged. Each entry names its branch.
 - Every new password needs at least 10 characters — at first-admin setup, on an account an admin
   creates or resets, on your own, and in the recovery tool (audit finding A5M-15). Passwords set
   before keep signing in until they are changed. *(branch `fix/audit-1-decisions-server`)*
+- Tracks, racers, brands and player groups accept only the fields the app itself sends, and numbers
+  within bounds at least as wide as the editors; anything else is refused with a message naming it.
+  Re-saving a record you already have is never refused (audit finding A5M-13).
+  *(branch `fix/audit-1-decisions-server`)*
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
   keeps working. *(branch `feat/csp`)*

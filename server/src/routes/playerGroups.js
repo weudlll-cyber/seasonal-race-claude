@@ -26,6 +26,7 @@ import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
 import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isValidId } from '../../utils/isValidId.js';
+import { unknownFields, unknownFieldsMessage } from '../../utils/recordFields.js';
 import { tooLongNames, nameTooLongMessage } from '../../../shared/nameLimits.mjs';
 import { doubledNames, doubledNamesMessage } from '../../../shared/playerNames.mjs';
 
@@ -98,6 +99,22 @@ export function validateBody(body) {
   return errors;
 }
 
+// ── The field allow-list (AUDIT-1 A5M-13, the owner's decision 2026-10-12) ─────────────────────
+//
+// The routes below already store only the fields they name; an extra field is now refused instead
+// of ignored. The list: what the Dev Screen's player-groups manager sends (`name`, `players`), what
+// the one-time localStorage migration sends (client/src/modules/storage/playerGroupMigration.js:
+// `id`, `name`, `players`), the keys of the shipped seed and the server's own fields. There are no
+// numbers; the group's size and its names keep their rules in `validateBody`. On an update, keys the
+// stored record already has always pass (server/utils/recordFields.js).
+const GROUP_FIELDS = new Set(['id', 'name', 'players', 'isDefault', 'createdAt', 'updatedAt']);
+
+/** The allow-list error for a create (`existing` null) or an update. */
+function validateGroupFields(body, existing = null) {
+  const unknown = unknownFields(body, GROUP_FIELDS, existing);
+  return unknown.length ? [unknownFieldsMessage(unknown, 'A player group')] : [];
+}
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 const router = express.Router();
@@ -117,7 +134,7 @@ router.get('/:id', (req, res) => {
 // POST /api/player-groups
 // isDefault is ALWAYS set to false — body.isDefault is never used (Invariant 2).
 router.post('/', (req, res) => {
-  const errors = validateBody(req.body);
+  const errors = [...validateBody(req.body), ...validateGroupFields(req.body)];
 
   let id = req.body.id;
   if (id !== undefined) {
@@ -157,7 +174,7 @@ router.put('/:id', (req, res) => {
   const existing = groupsMap.get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Player group not found' });
 
-  const errors = validateBody(req.body);
+  const errors = [...validateBody(req.body), ...validateGroupFields(req.body, existing)];
   if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
 
   const now = new Date().toISOString();

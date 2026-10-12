@@ -97,9 +97,9 @@ POSIX shell. On Windows they run unchanged in Git Bash.
 
 **One installation is one shared space.** Every signed-in user sees and can change all tracks, brands,
 player groups — **including the names of the people in them** — and racer types: the list routes
-answer every caller with the whole collection (`server/src/routes/tracks.js:454`,
-`server/src/routes/brands.js:161`, `server/src/routes/playerGroups.js:106`,
-`server/src/routes/racers.js:126`). **An `admin` manages every user on the installation**, whatever
+answer every caller with the whole collection (`server/src/routes/tracks.js:571`,
+`server/src/routes/brands.js:195`, `server/src/routes/playerGroups.js:123`,
+`server/src/routes/racers.js:190`). **An `admin` manages every user on the installation**, whatever
 their team (`server/src/auth/guards.js:25-30`, `server/src/auth/usersRouter.js:21-24`). **Race lists are
 per team**: a user sees only the races stored by their own team (`server/src/routes/races.js:164-181`).
 Decided on 2026-10-01; there is no per-organizer separation beyond races.

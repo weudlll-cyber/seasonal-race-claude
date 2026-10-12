@@ -1804,9 +1804,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 - [ ] **AUDIT-1 A5M-12 · no write quota.** Any signed-in user can store unlimited races, tracks and
       10 MB images. Proposal: per-user write limits or a disk alarm. *(verify: a decision, then a test)*
-- [ ] **AUDIT-1 A5M-13 · records accept any field and any number.** `tracks.js:504` stores every extra
-      body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
-      *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
 - [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
       edits any team's records (`docs/API.md:309`). *(verify: a decision — scope them, or record it)*
 - [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
@@ -1912,6 +1909,25 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A5M-13 · records accept any field and any number — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      Allow-lists `TRACK_FIELDS`, `RACER_FIELDS`, `BRAND_FIELDS`, `GROUP_FIELDS` beside each route,
+      derived from every field the client sends (Track Editor, Track Manager, Racer Editor, branding
+      profiles, player-groups manager and its localStorage migration), every seed key, the server's
+      own fields and legacy names; number bounds at least as wide as the editors and seeds
+      (`TRACK_NUMBER_BOUNDS`, `RACER_NUMBER_BOUNDS`; brands were already bounded; every number
+      inside a track effect within ±480000). Unknown field or out-of-range number → 400 with a
+      plain-English message. The rule for doubt is built into the shared
+      `server/utils/recordFields.js`: on an update a key the stored record already has, and a number
+      equal to the stored one, always pass. Nothing is checked on read. Test:
+      `server/src/routes/recordFields.test.js` — all 12 seed records and editor-shaped fixtures at
+      the editors' limits round-trip through PUT unchanged; `PUT /api/tracks/<id>` with `worldWidth:
+      1e9` → 400 `worldWidth must be a number from 1 to 10000`. Sabotage (no field ever unknown): 4
+      red. The row as it stood: **AUDIT-1 A5M-13 · records accept any field and any number.**
+      `tracks.js:504` stores every extra body field; `racers.js:93` checks no ranges. Proposal: an
+      allow-list and the editors' own bounds. *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9`
+      refused 400)*
 
 - [x] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`, and
