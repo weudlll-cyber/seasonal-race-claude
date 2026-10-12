@@ -133,9 +133,7 @@ function PlayerGroupsManager() {
 
   async function handleDelete(id, isDefault) {
     if (isDefault) {
-      setActionError(
-        'Eine Default-Gruppe kann nicht gelöscht werden. Entferne zuerst den Default-Status.'
-      );
+      setActionError('A default group cannot be deleted. Remove its default status first.');
       return;
     }
     if (!window.confirm('Delete this player group?')) return;

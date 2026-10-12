@@ -365,7 +365,7 @@ function BehaviorTuningSection({ part }) {
             onReset={resetSpeedBrake}
             resetTestId="reset-speed-brake"
             resetControlId="BehaviorTuningSection:reset-speed-brake"
-            subtitle="When a racer ends up directly behind another racer with no clear way to overtake, they slow down a bit instead of rear-ending them. This block controls when the brake kicks in (how close, how directly behind) and how strongly they slow down. Prevents visual collisions in tight packs."
+            subtitle="When a racer ends up directly behind another racer with no clear way to overtake, they slow down a bit instead of rear-ending them. Prevents visual collisions in tight packs. The one setting here is the brake's warm-up on open tracks: how long after the gun it takes to reach full strength."
             disabled={!behaviorConfig.enabled}
           >
             <div className={s.formGrid}>

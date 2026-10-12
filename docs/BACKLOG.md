@@ -782,8 +782,9 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★★ **THE AUTH QUESTION, NARROWED TO TWO FALSIFIABLE ITEMS.** "Admin auth hardened for
       public-facing use" was an open row with no bar, which is why it could not be settled. The
       decisions behind it are settled; what is measurable is exactly two things:
-      **(1) CSP is switched off** — `server/src/app.js:37` runs
-      `helmet({ contentSecurityPolicy: false })`; **(2) no written pre-exposure bar exists** anywhere
+      **(1) ~~CSP is switched off~~ — ANSWERED 2026-10-12:** the Content-Security-Policy is on
+      (`server/src/csp.js`, AUDIT-1 D1, accepted by the owner and merged with review/2026-10-12;
+      PART TWO); **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
       **His word plus a purchase, and then four build items.**
@@ -1810,28 +1811,21 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       Until then it points to GitHub's private vulnerability reporting, which is switched on.
       *(verify: SECURITY.md names a contact address at the project's domain)*
 
-### Visible changes — his eye
-
-- [ ] **AUDIT-1 A8-01 · Dev Screen accessibility:** colour contrast fails on the active tier toggle
-      and the reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2).
-      *(verify: `browser-audit.mjs <clone> <out> a8` reports 0 rules on `/dev`)*
-- [ ] **AUDIT-1 A8-02 · Track Editor:** two `<select>` elements without an accessible name.
-      *(verify: the same run reports 0 on `/track-editor`)*
-- [ ] **AUDIT-1 A8-03 · the setup screen is 3 px wider than a 390 px phone.** *(verify: the same run
-      reports no overflow at 390)*
-- [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
-      TrackManager), frozen by the language allowlist. *(verify: `check-language-closed` allowlist
-      counts for the three files are 0)*
-- [ ] **AUDIT-1 A2 · Dev Screen info texts that contradict the shipped settings** — "shipped OFF"
-      for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
-      -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
-      *(verify: each text read against `defaults.js`)*
-
 ### Records and decisions
 
 - [ ] **AUDIT-1 A7-03 · major upgrades — after v1.0.0, one package at a time** (decided 2026-10-12):
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
+
+### Observed by the owner on 2026-10-12
+
+- [ ] **The Dev Screen cuts its group cards off on a narrow window — does it have to work on a tablet
+      or a phone?** Observed by the owner on 2026-10-12 while looking at review/2026-10-12: in a
+      narrow window the Dev Screen's group cards are cut off at the right, and there is no
+      horizontal scroll to reach the rest. The question is not yet decided: whether the Dev Screen
+      must work on tablet or phone widths at all. Nothing is built until it is (decided
+      2026-10-12: record it, do not fix it). *(verify: a decision — the supported widths; if
+      narrow widths are in, no card is cut off at them)*
 
 ### Found on 2026-10-12 while re-measuring A2-50
 
@@ -1883,6 +1877,76 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **AUDIT-1 D1 and D2 · THE CONTENT-SECURITY-POLICY AND THE ADMIN STATUS BOX — BUILT AND
+      ACCEPTED 2026-10-12, merged with review/2026-10-12.** Both were built on 2026-10-09 (branches
+      `feat/csp` and `feat/admin-status-box`, reports/release/AUDIT-1.md pieces D1 and D2) and
+      held for the owner's look. On 2026-10-12 the owner looked at review/2026-10-12 on the
+      production preview and accepted it, the CSP and the status box with it. **D1:** every page
+      the server serves carries a Content-Security-Policy (`server/src/csp.js`): scripts only from
+      the server itself plus the one hashed runtime-configuration script, no inline or `eval`
+      scripts, no framing by other sites; a plain-HTTP install on a local network keeps working;
+      the browser spec `client/e2e/csp-no-violations.spec.js` runs in the Browser gate. **D2:** an
+      admin-only status box at the top of the Dev Screen's "Accounts and system" chapter — the
+      build, the newest backup, the overall status, and whether a newer release exists on GitHub
+      (`GET /api/admin/status`, `server/src/routes/adminStatus.js`; the release check runs at most
+      once a day and says "unknown" when it fails). The Going online row's "CSP is switched off"
+      item is answered by D1.
+
+- [x] **AUDIT-1 A2 · THE DEV SCREEN INFO TEXTS SAY WHAT SHIPS — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.** Each text
+      read against `defaults.js` and the code that consumes the value, and corrected without
+      stating a config value (the rule `check-tooltip-values` enforces): **A2-34** the Gap Leader
+      Brake card said "SHIPPED OFF" while `gapBrakeEnabled` ships true — it says "SHIPPED ON".
+      **A2-40** Phase-Split Bonuses called an area strength of 2.0 "full" and the shipped EARLY and
+      POST "full"; the engine divides the phase strength by Race Plan Bonus Strength, so the
+      shipped strengths give half — the note now explains the scale against that control and no
+      longer claims a shipped level. **A2-41** the Frame Timing subtitle, the smoothing control's
+      info text and its "very stable camera" read-out said the smoothing moves the camera; the
+      camera is fed the raw frame time and the smoothing reaches the track effects only — all
+      three now say so. **A2-42** the comeback card said the Race Plan needs an open track of at
+      least 60 s; the gate is the race's duration against Race Plan min duration, on every track —
+      the card now says that and points at the control. **A2-43** the Speed Brake subtitle
+      promised controls for how close, how directly behind and how strongly; the card has one, the
+      open-track warm-up, and now says so. Left: the matching comments inside `defaults.js` are in
+      the measured-stamp closure and are in the held-back patch (row "AUDIT-1 B · comment fixes
+      held back" above). The row as it stood: *"A2 · Dev Screen info texts that contradict the
+      shipped settings — "shipped OFF" for settings now ON, the camera-lerp help text, the
+      race-plan duration (A2-34, -40, -41, -42, -43)."*
+
+- [x] **AUDIT-1 A3-19 · THE THREE GERMAN ALERTS ARE ENGLISH — CLOSED 2026-10-12 (AUDIT-1 DECISIONS),
+      accepted by the owner on review/2026-10-12 the same day, and merged with it.** Deleting a default
+      record now says *"A default brand cannot be deleted. Remove its default status first."* (and
+      the same for a default group and a default track) in BrandingProfiles, PlayerGroupsManager
+      and TrackManager. Their three test files assert the English text, and their German test
+      names and comments are English too. All six files left `check-language-closed`'s allowlist
+      (27 files with German → 21; the guard passes, and its test's frozen record keeps the paths,
+      which is that list's rule). The row as it stood: *"A3-19 · three German alerts users see
+      (BrandingProfiles, PlayerGroupsManager, TrackManager), frozen by the language allowlist."*
+
+- [x] **AUDIT-1 A8-03 · THE SETUP SCREEN FITS A 390 PX PHONE — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.** The cause:
+      the header's branding dropdown is a flex item, and a flex item never shrinks below its content
+      by default — for a `<select>` that is its longest option ("Seasonal Entertainment"). Logo,
+      dropdown and gear needed 361 px inside a header with 2rem padding on each side, and the gear
+      ended at 393 px. The fix: the dropdown may shrink (`minWidth: 0`); at 390 px it is 137 px wide
+      instead of 172 px and still shows "Branding: None" whole; at 768 px and on a desktop nothing
+      moves. The audit's tool now reports no overflow at 390, 768 or desktop width. The row as it
+      stood: *"A8-03 · the setup screen is 3 px wider than a 390 px phone."*
+
+- [x] **AUDIT-1 A8-01 and A8-02 · DEV SCREEN AND TRACK EDITOR ACCESSIBILITY — CLOSED 2026-10-12
+      (AUDIT-1 DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.**
+      Contrast: the active View toggle's red is darkened 5% in that one rule (`#e63946` → `#db3643`,
+      white text 4.2:1 → 4.5:1; the shared `--color-primary` is unchanged, because it colours every
+      primary button); the Reset buttons lose their 0.7 fade and show the full muted grey (3.1:1 →
+      4.9:1 on a card). Names: the ten number fields carry their visible label as `aria-label`, and
+      the editor's two dropdowns are "Track lights style" and "Load track". axe 4.10.2 now reports 0
+      rules on `/dev` (its first chapter, which is what the audit's tool sees) and on
+      `/track-editor`; pinned by `DevScreen.a11yNames.test.jsx` and the Track Lights test. **Not in
+      the audit's view and left as found:** the other six chapters still carry contrast and label
+      findings of the same kinds (the shared primary button among them). The rows as they stood:
+      *"A8-01 · Dev Screen accessibility: colour contrast fails on the active tier toggle and the
+      reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2)"* and *"A8-02 ·
+      Track Editor: two `<select>` elements without an accessible name."*
 - [x] **AUDIT-1 A2-50 · invariant 3 reads the finish band with the normalised lateral — CLOSED
       2026-10-12 (branch `chore/audit-1-decisions-repo`).** `client/src/modules/viewerProbe.js`
       invariant 3 now calls `getPosition(tAt, k / 40 - 0.5)`, as the file's own rule at `bandPct`
