@@ -1822,12 +1822,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       e-mail address; it is to get one once the project has its own domain (decided 2026-10-12).
       Until then it points to GitHub's private vulnerability reporting, which is switched on.
       *(verify: SECURITY.md names a contact address at the project's domain)*
-- [ ] **AUDIT-1 A5T-06 · master is unprotected** — no branch protection, no ruleset. Proposal: forbid
-      force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
-      is not `[]`)*
-- [ ] **AUDIT-1 A5T-08 · the "require SHA pinning" Actions setting is off**; every workflow pins
-      anyway since `c369ea81`. *(verify: `gh api …/actions/permissions` shows
-      `"sha_pinning_required": true`)*
 - [ ] **AUDIT-1 A6-06 · licensing note:** the project is AGPL-3.0-or-later and the session store
       `better-sqlite3-session-store` is GPL-3.0-only; the combination is permitted, and the "-only"
       pins the shipped image's combined work to version 3. *(verify: a decision — accept, or replace
@@ -1934,6 +1928,23 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A5T-06 · master is protected against force-push and deletion — CLOSED 2026-10-12
+      (AUDIT-1 decisions).** A repository ruleset was created that day with `gh api`: id
+      **24917406**, "master: no force-push, no deletion", enforcement **active**, target
+      `refs/heads/master`, rules `non_fast_forward` and `deletion`, **no bypass actors**. It has no
+      pull-request or review rule, so ordinary pushes to master keep working.
+      `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets` answered `[]` before. The row as it
+      stood: **master is unprotected** — no branch protection, no ruleset. Proposal: forbid
+      force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
+      is not `[]`)*
+- [x] **AUDIT-1 A5T-08 · "require SHA pinning" for Actions is on — CLOSED 2026-10-12 (AUDIT-1
+      decisions).** Switched on that day with `gh api`: `gh api …/actions/permissions` answers
+      `{"enabled":true,"allowed_actions":"all","sha_pinning_required":true}` (it was `false`). Every
+      workflow already pinned its actions to commits since `c369ea81`, so nothing had to change in
+      them. The row as it stood: **the "require SHA pinning" Actions setting is off**; every
+      workflow pins anyway since `c369ea81`. *(verify: `gh api …/actions/permissions` shows
+      `"sha_pinning_required": true`)*
 
 - [x] **AUDIT-1 A5T-07 · Dependabot alerts, private vulnerability reporting and a SECURITY.md —
       CLOSED 2026-10-12 (AUDIT-1 decisions).** The two repository settings were switched on that day
