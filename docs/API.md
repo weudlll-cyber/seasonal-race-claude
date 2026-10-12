@@ -23,11 +23,11 @@ The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed 
 
 ## Access rules
 
-**Middleware order** (`server/src/app.js:36-86`): helmet → `cors(corsOptions)` (`:39`) →
-`express.json({ limit: '1mb' })` (`:40`) → session (`:41`) → `csrfOriginGuard` (`:42`) → static
-client + SPA fallback (`:50-51`, both refuse `/api/*`) → `requireAuth` (`:53`) → `requireAdmin`
-(`:54`) → `GET /api/health` (`:60`) → the three rate limiters (`:64-68`) → the routers (`:69-78`)
-→ the API 404 (`:82`) → the error handler (`:86`).
+**Middleware order** (`server/src/app.js:37-87`): helmet → `cors(corsOptions)` (`:40`) →
+`express.json({ limit: '1mb' })` (`:41`) → session (`:42`) → `csrfOriginGuard` (`:43`) → static
+client + SPA fallback (`:51-52`, both refuse `/api/*`) → `requireAuth` (`:54`) → `requireAdmin`
+(`:55`) → `GET /api/health` (`:61`) → the three rate limiters (`:65-69`) → the routers (`:70-79`)
+→ the API 404 (`:83`) → the error handler (`:87`).
 
 **Public paths** — exact method + path match, after the path is lower-cased and a trailing slash is stripped
 (`server/src/auth/guards.js:14-19`, matched at `:143-149`, normalisation at `:100-103`):
@@ -75,12 +75,14 @@ and are switched off when `NODE_ENV=test` or `VITEST` is set (`:12`).
 
 | Path (mounted with `app.use`, so every method) | Window | Max | Counts | Key | Lines |
 |---|---|---|---|---|---|
-| `/api/auth/login` (`server/src/app.js:64`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | `RA_LOGIN_RL_MAX`, default 10 | failed requests only | IP | `server/src/auth/rateLimit.js:18-26` |
-| `/api/auth/setup` (`server/src/app.js:65`) | `RA_SETUP_RL_WINDOW_MS`, default 60 min | `RA_SETUP_RL_MAX`, default 10 | every request | IP | `server/src/auth/rateLimit.js:34-42` |
-| `/api/auth/change-password` (`server/src/app.js:68`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | 5 (fixed) | failed requests only | `req.authUser.id`, else IP | `server/src/auth/rateLimit.js:74-83` |
+| `/api/auth/login` (`server/src/app.js:65`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | `RA_LOGIN_RL_MAX`, default 10 | failed requests only | IP | `server/src/auth/rateLimit.js:18-26` |
+| `/api/auth/setup` (`server/src/app.js:66`) | `RA_SETUP_RL_WINDOW_MS`, default 60 min | `RA_SETUP_RL_MAX`, default 10 | every request | IP | `server/src/auth/rateLimit.js:34-42` |
+| `/api/auth/change-password` (`server/src/app.js:69`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | 5 (fixed) | failed requests only | `req.authUser.id`, else IP | `server/src/auth/rateLimit.js:74-83` |
 
-The limiters are mounted after `requireAuth` (`server/src/app.js:64-68`). So a signed-out caller of
-`change-password` gets 401 and is never counted.
+The limiters are mounted after `requireAuth` (`server/src/app.js:65-69`). So a signed-out caller of
+`change-password` gets 401 and is never counted. "IP" is Express's `req.ip`, so how many proxy hops
+are trusted decides whose address it is: `RA_TRUST_PROXY` (`server/src/trustProxy.js`; unset = one
+hop when `NODE_ENV=production`, none otherwise — see [ENVIRONMENT.md](ENVIRONMENT.md)).
 
 **Errors common to every route, not repeated below:**
 
@@ -112,14 +114,14 @@ The limiters are mounted after `requireAuth` (`server/src/app.js:64-68`). So a s
 
 ## Health (`/api/health`)
 
-The build-identity probe, defined inline in the app factory (`server/src/app.js:56-62`).
+The build-identity probe, defined inline in the app factory (`server/src/app.js:57-63`).
 
 ### `GET /api/health`
 
 - **Who:** public (`server/src/auth/guards.js:15`).
 - **Request:** none.
 - **Response:** 200 `{status: "ok", timestamp: <ISO string>, build: {commit, branch, dirty?, reason?}}`
-  (`server/src/app.js:60-62`). The `build` shape is in `server/src/buildIdentity.js:45`. When nothing
+  (`server/src/app.js:61-63`). The `build` shape is in `server/src/buildIdentity.js:45`. When nothing
   supplied the commit or branch, those read `'unknown'` and `reason` says why (`server/src/buildIdentity.js:52-54`, `:66-67`).
 - **Errors:** none of its own.
 
@@ -141,7 +143,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 ### `POST /api/auth/setup`
 
 - **Who:** public (`server/src/auth/guards.js:17`), gated by a bootstrap token. Rate-limited per IP,
-  counting every request (`server/src/app.js:65`, `server/src/auth/rateLimit.js:34-42`).
+  counting every request (`server/src/app.js:66`, `server/src/auth/rateLimit.js:34-42`).
 - **Request:** header `x-bootstrap-token`, compared in constant time with `RA_BOOTSTRAP_TOKEN`. A
   token in the body is not read (header read at `server/src/auth/authRouter.js:57`, constant-time compare at `:63`,
   helper at `:28-32`). Body `{username: string, password: string}`, both required and
@@ -164,7 +166,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 ### `POST /api/auth/login`
 
 - **Who:** public (`server/src/auth/guards.js:18`). Rate-limited per IP, counting failures only
-  (`server/src/app.js:64`, `server/src/auth/rateLimit.js:18-26`).
+  (`server/src/app.js:65`, `server/src/auth/rateLimit.js:18-26`).
 - **Request:** body `{username, password}`. There is no explicit validation; a missing field simply
   fails to match. The username is looked up normalised (NFC, trimmed, lower-cased,
   `server/src/auth/usersStore.js:23-25`) (`server/src/auth/authRouter.js:204-205`).
@@ -190,7 +192,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 
 - **Who:** any signed-in user, and only for **their own** password. The target is
   `req.authUser.id` and never the body (`server/src/auth/authRouter.js:249-269`). It is not in
-  `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:68`,
+  `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:69`,
   `server/src/auth/rateLimit.js:74-83`).
 - **Request:** body `{currentPassword, newPassword}` (`server/src/auth/authRouter.js:265`).
   `newPassword` must be non-blank, by the store's rule (`server/src/auth/usersStore.js:270-281`,
@@ -1018,7 +1020,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 Installation-wide settings, one JSON file each in the data folder — today one, the test-aids switch
 (`server/src/routes/settings.js:1-12`, `server/src/settings/testAids.js`). Mounted at
-`server/src/app.js:78`. Read by every signed-in user, written by admins only, the same shape as the
+`server/src/app.js:79`. Read by every signed-in user, written by admins only, the same shape as the
 points rule above. TEST-AIDS-1, the owner's decision of 2026-10-04.
 
 ### `GET /api/settings/test-aids`

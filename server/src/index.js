@@ -14,6 +14,7 @@ import { sweepOrphanTmp } from '../utils/sweepOrphanTmp.js';
 import { resolveDataRoot } from './dataPaths.js';
 import { resolveBindAddress, listenOn } from './bindAddress.js';
 import { installGracefulShutdown } from './gracefulShutdown.js';
+import { resolveTrustProxy, trustProxyNotice } from './trustProxy.js';
 
 // ── RUNTIME-API-URL-1: THE ADDRESS IS JUDGED BEFORE ANYTHING LISTENS ───────────────────────────
 //
@@ -36,6 +37,7 @@ let bindAddress;
 try {
   assertPublicOriginUsable(process.env);
   bindAddress = resolveBindAddress(process.env);
+  resolveTrustProxy(process.env); // AUDIT-1 A5M-07: a value that is not a hop count stops here
 } catch (err) {
   // Deliberate: a refusal to start is what stderr is for. No eslint-disable is needed here —
   // `no-console` is configured as `["warn", { allow: ["warn", "error"] }]`
@@ -76,6 +78,9 @@ const server = listenOn(app, PORT, bindAddress, () => {
   // so refusing to start without one would break the arrangement SERVE-SPA-1 moved towards. The
   // reasoning is in startupReadiness.js; nothing here changes what the server does.
   reportStartupReadiness({ env: process.env, servingClient: clientBuildExists() });
+  // AUDIT-1 A5M-07: one line recommending RA_TRUST_PROXY while it is unset; see trustProxy.js.
+  const trustNotice = trustProxyNotice(process.env);
+  if (trustNotice) console.warn(trustNotice);
 });
 
 // AUDIT-1 A10-01: a SIGTERM (docker stop, compose down, `racearena update`) or a Ctrl+C lets the

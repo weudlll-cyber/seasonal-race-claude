@@ -26,13 +26,14 @@ import { buildIdentity } from './buildIdentity.js';
 import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLimit.js';
 import { mountClientAssets, mountSpaFallback, mountApiNotFound } from './staticClient.js';
 import { apiErrorHandler } from './apiErrorHandler.js';
+import { applyTrustProxy } from './trustProxy.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
 
 export function createApp() {
   const app = express();
-  if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+  applyTrustProxy(app); // AUDIT-1 A5M-07: RA_TRUST_PROXY; unset keeps the NODE_ENV rule
   app.use(
     helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } })
   );

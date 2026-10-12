@@ -221,7 +221,7 @@ The server speaks plain HTTP. **On a public address, HTTPS comes from a proxy in
 
 | path | how |
 | --- | --- |
-| Node | a reverse proxy such as Caddy, with `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in — DEPLOYMENT.md, *Behind a reverse proxy*, a tested example |
+| Node | a reverse proxy such as Caddy, with `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in and `RA_TRUST_PROXY=1` so the server believes the one proxy's forwarded address — DEPLOYMENT.md, *Behind a reverse proxy*, a tested example |
 | Docker | the same proxy; the shipped compose file publishes port 4000 on **every** interface, so close it in your own override file with `ports: !override` and `- "127.0.0.1:4000:4000"` (DEPLOYMENT.md, *Docker*) |
 | VPS install (branch feat/vps-install, not yet merged) | automatic: Caddy obtains and renews the certificate; only ports 22, 80 and 443 are open |
 
@@ -273,6 +273,7 @@ Read the first lines it prints; each start-up refusal names its cause.
 | no `RA_SESSION_SECRET` with `NODE_ENV=production` | refuses to start (`SESSION_SECRET_MISSING`) | set it in the settings (§5) |
 | `RA_PUBLIC_ORIGIN` set but malformed | refuses to start, naming what is wrong | correct the address |
 | `RA_BIND_ADDRESS` not an IP address | refuses to start, naming the variable | an IP address, or leave it out |
+| `RA_TRUST_PROXY` not a whole number | refuses to start, naming the variable | the number of proxies in front (`1` behind Caddy, `0` for none), or leave it out |
 | `RA_COOKIE_NAME_MODE=host` without a guaranteed secure cookie | refuses to start | leave the variable unset |
 | `sessions.sqlite` damaged | refuses to start: `SqliteError: file is not a database` | see *A damaged data file* below |
 | no client build present | **starts**, logs where it looked, and serves only the API | build the client (Node path, install step 3) |

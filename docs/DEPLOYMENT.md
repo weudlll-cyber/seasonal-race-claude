@@ -59,7 +59,7 @@ exactly as it always has.
 
 | Variable            | Example value                   | Why                                                                                                                                                                                                                                                                                            |
 | ------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`          | `production`                    | Enables Express production mode (trust-proxy, error sanitisation).                                                                                                                                                                                                                             |
+| `NODE_ENV`          | `production`                    | Enables Express production mode (one trusted proxy hop while `RA_TRUST_PROXY` is unset, error sanitisation).                                                                                                                                                                                                                   |
 | `RA_SESSION_SECRET` | `<64-char random string>`       | **Required in production** — the server refuses to start without it. Signs session cookies; rotating this invalidates all active sessions.                                                                                                                                                     |
 | `RA_BOOTSTRAP_TOKEN`| `<random string>`               | **Required to create the first admin.** Without it `POST /api/auth/setup` answers `403 setup not available` and the install can never be signed into. See [AUTH.md](AUTH.md).                                                                                                                  |
 | `RA_COOKIE_SECURE`  | `true` or `auto`                | Marks the session cookie `Secure` so it is only sent over HTTPS. Use `auto` to let Express infer from the trust-proxy setting; use `true` when you are certain HTTPS is always in use.                                                                                                        |
@@ -75,6 +75,7 @@ exactly as it always has.
 | `RA_DATA_DIR`      | `/var/lib/racearena`            | Redirects the whole runtime store. **See the warning below.**                                                                                  |
 | `PORT`             | `4000`                          | Listen port. Defaults to 4000.                                                                                                                 |
 | `RA_BIND_ADDRESS`  | `127.0.0.1`                     | The IP address the API listens on. Unset = every interface, as before. **Recommended `127.0.0.1` behind a reverse proxy.** Not an IP address → the server refuses to start. |
+| `RA_TRUST_PROXY`   | `1`                             | Reverse-proxy hops in front of the server: `1` behind one proxy, `0` when clients reach the port directly. Unset = one hop when `NODE_ENV=production`, none otherwise, as before, plus one startup line recommending it. Not a whole number → the server refuses to start. |
 | `RA_BACKUP_DIR`    | `/var/backups/racearena`        | Where `npm run backup` writes and where `npm run status` looks for the newest backup. Read by those two commands only, never by the server. |
 
 ## Install, update and roll back — from a release download
@@ -471,11 +472,17 @@ Caddy obtains and renews the certificate for that name by itself. The port must 
 ```sh
 NODE_ENV=production
 RA_BIND_ADDRESS=127.0.0.1
+RA_TRUST_PROXY=1
 RA_PUBLIC_ORIGIN=https://racearena.example.com
 ```
 
 - `RA_BIND_ADDRESS=127.0.0.1`: the server answers only on this machine, so the proxy is the only
   way in.
+- `RA_TRUST_PROXY=1`: exactly one proxy (Caddy) stands in front, so the server believes the
+  visitor address and protocol Caddy forwards, and the sign-in rate limit counts each visitor
+  separately. Unset, `NODE_ENV=production` trusts one hop anyway (the same behaviour, which is what
+  was tested below) and the server logs one line recommending the setting; `0` is for a port
+  that clients reach directly. See [ENVIRONMENT.md](ENVIRONMENT.md).
 - `RA_PUBLIC_ORIGIN` is the **https** address, exactly as visitors type it.
 - **Leave `RA_COOKIE_SECURE` unset.** In production it is on, and the server trusts the proxy's
   report that the visitor used https. The session cookie is then sent only over https, with the
@@ -563,7 +570,8 @@ succeeded and the image ran healthy with no mounts, but nothing here leads to th
 ## Notes
 
 - **Reverse proxy**: the tested configuration is [Behind a reverse proxy](#behind-a-reverse-proxy--a-tested-example-caddy)
-  above. `NODE_ENV=production` makes the server trust the proxy's forwarded protocol, and with
+  above. `RA_TRUST_PROXY=1` (or, while it is unset, `NODE_ENV=production`) makes the server trust
+  the proxy's forwarded protocol, and with
   `RA_COOKIE_SECURE` unset the cookie is `Secure` — that is what was tested. `RA_COOKIE_SECURE=auto`
   (Express decides per request from the forwarded protocol) also exists; it was not part of the test.
   Set `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in (install step 4).

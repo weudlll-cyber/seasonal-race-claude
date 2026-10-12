@@ -37,6 +37,9 @@ none of it should be relied on until it is merged. Each entry names its branch.
 
 ### Security
 
+- `RA_TRUST_PROXY`: the number of reverse proxies the server trusts for the visitor's address
+  (audit finding A5M-07). Left unset, nothing changes and the server says once at start that it
+  should be set. *(branch `fix/audit-1-decisions-server`)*
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
   keeps working. *(branch `feat/csp`)*

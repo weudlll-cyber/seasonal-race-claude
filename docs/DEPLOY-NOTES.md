@@ -162,11 +162,11 @@ without `RA_CLIENT_ORIGIN` would break the same-origin deployment the project is
 **What is true, and it was searched for rather than assumed.** An uncapped search of `server/`,
 `client/`, `scripts/` and `shared/` for `https.createServer`, `node:https`, `require('https')`,
 `from 'https'`, `createSecureServer`, `tls.`, `node:tls`, key/cert pairs, `letsencrypt` and `certbot`
-returns **nothing**. `server/src/index.js:60` is `listenOn(app, PORT, bindAddress, …)` — plain HTTP.
+returns **nothing**. `server/src/index.js:62` is `listenOn(app, PORT, bindAddress, …)` — plain HTTP.
 
 **But the server is TLS-aware and expects to sit behind a terminator:**
 
-- `server/src/app.js:34` — `if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)`
+- `server/src/trustProxy.js` — trusts `RA_TRUST_PROXY` hops; unset, one hop when `NODE_ENV=production`
 - `server/src/auth/session.js:23-29` — `resolveCookieSecure` marks the session cookie `Secure` in
   production, overridable with `RA_COOKIE_SECURE=true|false|auto`
 - `server/src/auth/session.js:35-43` — the cookie is named `__Host-ra.sid` when `Secure` is
@@ -244,7 +244,7 @@ behind a proxy. The Docker publish `4000:4000` below is untouched.
 rented server — **but it would remove a mode that works today.** The shipped model is same-origin:
 the server serves the built app *and* the API on one port (`DEPLOYMENT.md:9-13`), so a browser on
 another machine reaches `http://<host>:4000` directly, and a reverse proxy is described as optional
-(`DEPLOYMENT.md:227-228` recommends `RA_BIND_ADDRESS=127.0.0.1` behind one; the tested example is
+(`DEPLOYMENT.md:228-229` recommends `RA_BIND_ADDRESS=127.0.0.1` behind one; the tested example is
 `:452`). Binding to loopback breaks direct access
 and makes a proxy mandatory. **That is a decision about how the product may be run, so it is his.**
 

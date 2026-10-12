@@ -782,7 +782,7 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★★ **THE AUTH QUESTION, NARROWED TO TWO FALSIFIABLE ITEMS.** "Admin auth hardened for
       public-facing use" was an open row with no bar, which is why it could not be settled. The
       decisions behind it are settled; what is measurable is exactly two things:
-      **(1) CSP is switched off** — `server/src/app.js:36` runs
+      **(1) CSP is switched off** — `server/src/app.js:37` runs
       `helmet({ contentSecurityPolicy: false })`; **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
@@ -1802,18 +1802,13 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Security and access — his word
 
-- [ ] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one
-      proxy hop whenever `NODE_ENV=production`; on a source install with the port reachable directly,
-      `X-Forwarded-For` then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an
-      explicit `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed
-      logins against a directly exposed production-mode install — refused only after the fix)*
 - [ ] **AUDIT-1 A5M-12 · no write quota.** Any signed-in user can store unlimited races, tracks and
       10 MB images. Proposal: per-user write limits or a disk alarm. *(verify: a decision, then a test)*
 - [ ] **AUDIT-1 A5M-13 · records accept any field and any number.** `tracks.js:504` stores every extra
       body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
       *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
 - [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
-      edits any team's records (`docs/API.md:294`). *(verify: a decision — scope them, or record it)*
+      edits any team's records (`docs/API.md:296`). *(verify: a decision — scope them, or record it)*
 - [ ] **AUDIT-1 A5M-15 · the only password rule is "not blank".** `usersStore.js:30`; the installer
       asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
 - [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
@@ -1935,6 +1930,23 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `RA_TRUST_PROXY` is the number of trusted proxy hops (`0` = none); one home,
+      `server/src/trustProxy.js` (`resolveTrustProxy`, `applyTrustProxy`, `trustProxyNotice`),
+      applied in `createApp` and judged before anything listens in `index.js` — set but not a whole
+      number refuses to start, like `RA_BIND_ADDRESS`. Unset keeps the old rule exactly (one hop
+      when `NODE_ENV=production`, none otherwise) and logs one startup line recommending the
+      setting. Documented in ENVIRONMENT.md, DEPLOYMENT.md (the Caddy example sets
+      `RA_TRUST_PROXY=1`) and OPERATOR-GUIDE.md. Test: `server/src/trustProxy.test.js` — with
+      `NODE_ENV=production` and `RA_TRUST_PROXY=0` a forged `X-Forwarded-For` is not `req.ip`.
+      Setting it on the VPS stack is that branch's work. The row as it stood: **AUDIT-1 A5M-07 ·
+      trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one proxy hop whenever
+      `NODE_ENV=production`; on a source install with the port reachable directly, `X-Forwarded-For`
+      then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an explicit
+      `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed logins
+      against a directly exposed production-mode install — refused only after the fix)*
 
 - [x] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — CLOSED 2026-10-06 (SERVER-DEFECTS-1):
       BOTH FIXED AND MERGED.** (1) An `async` route whose unexpected error used to escape now answers
