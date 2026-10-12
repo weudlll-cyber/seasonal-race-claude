@@ -1853,8 +1853,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Visible changes — his eye
 
-- [ ] **AUDIT-1 A8-03 · the setup screen is 3 px wider than a 390 px phone.** *(verify: the same run
-      reports no overflow at 390)*
 - [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
       TrackManager), frozen by the language allowlist. *(verify: `check-language-closed` allowlist
       counts for the three files are 0)*
@@ -1930,6 +1928,16 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A8-03 · THE SETUP SCREEN FITS A 390 PX PHONE — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** The cause:
+      the header's branding dropdown is a flex item, and a flex item never shrinks below its content
+      by default — for a `<select>` that is its longest option ("Seasonal Entertainment"). Logo,
+      dropdown and gear needed 361 px inside a header with 2rem padding on each side, and the gear
+      ended at 393 px. The fix: the dropdown may shrink (`minWidth: 0`); at 390 px it is 137 px wide
+      instead of 172 px and still shows "Branding: None" whole; at 768 px and on a desktop nothing
+      moves. The audit's tool now reports no overflow at 390, 768 or desktop width. The row as it
+      stood: *"A8-03 · the setup screen is 3 px wider than a 390 px phone."*
 
 - [x] **AUDIT-1 A8-01 and A8-02 · DEV SCREEN AND TRACK EDITOR ACCESSIBILITY — CLOSED 2026-10-12
       (AUDIT-1 DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.**
