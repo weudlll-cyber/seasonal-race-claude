@@ -1771,6 +1771,9 @@ owner's hand**: parked here with enough context to be actionable months from now
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and the number has grown:** the built bundle is **874 KB** today (`client/dist/assets/index-*.js`), against the ≈763 KB the entry records and the 500 kB warning threshold. Waiting on the code-split.
 
+  ★ **DECIDED 2026-10-12: left as is** — AUDIT-1 A9-01 (1,007 KB, 295 KB gzipped) was decided that
+  day, and the decision covers this entry; see PART TWO.
+
 - ⏳ **CAMERA-GLIDE-PATH-1 — view-change detour.** A camera view change travels fast but takes a visible
   DETOUR rather than the direct line. Standing hypothesis: the pan is interpolated in **track space (T-lerp)**
   and so follows the curvature of the track, instead of on a straight **screen-space** line between the two
@@ -1807,25 +1810,15 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       `X-Forwarded-For` then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an
       explicit `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed
       logins against a directly exposed production-mode install — refused only after the fix)*
-- [ ] **AUDIT-1 A5M-12 · no write quota.** Any signed-in user can store unlimited races, tracks and
-      10 MB images. Proposal: per-user write limits or a disk alarm. *(verify: a decision, then a test)*
 - [ ] **AUDIT-1 A5M-13 · records accept any field and any number.** `tracks.js:504` stores every extra
       body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
       *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
-- [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
-      edits any team's records (`docs/API.md:294`). *(verify: a decision — scope them, or record it)*
 - [ ] **AUDIT-1 A5M-15 · the only password rule is "not blank".** `usersStore.js:30`; the installer
       asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
-- [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
-      (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
 - [ ] **SECURITY.md contact e-mail (with the domain).** [SECURITY.md](../SECURITY.md) names no
       e-mail address; it is to get one once the project has its own domain (decided 2026-10-12).
       Until then it points to GitHub's private vulnerability reporting, which is switched on.
       *(verify: SECURITY.md names a contact address at the project's domain)*
-- [ ] **AUDIT-1 A6-06 · licensing note:** the project is AGPL-3.0-or-later and the session store
-      `better-sqlite3-session-store` is GPL-3.0-only; the combination is permitted, and the "-only"
-      pins the shipped image's combined work to version 3. *(verify: a decision — accept, or replace
-      the store)*
 
 ### Robustness — his word
 
@@ -1840,9 +1833,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A10-07 · a damaged sessions file stops the server.** `SqliteError: file is not a
       database`, exit 1. Proposal: move it aside and start fresh (everyone signs in again).
       *(verify: `a10-corrupt.mjs` — "starts: yes" for the sessions scenario)*
-- [ ] **AUDIT-1 A12 · retention.** Player names are stored forever in `races.sqlite` (immutable rows,
-      no delete route) and backup archives are never pruned. *(verify: a decision; then a retention
-      rule with a test)*
 
 ### Visible changes — his eye
 
@@ -1860,8 +1850,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
       -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
       *(verify: each text read against `defaults.js`)*
-- [ ] **AUDIT-1 A9-01 · one 1,007 KB JavaScript chunk** (295 KB gzipped). Code splitting changes how
-      the app loads. *(verify: `npm run build` prints no chunk over 500 KB)*
 
 ### Records and decisions
 
@@ -1871,14 +1859,9 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A2-50 · `viewerProbe.js:414` passes world pixels where a normalised value belongs**
       (the file's own rule), so invariant 3 is too lenient. Fixing it changes the instrument's verdicts.
       *(verify: the probe's invariant-3 call uses the normalised band, re-measured)*
-- [ ] **AUDIT-1 A3-22 · CLAUDE.md's closing inventory** names two FINISH-PAIR-1 quotations in
-      `docs/fingerprints.json`, which carries none; CLAUDE.md forbids editing that list.
-      *(verify: a decision — annotate or leave)*
-- [ ] **AUDIT-1 A6-03 · about 200 MB of old measurement blobs in history.** Shrinking it rewrites every
-      SHA. *(verify: a decision)*
-- [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
-      better-sqlite3 13 — each a migration, none a security fix today. *(verify: a decision per
-      package)*
+- [ ] **AUDIT-1 A7-03 · major upgrades — after v1.0.0, one package at a time** (decided 2026-10-12):
+      React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
+      fix today. *(verify: a decision per package)*
 - [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
       covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
 
@@ -1921,6 +1904,38 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 — eight rows decided 2026-10-12: left as is.** Each reason in one line, from the row's
+      own text; each row as it stood follows its reason.
+      - **A5M-12 · no write quota** — decided 2026-10-12: left as is; every writer is a signed-in
+        account the operator created, so a quota would guard against the operator's own people. *(As
+        it stood: any signed-in user can store unlimited races, tracks and 10 MB images; proposal:
+        per-user write limits or a disk alarm.)*
+      - **A5M-14 · tracks, brands, racers and player groups are not team-scoped** — decided
+        2026-10-12: left as is, as decided 2026-10-01 — the tenancy boundary is not built, organizers
+        on one installation share these records and only races are scoped per team. *(As it stood:
+        any operator edits any team's records, `docs/API.md:294`.)*
+      - **A5M-16 · no per-account sign-in counter** — decided 2026-10-12: left as is; a lockout risk
+        for real users outweighs it, and the per-IP limiter stays. *(As it stood: the limiter keys
+        on the IP only, `rateLimit.js:16`; it can lock out a real user.)*
+      - **A6-06 · licensing note** — decided 2026-10-12: left as is; the combination is permitted,
+        and the store is kept. *(As it stood: the project is AGPL-3.0-or-later and
+        `better-sqlite3-session-store` is GPL-3.0-only; the "-only" pins the shipped image's combined
+        work to version 3.)*
+      - **A12 · retention** — decided 2026-10-12: left as is; stored races are kept for ever as
+        decided 2026-10-08, and backup archives are the operator's to prune (the VPS install on the
+        unmerged `feat/vps-install` keeps 14 days). *(As it stood: player names are stored forever in `races.sqlite`, immutable rows
+        with no delete route, and backup archives are never pruned.)*
+      - **A9-01 · one 1,007 KB JavaScript chunk** — decided 2026-10-12: left as is; code splitting
+        changes how the app loads, and the size is a build warning, not a failure. *(As it stood: 295 KB
+        gzipped; verify was `npm run build` printing no chunk over 500 KB.)*
+      - **A3-22 · CLAUDE.md's closing inventory** — decided 2026-10-12: left as is; CLAUDE.md
+        forbids editing that list, and the stale entry is recorded here and in the audit.
+        *(As it stood: the inventory names two FINISH-PAIR-1 quotations in `docs/fingerprints.json`,
+        which carries none.)*
+      - **A6-03 · about 200 MB of old measurement blobs in history** — decided 2026-10-12: left as
+        is; shrinking it rewrites every SHA, and every tag, stamp and register line names one.
+        *(As it stood: verify was a decision.)*
 
 - [x] **AUDIT-1 A3-25 · every un-struck item in OPEN.md §2-§5 is struck or backed by a row — CLOSED
       2026-10-12 (branch `chore/audit-1-decisions-repo`).** Item by item, checked at the tree:
