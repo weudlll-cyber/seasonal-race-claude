@@ -1874,8 +1874,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A3-22 · CLAUDE.md's closing inventory** names two FINISH-PAIR-1 quotations in
       `docs/fingerprints.json`, which carries none; CLAUDE.md forbids editing that list.
       *(verify: a decision — annotate or leave)*
-- [ ] **AUDIT-1 A3-25 · OPEN.md §2-§5 still show un-struck items** no row backs ("Pause and resume",
-      "HTTPS is not arranged", …). *(verify: each item either struck or backed by a PART ONE row)*
 - [ ] **AUDIT-1 A6-03 · about 200 MB of old measurement blobs in history.** Shrinking it rewrites every
       SHA. *(verify: a decision)*
 - [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
@@ -1883,6 +1881,29 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       package)*
 - [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
       covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
+
+### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
+
+Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
+a row here; the detail stays where it already lives in this part.
+
+- [ ] **Pause and resume a running race (`B-UX-Pause`).** Unbuilt: there is no pause or resume path in
+      `client/src/screens/RaceScreen/` (searched 2026-10-12). Its description and priority are under
+      *Phase B* in this part. *(verify: in the browser, pausing freezes the race loop and resuming
+      continues the same race)*
+- [ ] **The Phase V verification sittings — his eye.** Manual checks of shipped work that nobody has
+      performed: loading a saved player list (`V-1`), a track with missing geometry being refused
+      (`V-2`), backup → restore → reset end to end (`V-5`/`B-5`), the Dev Screen sections (`V-6`),
+      physics and collisions (`V-7`), storage edge cases (`V-8`), fullscreen (`V-9`). Each entry is
+      in this part under its id. *(verify: each id recorded as performed, with the date and the
+      result)*
+- [ ] **`Q-19` — the `TrackEditor.effects.test.jsx` flake, NARROWED and not closed.** 0 failures in 20
+      local full-suite runs (2026-09-24), and 0 in the 62 CI runs since then in which the client suite
+      ran (all 62 green; the 4 red CI runs of that period failed in the audit gate or the script
+      suite, not here) — 0 in 82. A one-in-five flake is refuted; a one-in-fifty one would still be
+      missed 19% of the time (0.98^82). Its own rule stands: close it on a much larger N, or when the
+      file goes. The entry is under *Phase Q* in this part. *(verify: a recorded N at which a
+      one-in-fifty flake would be missed less than 5% of the time — 150 runs — with 0 failures)*
 
 ### Test hygiene (no decision needed; not urgent)
 
@@ -1900,6 +1921,25 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A3-25 · every un-struck item in OPEN.md §2-§5 is struck or backed by a row — CLOSED
+      2026-10-12 (branch `chore/audit-1-decisions-repo`).** Item by item, checked at the tree:
+      **§2** *Pause and resume* — still unbuilt → a new PART ONE row. **§3.1** *the verification
+      sittings* — still unperformed → a new PART ONE row; its address `docs/BACKLOG.md:1743` (which
+      is *Re-apply --jobs parallelism*, A3-27) corrected to the `V-1`…`V-9` entries. **§3.2** *the
+      0.75 decisive phase* — struck: superseded on 2026-10-02, when SHIP-OWNER-COSMETIC-1 shipped the
+      owner's own camera settings (`062f5bb2`) and `outcomePhaseThreshold` went 0.75 → 0.65.
+      **§3.3** *`archive/front-group`* — struck: built and retired, superseded by CONTENDER-ZOOM-1
+      (TAGS.md, DEAD-ENDS.md §N); nothing is owed. **§4** *the flaky editor test* — still open by its
+      own rule → a new PART ONE row with the larger N (0 in 82). **§4** *4 solo breakaways and 9
+      pairs* — struck: closed by the owner's two decisions of 2026-09-24 (rows in this part).
+      **§5** *Going online* — backed by the GOING ONLINE row. **§5** *HTTPS is not arranged* —
+      struck: the same subject as GOING ONLINE, and its "sign-in stops working" claim is the one
+      corrected there (A3-26). **§5** *`deploy.yml.disabled`* — struck: closed 2026-09-25
+      (TRUTH-UP-1, a row in this part). A3-24 (the title date) already agreed with the header.
+      The row as it stood: **OPEN.md §2-§5 still show un-struck items** no row backs ("Pause and
+      resume", "HTTPS is not arranged", …). *(verify: each item either struck or backed by a PART ONE
+      row)*
 
 - [x] **AUDIT-1 B · the rest left on purpose — CLOSED 2026-10-12, item by item (branch
       `chore/audit-1-decisions-repo`).** The fate of each:
