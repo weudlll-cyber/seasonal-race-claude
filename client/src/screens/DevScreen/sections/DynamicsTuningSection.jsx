@@ -315,6 +315,7 @@ function DynamicsTuningSection({ part }) {
                   type="number"
                   data-testid="normal-speed-input"
                   className={s.input}
+                  aria-label="Normal Speed (px/s)"
                   min={10}
                   max={2000}
                   step={5}
@@ -351,6 +352,7 @@ function DynamicsTuningSection({ part }) {
                   type="number"
                   data-testid="min-speed-input"
                   className={s.input}
+                  aria-label="Min Speed"
                   min={0.0001}
                   max={0.005}
                   step={0.00001}
@@ -373,6 +375,7 @@ function DynamicsTuningSection({ part }) {
                   type="number"
                   data-testid="max-speed-input"
                   className={s.input}
+                  aria-label="Max Speed"
                   min={0.0001}
                   max={0.005}
                   step={0.00001}

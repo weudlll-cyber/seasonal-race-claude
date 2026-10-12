@@ -56,7 +56,6 @@ function SpriteSizeRangeSection() {
                 fontSize: '0.72rem',
                 cursor: 'pointer',
                 padding: '0.1rem 0.2rem',
-                opacity: 0.7,
               }}
             >
               Reset Sprite Size Cap

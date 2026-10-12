@@ -89,7 +89,7 @@ export default function TrackEditorSaveBar({
         <button className={s.saveBtn} disabled={saveDisabled} onClick={onSave}>
           {isSaving ? 'Saving…' : saveLabel}
         </button>
-        <select className={s.loadSelect} value="" onChange={onLoad}>
+        <select className={s.loadSelect} aria-label="Load track" value="" onChange={onLoad}>
           <option value="" disabled>
             Load track…
           </option>

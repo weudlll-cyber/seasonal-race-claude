@@ -98,6 +98,7 @@ function AutoScaleSection() {
             <input
               type="number"
               className={s.input}
+              aria-label="Reference Value"
               min={1}
               max={200}
               step={1}
@@ -125,6 +126,7 @@ function AutoScaleSection() {
             <input
               type="number"
               className={s.input}
+              aria-label="Min Scale"
               min={0.1}
               max={1}
               step={0.05}
@@ -159,6 +161,7 @@ function AutoScaleSection() {
             <input
               type="number"
               className={s.input}
+              aria-label="Max Scale"
               min={1}
               max={5}
               step={0.1}
@@ -225,6 +228,7 @@ function AutoScaleSection() {
             <input
               type="number"
               className={s.input}
+              aria-label="Track Width (px)"
               min={50}
               max={2000}
               step={10}
@@ -243,6 +247,7 @@ function AutoScaleSection() {
             <input
               type="number"
               className={s.input}
+              aria-label="Racer Count"
               min={1}
               max={50}
               step={1}

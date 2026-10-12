@@ -123,8 +123,10 @@
   color: var(--color-text);
 }
 
+/* Not var(--color-primary): white on #e63946 is 4.2:1, short of WCAG AA's 4.5:1 for this
+   small text (AUDIT-1 A8-01). The same red, 5% darker, is 4.5:1. */
 .tierToggleBtnActive {
-  background: var(--color-primary);
+  background: #db3643;
   color: #fff;
 }
 

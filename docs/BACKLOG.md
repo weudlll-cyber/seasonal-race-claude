@@ -1853,11 +1853,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Visible changes — his eye
 
-- [ ] **AUDIT-1 A8-01 · Dev Screen accessibility:** colour contrast fails on the active tier toggle
-      and the reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2).
-      *(verify: `browser-audit.mjs <clone> <out> a8` reports 0 rules on `/dev`)*
-- [ ] **AUDIT-1 A8-02 · Track Editor:** two `<select>` elements without an accessible name.
-      *(verify: the same run reports 0 on `/track-editor`)*
 - [ ] **AUDIT-1 A8-03 · the setup screen is 3 px wider than a 390 px phone.** *(verify: the same run
       reports no overflow at 390)*
 - [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
@@ -1935,6 +1930,21 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A8-01 and A8-02 · DEV SCREEN AND TRACK EDITOR ACCESSIBILITY — CLOSED 2026-10-12
+      (AUDIT-1 DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.**
+      Contrast: the active View toggle's red is darkened 5% in that one rule (`#e63946` → `#db3643`,
+      white text 4.2:1 → 4.5:1; the shared `--color-primary` is unchanged, because it colours every
+      primary button); the Reset buttons lose their 0.7 fade and show the full muted grey (3.1:1 →
+      4.9:1 on a card). Names: the ten number fields carry their visible label as `aria-label`, and
+      the editor's two dropdowns are "Track lights style" and "Load track". axe 4.10.2 now reports 0
+      rules on `/dev` (its first chapter, which is what the audit's tool sees) and on
+      `/track-editor`; pinned by `DevScreen.a11yNames.test.jsx` and the Track Lights test. **Not in
+      the audit's view and left as found:** the other six chapters still carry contrast and label
+      findings of the same kinds (the shared primary button among them). The rows as they stood:
+      *"A8-01 · Dev Screen accessibility: colour contrast fails on the active tier toggle and the
+      reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2)"* and *"A8-02 ·
+      Track Editor: two `<select>` elements without an accessible name."*
 
 - [x] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — CLOSED 2026-10-06 (SERVER-DEFECTS-1):
       BOTH FIXED AND MERGED.** (1) An `async` route whose unexpected error used to escape now answers

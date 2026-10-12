@@ -166,6 +166,7 @@ export default function TrackEditorToolbar({
           </label>
           <select
             data-testid="track-lights-style"
+            aria-label="Track lights style"
             value={trackLights.style}
             onChange={(e) => onLightsStyleChange(e.target.value)}
             style={{ fontSize: '0.8rem' }}

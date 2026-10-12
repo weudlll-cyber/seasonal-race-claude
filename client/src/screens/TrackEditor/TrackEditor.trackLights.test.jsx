@@ -94,6 +94,13 @@ describe('TrackEditor — Track Lights section', () => {
     expect(screen.getByText('Track Lights')).toBeTruthy();
   });
 
+  // AUDIT-1 A8-02: the editor's two dropdowns had no accessible name (axe select-name).
+  it('names the Style dropdown and the load dropdown for assistive technology', () => {
+    renderEditor();
+    expect(screen.getByRole('combobox', { name: 'Track lights style' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Load track' })).toBeTruthy();
+  });
+
   it('renders a color input (type=color)', () => {
     const { container } = renderEditor();
     const colorInput = container.querySelector('input[type="color"]');

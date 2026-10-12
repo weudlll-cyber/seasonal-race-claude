@@ -175,7 +175,6 @@ function StateProfileBlock({ stateName, profile, defaults, onChangeField, onRese
               fontSize: '0.68rem',
               cursor: 'pointer',
               padding: '0.1rem 0.2rem',
-              opacity: 0.7,
             }}
           >
             Reset state
