@@ -1160,6 +1160,9 @@ function SetupScreen() {
               padding: '0.15rem 0.4rem',
               cursor: 'pointer',
               marginLeft: 'auto',
+              // A flex item never shrinks below its content by default, and a select's content is
+              // its longest option: at 390 px the header overflowed by 3 px (AUDIT-1 A8-03).
+              minWidth: 0,
             }}
             aria-label="Active branding profile"
           >

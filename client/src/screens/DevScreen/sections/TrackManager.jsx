@@ -152,9 +152,7 @@ function TrackManager() {
 
   async function handleDelete(id, isDefault) {
     if (isDefault) {
-      setDeleteError(
-        'Eine Default-Strecke kann nicht gelöscht werden. Entferne zuerst den Default-Status.'
-      );
+      setDeleteError('A default track cannot be deleted. Remove its default status first.');
       return;
     }
     if (!window.confirm('Delete this track? This cannot be undone.')) return;
