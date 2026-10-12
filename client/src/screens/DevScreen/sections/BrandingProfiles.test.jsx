@@ -399,7 +399,7 @@ describe('BrandingProfiles — delete brand', () => {
 //  API is never called and confirm never shown.)
 
 describe('BrandingProfiles — default brand: client-side guard', () => {
-  it('shows German error immediately without calling confirm or deleteBrand', async () => {
+  it('shows the error immediately without calling confirm or deleteBrand', async () => {
     fetchBrands.mockResolvedValue([DEFAULT_BRAND]);
     const confirmSpy = vi.spyOn(window, 'confirm');
 
@@ -411,7 +411,7 @@ describe('BrandingProfiles — default brand: client-side guard', () => {
     });
 
     const alert = screen.getByRole('alert');
-    expect(alert.textContent).toMatch(/Ein Default-Brand kann nicht gelöscht werden/i);
+    expect(alert.textContent).toMatch(/A default brand cannot be deleted/i);
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(deleteBrand).not.toHaveBeenCalled();
   });
@@ -509,17 +509,17 @@ describe('BrandingProfiles — Invariant 10: only syncBrandingMirror writes KEYS
 
 // ── DefaultControls smoke test ────────────────────────────────────────────────
 
-// ── L126: Default-Lösch-Guard ─────────────────────────────────────────────────
-// OHNE isDefault-Check: confirm + API werden aufgerufen → ROT
-// MIT isDefault-Check:  Fehlermeldung sofort, kein confirm, kein API-Call → GRÜN
+// ── L126: the default-delete guard ────────────────────────────────────────────
+// WITHOUT the isDefault check: confirm + API are called → RED
+// WITH the isDefault check:    error at once, no confirm, no API call → GREEN
 
-describe('BrandingProfiles — handleDelete: Default-Brand wird sofort abgelehnt', () => {
+describe('BrandingProfiles — handleDelete: a default brand is refused at once', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchBrands.mockResolvedValue([DEFAULT_BRAND]); // isDefault: true
   });
 
-  it('zeigt sofort Fehlermeldung, ruft weder confirm noch deleteBrand auf', async () => {
+  it('shows the error at once and calls neither confirm nor deleteBrand', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     renderProfiles();
     await waitFor(() => screen.getByText('Seasonal Entertainment'));
@@ -528,12 +528,12 @@ describe('BrandingProfiles — handleDelete: Default-Brand wird sofort abgelehnt
       fireEvent.click(screen.getByTitle('Delete'));
     });
 
-    expect(screen.getByText(/Ein Default-Brand kann nicht gelöscht werden/i)).toBeInTheDocument();
+    expect(screen.getByText(/A default brand cannot be deleted/i)).toBeInTheDocument();
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(deleteBrand).not.toHaveBeenCalled();
   });
 
-  it('normaler (nicht-default) Brand zeigt confirm und ruft API auf', async () => {
+  it('a normal (non-default) brand shows confirm and calls the API', async () => {
     fetchBrands.mockResolvedValue([CUSTOM_BRAND]); // isDefault: false
     deleteBrand.mockResolvedValue(undefined);
     vi.spyOn(window, 'confirm').mockReturnValue(true);

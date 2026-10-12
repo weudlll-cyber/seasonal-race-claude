@@ -1853,9 +1853,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Visible changes — his eye
 
-- [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
-      TrackManager), frozen by the language allowlist. *(verify: `check-language-closed` allowlist
-      counts for the three files are 0)*
 - [ ] **AUDIT-1 A2 · Dev Screen info texts that contradict the shipped settings** — "shipped OFF"
       for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
       -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
@@ -1928,6 +1925,16 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A3-19 · THE THREE GERMAN ALERTS ARE ENGLISH — CLOSED 2026-10-12 (AUDIT-1 DECISIONS),
+      on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** Deleting a default
+      record now says *"A default brand cannot be deleted. Remove its default status first."* (and
+      the same for a default group and a default track) in BrandingProfiles, PlayerGroupsManager
+      and TrackManager. Their three test files assert the English text, and their German test
+      names and comments are English too. All six files left `check-language-closed`'s allowlist
+      (27 files with German → 21; the guard passes, and its test's frozen record keeps the paths,
+      which is that list's rule). The row as it stood: *"A3-19 · three German alerts users see
+      (BrandingProfiles, PlayerGroupsManager, TrackManager), frozen by the language allowlist."*
 
 - [x] **AUDIT-1 A8-03 · THE SETUP SCREEN FITS A 390 PX PHONE — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** The cause:
