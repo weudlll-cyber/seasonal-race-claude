@@ -1888,12 +1888,6 @@ a row here; the detail stays where it already lives in this part.
       file goes. The entry is under *Phase Q* in this part. *(verify: a recorded N at which a
       one-in-fifty flake would be missed less than 5% of the time — 150 runs — with 0 failures)*
 
-### Test hygiene (no decision needed; not urgent)
-
-- [ ] **AUDIT-1 A4-02 · two Dev Screen test files run ~9.5 s against a 10 s `beforeAll` limit** and
-      time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
-      run with a parallel `docker build`)*
-
 ---
 
 # PART TWO — CLOSED
@@ -1904,6 +1898,21 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A4-02 · the two Dev Screen chapter walks have headroom — CLOSED 2026-10-12 (branch
+      `chore/audit-1-decisions-repo`).** `devScreenChapters.guard.test.jsx` and
+      `.savedSettings.test.jsx` pass `CHAPTER_WALK_TIMEOUT_MS = 60_000` to their `beforeAll`, with a
+      comment saying why; vitest's other limits are untouched, so a hung walk still fails. Measured:
+      unloaded the files take ~4.6 s each; under load — the full client suite with coverage
+      (`npm run test:coverage`) running beside a browser sweep (`viewer-invariants`, a build, two
+      servers and Chromium) — they took **20.2 s and 15.2 s and passed**, where the old 10 s hook
+      limit would have failed them. Sabotage: the limit set to 2 s turned the guard file red ("Hook
+      timed out in 2000ms"); restored, green. ★ **Noticed in that same loaded run, not changed:**
+      `src/modules/sim-fairness.test.js` › *computeFairnessStats over 10 races* timed out at vitest's
+      5 s test limit (7.8 s) — the same load-sensitivity in a third file; the other 5,070 tests passed.
+      The row as it stood: **two Dev Screen test files run ~9.5 s against a 10 s `beforeAll` limit**
+      and time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
+      run with a parallel `docker build`)*
 
 - [x] **AUDIT-1 — eight rows decided 2026-10-12: left as is.** Each reason in one line, from the row's
       own text; each row as it stood follows its reason.
