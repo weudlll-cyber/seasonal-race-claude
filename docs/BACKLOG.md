@@ -1818,11 +1818,13 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
 - [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
       (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
+- [ ] **SECURITY.md contact e-mail (with the domain).** [SECURITY.md](../SECURITY.md) names no
+      e-mail address; it is to get one once the project has its own domain (decided 2026-10-12).
+      Until then it points to GitHub's private vulnerability reporting, which is switched on.
+      *(verify: SECURITY.md names a contact address at the project's domain)*
 - [ ] **AUDIT-1 A5T-06 · master is unprotected** — no branch protection, no ruleset. Proposal: forbid
       force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
       is not `[]`)*
-- [ ] **AUDIT-1 A5T-07 · Dependabot alerts, private vulnerability reporting and a SECURITY.md are all
-      absent.** *(verify: `gh api …/vulnerability-alerts` answers 204; a SECURITY.md names a contact)*
 - [ ] **AUDIT-1 A5T-08 · the "require SHA pinning" Actions setting is off**; every workflow pins
       anyway since `c369ea81`. *(verify: `gh api …/actions/permissions` shows
       `"sha_pinning_required": true`)*
@@ -1932,6 +1934,20 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A5T-07 · Dependabot alerts, private vulnerability reporting and a SECURITY.md —
+      CLOSED 2026-10-12 (AUDIT-1 decisions).** The two repository settings were switched on that day
+      with `gh api`: `gh api -i …/vulnerability-alerts` answers **204** (it answered 404
+      "Vulnerability alerts are disabled." before), and `gh api …/private-vulnerability-reporting`
+      answers `{"enabled":true}` (it was `false`). [SECURITY.md](../SECURITY.md) is new at the
+      repository root (branch `chore/audit-1-decisions-repo`): reports go privately through GitHub's
+      "Report a vulnerability" on the Security tab; the scope is the server, the client, the shipped
+      image and compose file, and the repository's own scripts; only the newest release gets fixes.
+      It is linked from `README.md` and `docs/OPERATOR-GUIDE.md` §5, and registered in the root
+      document lists of `check-doc-links` and `check-measured-stamps`. ★ **The contact e-mail address
+      is not in it yet** — it follows the domain, and is its own PART ONE row. The row as it stood:
+      **Dependabot alerts, private vulnerability reporting and a SECURITY.md are all absent.**
+      *(verify: `gh api …/vulnerability-alerts` answers 204; a SECURITY.md names a contact)*
 
 - [x] **AUDIT-1 A5T-02 · root `sharp` lifted to 0.35 — CLOSED 2026-10-12 (AUDIT-1 decisions,
       branch `chore/audit-1-decisions-repo`).** The root dev dependency moved from `^0.34.5` to

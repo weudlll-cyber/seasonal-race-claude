@@ -122,6 +122,9 @@ and what a public install would need.
 
 **[OPERATOR-GUIDE.md](docs/OPERATOR-GUIDE.md) is for the person who runs the server**: health, logs, backups, restore, updates, accounts and trouble, task by task.
 
+**[SECURITY.md](SECURITY.md) says how to report a security problem** — privately, through GitHub's
+"Report a vulnerability" on the Security tab — what is in scope, and which version gets fixes.
+
 ---
 
 ## How results are kept and restored

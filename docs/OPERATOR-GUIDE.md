@@ -256,6 +256,13 @@ The app itself also limits failed sign-ins per IP address and failed password ch
 
 What is stored, where, for how long and who can read it is [PRIVACY-FACTS.md](PRIVACY-FACTS.md)'s.
 
+### Reporting a security problem
+
+If you find a weakness in RaceArena itself, report it privately as [SECURITY.md](../SECURITY.md)
+describes — through GitHub's "Report a vulnerability" on the repository's Security tab, not in a
+public issue. Only the newest release receives security fixes, so keep your install updated
+(section 3).
+
 ---
 
 ## 6. When something goes wrong

@@ -42,6 +42,9 @@ none of it should be relied on until it is merged. Each entry names its branch.
   keeps working. *(branch `feat/csp`)*
 - The data and backup folders on a single-server install are private to the app's own account
   (audit finding A5M-06), also after a restore. *(branch `feat/vps-install`)*
+- `SECURITY.md`: how to report a security problem privately (GitHub's "Report a vulnerability"),
+  what is in scope, and that only the newest release receives fixes.
+  *(branch `chore/audit-1-decisions-repo`)*
 
 ## [1.0.0] — not yet tagged
 
