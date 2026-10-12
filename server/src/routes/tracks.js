@@ -33,6 +33,13 @@ import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 import { removeStoredAsset } from '../../utils/removeStoredAsset.js';
 import { pruneTrackBackups } from '../../utils/trackBackupRetention.js';
+import {
+  unknownFields,
+  unknownFieldsMessage,
+  checkNumber,
+  checkString,
+  checkNestedNumbers,
+} from '../../utils/recordFields.js';
 
 const DATA_DIR = join(DATA_ROOT, 'tracks');
 const BG_DIR = join(DATA_ROOT, 'backgrounds');
@@ -136,6 +143,116 @@ const COORD_BOUND = 10000;
 // Longest existing default track name is 14 chars ("Mountainstreet"). 100 is
 // generous while blocking megabyte-length strings.
 const TRACK_NAME_MAX = 100;
+
+// ── The field allow-list and the number bounds (AUDIT-1 A5M-13, the owner's decision 2026-10-12) ──
+//
+// THE ONE ROUTE OF THE FOUR THAT SPREADS ITS BODY into the stored record, so before this every extra
+// field was stored. The list is the union of: what the Track Editor sends
+// (client/src/screens/TrackEditor/trackEditorSave.js `buildTrackFromEditorState`, plus `geometryId`
+// from useTrackIO.js), what the Dev Screen Track Manager sends (TrackManager.jsx, including its
+// constant `isDefault: false`), every key of the ten seeds (`difficulty`, `defaultWinners`, …), the
+// server's own fields, the GET summary's `pointCount`, and the legacy names the Track Manager still
+// reads as fallbacks (`defaultDuration`, `racerTypeId`, `racerId`) and `trackWidth` (removed in
+// D7c-fix-v2, may still be stored). In doubt a field is ALLOWED: a refused re-save is the worse
+// failure. Server-owned fields stay allowed and are overwritten by the route as before. On an
+// update, keys the stored record already has and values equal to the stored ones always pass
+// (server/utils/recordFields.js). `effects[]` entries and `trackLights` keep open keys — the editor
+// re-sends a stored entry whole — but every number inside an effect is bounded.
+const TRACK_FIELDS = new Set([
+  'id',
+  'name',
+  'icon',
+  'description',
+  'color',
+  'difficulty',
+  'defaultRacerTypeId',
+  'defaultLaps',
+  'defaultDurationSec',
+  'defaultWinners',
+  'maxRacers',
+  'surfaceClasses',
+  'trackLights',
+  'effects',
+  'closed',
+  'sourceMode',
+  'width',
+  'pathLengthPx',
+  'worldWidth',
+  'worldHeight',
+  'centerPoints',
+  'innerPoints',
+  'outerPoints',
+  'geometryId',
+  'isDefault',
+  'backgroundImage',
+  'backgroundImageFile',
+  'createdAt',
+  'updatedAt',
+  'pointCount',
+  'defaultDuration',
+  'racerTypeId',
+  'racerId',
+  'trackWidth',
+]);
+
+// Each bound is at least as wide as the editors and the seeds (seed ranges in brackets):
+// world size — the Track Editor takes the background's own size, capped MAX_BG_W 8000 × MAX_BG_H
+// 4096 [3072–6144 × 2047–4096], so COORD_BOUND, which the points already use; lane `width` — slider
+// 20–300, a stored value loads unclamped [131–300]; `pathLengthPx` — a computed spline length
+// [4773–19772]; laps — pills 1–10, any stored value ≥ 1 passes through [2]; duration — pills
+// 30–120 s, a stored or legacy value passes through [60–90]; `maxRacers` — input 1–500 that can be
+// typed past, and an auto value of rows × racers per row [null]; `defaultWinners` — unread [3].
+const TRACK_NUMBER_BOUNDS = {
+  worldWidth: { min: 1, max: COORD_BOUND },
+  worldHeight: { min: 1, max: COORD_BOUND },
+  width: { min: 0, max: COORD_BOUND },
+  pathLengthPx: { min: 0, max: 10_000_000 },
+  defaultLaps: { min: 0, max: 1000 },
+  defaultDurationSec: { min: 0, max: 86_400 },
+  defaultDuration: { min: 0, max: 86_400_000 },
+  maxRacers: { min: 0, max: 100_000, nullable: true },
+  defaultWinners: { min: 0, max: 1000 },
+  trackWidth: { min: 0, max: COORD_BOUND },
+};
+
+// Text: generous against every editor limit (name 40, icon 4, description 100, colour 7).
+const TRACK_STRING_BOUNDS = {
+  icon: { max: 100 },
+  description: { max: 5000 },
+  color: { max: 100 },
+  difficulty: { max: 100 },
+  defaultRacerTypeId: { max: 200 },
+  sourceMode: { max: 100 },
+  createdAt: { max: 100 },
+};
+
+// Every number inside an effect: the largest slider is `count` (240000, and `count` keeps its own
+// stricter rule in `validateEffects`); the others are 0–5 or so. One generous bound for open keys.
+const EFFECT_NUMBER_BOUND = EFFECT_COUNT_MAX;
+
+/** The allow-list and bound errors for a create (`existing` null) or an update. */
+function validateTrackFields(body, existing) {
+  const errors = [];
+  const unknown = unknownFields(body, TRACK_FIELDS, existing);
+  if (unknown.length) errors.push(unknownFieldsMessage(unknown, 'A track'));
+  for (const [key, bound] of Object.entries(TRACK_NUMBER_BOUNDS)) {
+    // worldWidth/Height and maxRacers keep their own type messages in the validators below.
+    if (key in body && typeof body[key] !== 'number' && body[key] !== null) {
+      if (key === 'worldWidth' || key === 'worldHeight' || key === 'maxRacers') continue;
+    }
+    const err = checkNumber(body, key, bound, existing);
+    if (err) errors.push(err);
+  }
+  for (const [key, bound] of Object.entries(TRACK_STRING_BOUNDS)) {
+    const err = checkString(body, key, bound, existing);
+    if (err) errors.push(err);
+  }
+  if (Array.isArray(body.effects)) {
+    const err = checkNestedNumbers(body.effects, 'effects', EFFECT_NUMBER_BOUND);
+    if (err) errors.push(err);
+  }
+  return errors;
+}
 
 function isFiniteCoord(v) {
   return typeof v === 'number' && isFinite(v) && Math.abs(v) <= COORD_BOUND;
@@ -486,7 +603,7 @@ router.get('/:id/background', (req, res) => {
 
 // POST /api/tracks — create a new track
 router.post('/', (req, res) => {
-  const errors = validateTrackBodyForCreate(req.body);
+  const errors = [...validateTrackBodyForCreate(req.body), ...validateTrackFields(req.body, null)];
   if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
   const id = generateId();
@@ -504,7 +621,9 @@ router.post('/', (req, res) => {
     // are seeded: closed geometries read defaultLaps, open ones defaultDurationSec.
     defaultLaps: 2,
     defaultDurationSec: 60,
-    defaultWinners: 3,
+    // No `defaultWinners` (AUDIT-1 A2-14, 2026-10-12): nothing has read it since the podium became
+    // three places everywhere (REMOVE-WINNERS-SETTING-1). The ten seed records keep theirs, byte for
+    // byte, so no installation is redelivered; a stored track that has it keeps it on every save.
     surfaceClasses: [],
     trackLights: CUSTOM_TRACK_LIGHTS_DEFAULT,
     ...rest,
@@ -530,7 +649,10 @@ router.put('/:id', (req, res) => {
   const existing = tracksMap.get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Track not found' });
 
-  const errors = validateTrackBodyForUpdate(req.body);
+  const errors = [
+    ...validateTrackBodyForUpdate(req.body),
+    ...validateTrackFields(req.body, existing),
+  ];
   if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
   const { backgroundImage: _backgroundImage, ...rest } = req.body;

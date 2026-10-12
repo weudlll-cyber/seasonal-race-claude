@@ -47,9 +47,10 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const PLUGIN_SRC = join(process.cwd(), 'vite-plugin-ra-build.js');
+// Resolved from this file, not from the working directory (AUDIT-1 A4-03).
+const PLUGIN_SRC = fileURLToPath(new URL('../../vite-plugin-ra-build.js', import.meta.url));
 const temps = [];
 
 /**

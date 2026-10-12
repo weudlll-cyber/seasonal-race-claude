@@ -74,7 +74,7 @@ describe('POST /api/auth/setup — the log says which 403 it was, the response n
     const res = await request(appWith(() => TOKEN))
       .post('/api/auth/setup')
       .set('x-bootstrap-token', WRONG)
-      .send({ username: 'admin', password: 'pw123456' });
+      .send({ username: 'admin', password: 'pw123456-0' });
 
     expect(res.status).toBe(403);
     const lines = warn.mock.calls.map((c) => c.join(' '));
@@ -89,7 +89,7 @@ describe('POST /api/auth/setup — the log says which 403 it was, the response n
     const res = await request(appWith(() => TOKEN))
       .post('/api/auth/setup')
       .set('x-bootstrap-token', TOKEN)
-      .send({ username: 'admin', password: 'pw123456' });
+      .send({ username: 'admin', password: 'pw123456-0' });
 
     expect(res.status).toBe(201);
     // NOT `expect(warn).not.toHaveBeenCalled()`, and the reason is named rather than worked around:
@@ -108,12 +108,12 @@ describe('POST /api/auth/setup — the log says which 403 it was, the response n
     const mismatch = await request(appWith(() => TOKEN))
       .post('/api/auth/setup')
       .set('x-bootstrap-token', WRONG)
-      .send({ username: 'admin', password: 'pw123456' });
+      .send({ username: 'admin', password: 'pw123456-0' });
 
     const notConfigured = await request(appWith(() => null))
       .post('/api/auth/setup')
       .set('x-bootstrap-token', WRONG)
-      .send({ username: 'admin', password: 'pw123456' });
+      .send({ username: 'admin', password: 'pw123456-0' });
 
     expect(mismatch.status).toBe(403);
     expect(notConfigured.status).toBe(mismatch.status);
@@ -128,7 +128,7 @@ describe('POST /api/auth/setup — the log says which 403 it was, the response n
     await request(appWith(() => TOKEN))
       .post('/api/auth/setup')
       .set('x-bootstrap-token', WRONG)
-      .send({ username: 'admin', password: 'pw123456' });
+      .send({ username: 'admin', password: 'pw123456-0' });
 
     const logged = warn.mock.calls.flat().join(' ');
     expect(logged).not.toContain(TOKEN);
@@ -144,7 +144,7 @@ describe('POST /api/auth/setup — the log says which 403 it was, the response n
     await request(appWith(() => null))
       .post('/api/auth/setup')
       .set('x-bootstrap-token', WRONG)
-      .send({ username: 'admin', password: 'pw123456' });
+      .send({ username: 'admin', password: 'pw123456-0' });
 
     const lines = warn.mock.calls.map((c) => c.join(' '));
     expect(lines).toHaveLength(1);

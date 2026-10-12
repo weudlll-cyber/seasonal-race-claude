@@ -20,13 +20,15 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import RA_BUILD from 'virtual:ra-build';
 import { formatBuildLabel } from './buildInfo.js';
 
-const SRC = join(process.cwd(), 'src');
-const RACE_SCREEN = readFileSync(join(SRC, 'screens/RaceScreen/index.jsx'), 'utf8');
-const VITE_CONFIG = readFileSync(join(process.cwd(), 'vite.config.js'), 'utf8');
+// Resolved from this file (client/src/modules/), not from the working directory (AUDIT-1 A4-03).
+const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const RACE_SCREEN = readFileSync(join(CLIENT, 'src/screens/RaceScreen/index.jsx'), 'utf8');
+const VITE_CONFIG = readFileSync(join(CLIENT, 'vite.config.js'), 'utf8');
 
 /** Strip comments so a mention in prose is not mistaken for a reader. */
 const codeOnly = (s) =>

@@ -254,7 +254,7 @@ describe('GAP-BRAKE-1 — the gate is a SIZE, and it is unchanged', () => {
   });
 
   it('the authority never exceeds the engine’s own maximum braking', () => {
-    // 1 - minMult is the floor the outcome controller clamps every target to (racePlanner.js:103),
+    // 1 - minMult is the floor the outcome controller clamps every target to (racePlanner.js:104),
     // and the owner's instruction was that the brake may never ask for more than the steering could.
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority).toBeLessThanOrEqual(
       1 - DEFAULT_CONTROLLER_PARAMS.minMult

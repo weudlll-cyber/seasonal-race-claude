@@ -286,10 +286,15 @@ test("ROUTED TO THE SERVER SUITE: a change under server/ selects the suite that 
   // pull-in lives in `plan()` and states itself in the guard's own reason line. Same rule as above:
   // the expected set follows the behaviour, and a set that stopped growing here would be asserting
   // that the dependency is not wired.
+  //
+  // AUDIT-1 A7-02 (2026-10-12) GREW IT A SIXTH TIME: `scripts/runtime-node.test.mjs` now reads the
+  // manifest's `engines` floor through `join(ROOT, "server/package.json")`, so by `dataReach`'s rule
+  // a manifest change selects the script suite as well.
   assert.deepEqual(routesTo("server/package.json"), [
     "check-client-build",
     "check-image-starts",
     "check-language-closed",
+    "script-suite",
     "server-format-check",
     "server-lint",
     "server-suite",

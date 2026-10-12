@@ -12,7 +12,7 @@
 //              naturalness ceiling-cap (computeDirectorCeiling / NATURALNESS_CEILING). Position +
 //              seed only — NEVER the target-rank assignment.
 //
-//              Shared by the browser engine (RaceScreen/index.jsx) and the headless sim
+//              Shared by the browser engine (raceCore.js `stepRacePhysics`) and the headless sim
 //              (sim-fairness.mjs) so both drive the identical mechanism (single source). Reuses
 //              easeInOutCubic. DETERMINISTIC (selection by live rank + signed distance + index; no
 //              Math.random) and hero-INCLUSIVE for the leader brake (heroes are never boosted).
@@ -35,7 +35,7 @@ import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 // importers (GovernorDiagHUD, sim-fairness, tests) keep the same import path, unchanged.
 export { arcT };
 
-// Hard naturalness leitplanke: the effective director ceiling may NEVER exceed +20% of the field
+// Hard naturalness guardrail: the effective director ceiling may NEVER exceed +20% of the field
 // mean, regardless of band width or configured boost-headroom. Enforced in computeDirectorCeiling.
 export const NATURALNESS_CEILING = 1.2;
 
@@ -47,7 +47,7 @@ export const NATURALNESS_CEILING = 1.2;
  * challenger may burst past the fastest natural racer — reviving the otherwise cap-eaten catch-up
  * boost. Additive (not multiplicative) so it scales correctly as the band width changes.
  *
- * Hard-clamped to NATURALNESS_CEILING (1.20) so no config/band can breach the ±20% leitplanke:
+ * Hard-clamped to NATURALNESS_CEILING (1.20) so no config/band can breach the ±20% guardrail:
  * at a wide band the available headroom shrinks automatically (±14% band max ≈ 1.143 → clamp allows
  * ≈ +6 pts; ±8% band max ≈ 1.081 → allows ≈ +12 pts).
  *
@@ -64,12 +64,14 @@ export function computeDirectorCeiling(baseSpeedMax, baseSpeedMean, boostHeadroo
   return Math.min(bandMax + Math.max(0, boostHeadroom || 0), NATURALNESS_CEILING);
 }
 
-// ── ★★ THE SLOW SIDE'S LEITPLANKE (NIGHT-2026-09-24C piece 3d, the owner's decision of 2026-09-23)
+// ── ★★ THE SLOW SIDE'S GUARDRAIL (NIGHT-2026-09-24C piece 3d, the owner's decision of 2026-09-23)
 //
 // The mirror of NATURALNESS_CEILING. `docs/RACE-ACTION.md` §6 recorded for a month that the envelope
 // is guarded on ONE SIDE ONLY: the fast side is hard-clamped at 1.20 and *"the SLOW side has no
 // ceiling of its own at all — a configuration may brake a racer far below the −20 percent line and
-// nothing in the code objects."* This is the code objecting.
+// nothing in the code objects."* This is the check that can object — but note that nothing on the
+// race path calls it yet: `assertNaturalnessFloor` / `isWithinNaturalnessFloor` are exercised only by
+// naturalnessFloor.test.js.
 export const NATURALNESS_FLOOR = 0.8;
 
 /**
@@ -89,7 +91,8 @@ export const NATURALNESS_FLOOR = 0.8;
  *
  * At every shipped stage the answer is comfortably inside it — quiet and medium brake 0.10 (floor
  * 0.88), wild brakes 0.15 (floor 0.85) — so nothing shipped is refused and the three race
- * fingerprints are unmoved. It refuses a configuration that has never existed, which is the point.
+ * fingerprints are unmoved. It WOULD refuse a configuration that has never existed, which is the
+ * point — but no race-path caller invokes `assertNaturalnessFloor` today; only its test does.
  *
  * @param {number} maxEffect  pulkEnvelopeMaxEffect
  * @param {number} leaderBrake  pulkLeaderBrake
@@ -100,7 +103,7 @@ export function computeDirectorFloor(maxEffect = 0, leaderBrake = 0) {
 }
 
 /**
- * Is this configuration inside the slow-side leitplanke?
+ * Is this configuration inside the slow-side guardrail?
  * @returns {boolean} false when the config would permit a brake deeper than NATURALNESS_FLOOR
  */
 export function isWithinNaturalnessFloor(maxEffect = 0, leaderBrake = 0) {
@@ -400,8 +403,8 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   // ATTACKERS — the front group is the first (frontPool − 1) NON-HERO racers behind the leader; HEROES
   // do NOT consume a window slot (S1: a hero-clogged front no longer starves the attacker slots — the
   // scan reaches the real chasers behind the heroes instead of stopping at raw rank frontPool). The
-  // window is still BOUNDED (≤ frontPool − 1 non-heroes, so ≤ 4 heroes can push it only a few ranks
-  // deeper), and every admitted attacker is still reachability-gated: we trade "no attacker" for a
+  // window is still BOUNDED (≤ frontPool − 1 non-heroes, so the heroes — the `maxHeroes` budget plus
+  // the `b2AttackHeroes` attackers — can push it only a few ranks deeper), and every admitted attacker is still reachability-gated: we trade "no attacker" for a
   // REAL attacker, never a hopeless one parked in a 12 s deadlock. `frontWindow` doubles as the
   // front-group boundary for the outsider below, so the two selections stay provably DISJOINT (an
   // attacker is always in frontWindow; the outsider always skips frontWindow → never the same racer).

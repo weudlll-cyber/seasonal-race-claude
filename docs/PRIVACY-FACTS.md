@@ -31,7 +31,7 @@ is marked as such. Where this page and the code disagree, the code is right.
 | data | personal data in it | where | kept for | who can read it |
 | --- | --- | --- | --- | --- |
 | user accounts | user name, team, role, a bcrypt password hash, a session counter | `users.json` in the data folder, owner-only file | until an admin deletes the account | admins, through the account management; whoever can read the data folder on the host |
-| sessions | the user id and the session counter only — **no IP address, no browser details** | `sessions.sqlite` in the data folder | 30 days, removed when they expire | the host account |
+| sessions | the user id and the session counter only — **no IP address, no browser details** | `sessions.sqlite` in the data folder; a damaged one is renamed `sessions.sqlite.damaged-<time>` and kept until removed by hand | 30 days, removed when they expire (not in a renamed damaged file) | the host account |
 | session cookie | an opaque session id | the visitor's browser (`ra.sid`, or `__Host-ra.sid` over HTTPS); not readable by page scripts | 30 days | that browser |
 | stored races | **player names** (the roster), finishing order and times, the team that ran the race (not the user name) | `races.sqlite` in the data folder | **forever** — the database refuses changes to a stored race, and no route deletes one | every signed-in user of that team |
 | race history in the browser | player names, results, seed | the browser's local storage (`racearena:raceHistory`) | until that browser's storage is cleared | that browser |
@@ -82,8 +82,8 @@ address to GitHub).
 | a name in a browser's race history | clear that browser's site data |
 | a name in a backup | delete the backup; an archive cannot be edited |
 
-★ **Retention is a decision the owner has left open**: the row *AUDIT-1 A12 · retention* in
-[BACKLOG.md](BACKLOG.md) PART ONE, covering player names in stored races and backup archives. Stored races are kept forever **by design**:
+★ **Retention was decided on 2026-10-12: left as is** — the row *AUDIT-1 A12 · retention*, covering
+player names in stored races and backup archives, is in [BACKLOG.md](BACKLOG.md) PART TWO. Stored races are kept forever **by design**:
 it was decided on 2026-10-08 that the race store keeps every race. If an event needs names removed
 later, the honest options today are not entering real names, or not using the stored-race history for
 that event.

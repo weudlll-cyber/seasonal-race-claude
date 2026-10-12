@@ -576,7 +576,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // settled picture, and builds the podium up. A scrim over all of that contradicts every part of
   // it. Moving it to the last moments before navigation was considered and rejected as redundant:
   // the screen transition already fades to black there (`SCREEN_TRANSITION_MS`, a constant in
-  // TransitionContext.jsx), so those moments are covered by something that fades rather than snaps.
+  // screens/RaceScreen/endingSchedule.js), so those moments are covered by something that fades rather than snaps.
   finishedSplashEnabled: false,
   finishOverviewLookbackPx: 150, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
@@ -801,6 +801,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   // WHOLE, the contenders decide how tight the shot may close, and the corridor width is a MAXIMUM
   // rather than a minimum — never wider than the track is wide, because the full width certainly
   // shows everyone, and if the full width is not needed the shot closes in further.
+  //
+  // ★ SUPERSEDED (merged 2026-08-14, CONTENDER-ZOOM-1): `contenderZoom` ships ON (below), and with
+  //   it ON the membership is `_abreastContenders` in CameraDirector.js, not `slice(0, 2)`. The two
+  //   paragraphs that follow ("ONLY ONE OF THEM COULD BE BUILT", "DEFAULT OFF") are the record of the
+  //   first draft's verdict, not a description of today.
   //
   // TWO HALVES, AND ONLY ONE OF THEM COULD BE BUILT. The GUARANTEE half is here: the pair rule is
   // generalised to however many contenders the set holds, and the corridor becomes a cap on width.
@@ -1085,16 +1090,18 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   pulkCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max
   // Additive headroom (speed-factor points) ABOVE the natural band max for the pulk ceiling: lets
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
-  // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
+  // 0 = the pre-headroom baseline (cap = band max, byte-identical to before the key existed); the
+  // shipped value is below. Hard-clamped to +20% (NATURALNESS_CEILING).
   pulkBoostHeadroom: 0.1,
   // ── ★★ CHASE-AFTER-OUTCOME (NIGHT-2026-09-23) — the chase past the OUTCOME boundary ───────────
   // The owner's question of 2026-09-23: how many racers to accelerate, and which, for a race with as
   // many overtakes as possible and no breakaways. CHASE-REACH-1 measured that the BOOST SIZE is not
   // the constraint — raising `pulkChallengerBoost` changes no race, and at wild it already sits AT
   // `pulkEnvelopeMaxEffect`. The constraint is that the governor is OFF for the whole of his
-  // [0.70, finish] window: it runs only while `progress < pulkEndFrac` (raceGovernor.js:182-187),
-  // `pulkEnd` IS `choreoOutcomeStart` = 0.6 (racePlanner.js:174), and `governorPhaseWeight` returns
-  // exactly 0.0 from that boundary on (raceGovernor.js:92-97).
+  // [0.70, finish] window: it runs only while `progress < pulkEndFrac` (raceGovernor.js, `inPulk`
+  // in applyPulkLeadRotation), `pulkEnd` IS `choreoOutcomeStart` = 0.6 (racePlanner.js,
+  // `phaseFractions.pulkEnd`), and `governorPhaseWeight` returns exactly 0.0 from that boundary on
+  // (raceGovernor.js `governorPhaseWeight` / `governorFadeStart`).
   //
   // ★ THE OWNER'S SCOPE, 2026-09-22, and it bounds all three keys: extend ONLY the boost part past
   // 0.6. The PULK end does not move, the OUTCOME start does not move, and THE LEADER BRAKE IS NEVER
@@ -1122,7 +1129,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // FASTER — every arm measured that way failed the solo-share rule, at +424% to +1461% front churn.
   chaseAfterOutcomeSelection: 'gap',
   // Attacker slots INSIDE the extension only. The PULK phase keeps its own hard 1..2 clamp
-  // (raceGovernor.js:197) untouched. Total boosted is this + the single outsider slot — so the
+  // (raceGovernor.js, `attackerSlots` in applyPulkLeadRotation) untouched. Total boosted is this + the single outsider slot — so the
   // shipped 5 accelerates SIX racers. 2 was the pre-ship value.
   chaseAfterOutcomeSlots: 5,
   // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
@@ -1277,7 +1284,8 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // x four authorities over 6,300 races: below 56 the brake works almost continuously on leads
   // nobody would call a runaway (at 40 px it commands in 289 of 300 races with 100% of its work
   // under 90 px), and above it the brake is too rarely obeyed to move anything. 56 is the last
-  // value at which it is still selective. In his unit that is 0.249 canvas widths.
+  // value at which it is still selective. In his unit that was 0.249 canvas widths on the day; the
+  // LEADER default moved on 2026-10-01 (see the ★ note above), so the same 56 px now reads as fewer.
   gapBrakeAllowedGapPx: 56,
   // Where the brake's window ENDS, as a progress fraction. Its START is not a key: it is bound to
   // `choreoOutcomeStart` — the same quantity that ends the PULK brake — so if that boundary moves,
@@ -1290,7 +1298,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // it is the ONLY column that moves. The finish does not pay for it: contested finishes go 129
   // -> 124 at 0.95 and back to 125 at 0.97, and the brake is still pulling as the winner crosses
   // in 0 of 300 races at every value — `raceProgress` is the leader's own t/finishT
-  // (raceCore.js:577), so the winner crosses at 1.0 and the window has always released by then.
+  // (raceCore.js, `st.raceProgress` in stepRacePhysics), so the winner crosses at 1.0 and the window has always released by then.
   gapBrakeWindowEnd: 0.97,
   // ── The brake's MAXIMUM AUTHORITY, as a fraction of natural speed. Target floor = 1 - this. ──
   //
@@ -1305,7 +1313,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // ceiling would be a much bigger intervention. 10% is his number. The resulting floor (0.90) sits
   // inside [minMult, maxMult], so the two clamps never argue.
   // ★ 13% is the owner's value, 2026-09-15. It is still inside the engine's own maximum braking,
-  // which is `1 - controllerParams.minMult` = 15% (racePlanner.js:103) — the instruction was that
+  // which is `1 - controllerParams.minMult` = 15% (racePlanner.js:104) — the instruction was that
   // the brake may never exceed it, and 13 does not.
   gapBrakeMaxAuthority: 0.13,
   // ── SERVO-NARROW-1 (V1) — the placement servo's restart decision ignores its own noise.
@@ -1331,8 +1339,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   pulkLeadRotationDeadlockTimeoutMs: 12000, // per-boost safety net (never the normal path)
   pulkLeadRotationMinHoldMs: 750, // fresh-P1 hold = smart-camera SM_HOLD_MS → no sub-750ms P1 flicker
   // Phase-split bonuses: areaBonus/rowBonus strength gated by race phase (chaos EARLY / PULK / post
-  // POST). areaBonus strengths are in bonusStrengthMultiplier units (2.0 = shipped full, 0 = off);
-  // rowBonus strengths are fractions (1 = full, 0 = off). Winning set: EARLY + POST full, PULK off.
+  // POST). areaBonus strengths are in bonusStrengthMultiplier units, scaled against the reference
+  // `racePlanBonusStrengthMultiplier` (racePlanner.js: `scale = phaseStrength / _areaRefStrength`),
+  // so a value equal to the reference is full strength, half of it is half strength, and 0 = off;
+  // rowBonus strengths are fractions (1 = full, 0 = off). PULK is off; EARLY and POST run at the
+  // value below, which is half the reference.
   phaseSplitBonusEnabled: true,
   areaBonusEarly: 1.0,
   areaBonusPulk: 0,
@@ -1505,7 +1516,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // LAST step of applyRacerBehavior — after every force (L1–L11) and after the
   // velocity/clamp integration. It resolves a fraction of any residual body overlap
   // each frame, acting as a BACKSTOP behind the normal avoidance/free-lane forces.
-  // Opt-in for testing.
+  // Shipped ON (see the master switch below).
   //   hardSeparationEnabled:    master switch. Default TRUE = hard separation active as a
   //                             pure backstop (verified fair + effective across the full
   //                             track×racer matrix). Set FALSE to reproduce the pre-feature

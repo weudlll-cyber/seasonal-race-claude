@@ -78,9 +78,10 @@ export const runInMixin = {
    *          of the race at the latest the winner and the line are both visible. So the move that
    *          makes them visible must be FINISHED there, not started there — which is why the run-in
    *          now begins before the threshold rather than at it.
-   *   CLOSE, from the threshold to the crossing, landing on the ACTIVE STATE'S OWN zoom. That is
-   *          requirement 2 and it introduces no value: `_stateCamZoom()` is the leader view's 0.75
-   *          corridors or the photo finish's 0.4, whichever is running.
+   *   CLOSE, from the threshold to the crossing, landing on the leader view's zoom or the photo
+   *          finish's, whichever is running. That is requirement 2 and it introduces no value: the
+   *          endpoint is `_inPhotoFinish ? _photoFinishZoom : _leaderZoom` (see `_updateRunIn`),
+   *          deliberately NOT `_stateCamZoom()`, which could still be OVERVIEW's.
    *
    * -- THE EASE IS A SMOOTHSTEP, WHICH IS REQUIREMENTS 3 AND 6 BY CONSTRUCTION -------------------
    *
@@ -138,8 +139,8 @@ export const runInMixin = {
     // `runInOpenMs` of (time, progress) samples, evaluated at NOW. It is a smoothing with no new
     // constant — the window is the opening's own duration — and it is UNBIASED, unlike an average
     // or an EMA, because it extrapolates the fitted line to the current instant rather than
-    // reporting the window's middle. Progress is very nearly linear in time over a fifth of a
-    // second, which is what makes a straight line the right model rather than a chosen filter.
+    // reporting the window's middle. Progress is very nearly linear in time over the window
+    // (`runInOpenMs`), which is what makes a straight line the right model rather than a chosen filter.
     //
     // IT REMAINS MONOTONE AND IT STILL LANDS: `_runInProgressOf` clamps monotone, and the fit is
     // fed the real progress, so it converges on it at the line.
@@ -156,6 +157,9 @@ export const runInMixin = {
     // and a 1.43x tax on every frame) is the wrong region. `COMPANY_FRAME_PCT` is what this project
     // already means by "in frame, near the edge is acceptable": it is the region a COMPANION must
     // be inside, 5% off each edge, and it costs 1.11x instead of 1.43x.
+    // ★ WITH `bandFloor` ON — the shipped default — `_lineCeiling` maps a COMPANY_FRAME_PCT request
+    // back to the subject's `innerFramePct`, so the shipped run-in guarantees the line inside the
+    // 0.7 region after all; the 1.11x figure is the `bandFloor`-OFF arm.
     //
     // 1.0 WAS TRIED FIRST AND IS THE CHEAPER-LOOKING WRONG ANSWER: it puts the line EXACTLY on the
     // frame edge, where the pan's own lag takes it straight back out — measured, requirement 1's
@@ -340,7 +344,7 @@ export const runInMixin = {
    * IT INTRODUCES NO CONSTANT. The window is the trail the schedule already keeps, whose length is
    * the opening's own duration. And it is UNBIASED, unlike an average or an EMA, because it
    * extrapolates the fitted line to the current instant rather than reporting the window's middle —
-   * progress is very nearly linear in time over a fifth of a second, which is what makes a straight
+   * progress is very nearly linear in time over the window (`runInOpenMs`), which is what makes a straight
    * line the right model rather than a chosen filter.
    *
    * IT REMAINS MONOTONE AND IT STILL LANDS: `_runInProgressOf` clamps monotone, and the fit is fed
@@ -521,7 +525,8 @@ export const runInMixin = {
    */
   _scheduleClose(demand, endZoom) {
     // -- CLOSE -----------------------------------------------------------------------------
-    // The width reached at the deadline is the start; the state's own zoom is the end. Latched
+    // The width reached at the deadline is the start; `endZoom` (the leader view's or the photo
+    // finish's zoom, chosen in `_updateRunIn`) is the end. Latched
     // once, because interpolating from a live value would let the start of the ramp move under it.
     // THE CLOSE STARTS FROM THE DELIVERED WIDTH, NOT FROM THE WIDEN'S OWN LAST VALUE. They differ
     // wherever a guarantee widened the shot during the widen, and starting the ramp from the value
@@ -571,7 +576,8 @@ export const runInMixin = {
     // always tell where the finish line is. It need not be whole — cut at the edge is fine, part of
     // the band is enough — but it never becomes unfindable.
     //
-    // THE CONDITION: the line's CENTRE POINT stays inside the frame at `COMPANY_FRAME_PCT`. The
+    // THE CONDITION: the line's CENTRE POINT stays inside the frame at `COMPANY_FRAME_PCT` (with
+    // `bandFloor` ON, the shipped default, `_lineCeiling` uses the subject's `innerFramePct` instead). The
     // band runs THROUGH that point, so if the point is in shot the band is in shot, cut at its ends
     // by the frame edge — which is exactly what he allows. It is far looser than the promise the
     // old `check-runin-frame` held (the point inside the subject's 0.7 box, a 1.43x tax on every

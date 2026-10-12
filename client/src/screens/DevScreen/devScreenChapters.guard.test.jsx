@@ -289,6 +289,12 @@ const OPENERS = {
   },
 };
 
+// AUDIT-1 A4-02: this hook renders the whole Dev Screen and walks all seven chapters, and it ran
+// ~9.5 s against vitest's default 10 s hook limit — it timed out twice under load (beside a scanner,
+// and under coverage instrumentation) while passing in every unloaded run. The limit is raised for
+// this hook only, so a genuinely hung walk still fails, just later.
+const CHAPTER_WALK_TIMEOUT_MS = 60_000;
+
 beforeAll(async () => {
   localStorage.clear();
   // Stored overrides on the horse that make every Reset of the racer editor appear.
@@ -315,7 +321,7 @@ beforeAll(async () => {
     take();
     await OPENERS[chapter.title]?.();
   }
-});
+}, CHAPTER_WALK_TIMEOUT_MS);
 
 describe('DEVSCREEN-CHAPTERS-1 — the screen holds every control of the design, once, in place', () => {
   it('design.json is the 347-row table', () => {

@@ -1,5 +1,8 @@
 // ============================================================
-// raceLengths.js — the ONE source for the racer-LENGTH unit.
+// File:        raceLengths.js
+// Path:        client/src/modules/raceLengths.js
+// Project:     RaceArena
+// Description: The ONE source for the racer-LENGTH unit.
 //
 // "Racer lengths" = how many racer bodies fit in a gap on the track. It is what the owner has
 // reasoned in for the whole project and what the DIRECTOR-DIAG HUD shows on screen: a spatial,

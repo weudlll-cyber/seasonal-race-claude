@@ -18,7 +18,7 @@
 // wrote.
 //
 // WHAT IS DISCARDED: the per-hero `beats` array — `{ progress, event }` with `event` one of
-// `anchor` / `peak` / `resolve`, built at `heroCurveGenerator.js:781` from the authored curve's
+// `anchor` / `peak` / `resolve`, built at `heroCurveGenerator.js:783` from the authored curve's
 // own points — and `finalRank`. So the plan states, per comebacker, WHERE IN THE RACE its climb was
 // written, and the camera never sees it.
 //
@@ -77,7 +77,7 @@
 // IT DECIDES THIS MEASUREMENT, because the comeback shot is offered only when
 // `raceState?.isOutcomePhase || leaderProgress > outcomePhaseThreshold`
 // (`CameraDirector.js:1791-1793`). With the flag false the window is the internal fallback alone;
-// with the browser's flag it is the PLAN's OUTCOME phase, which `racePlanner.js:526-530` opens at
+// with the browser's flag it is the PLAN's OUTCOME phase, which `racePlanner.js:527-531` opens at
 // `corridorStart` — much earlier. So the driver's window is a STRICT SUBSET of the browser's, and a
 // count of shots taken on the driver's path is a LOWER BOUND, not the answer.
 //
@@ -151,7 +151,7 @@ const CONTEST = ARG("contest", "1") !== "0";
 // cast, so a climb by anyone else is invisible to the camera however well it is held.
 //
 // ★ IT COSTS TWO RUNS PER RACE, AND THE SECOND IS THE MEASURED ONE. The cast is not known at the
-// start line: `racePlanner.js:684` runs the hero generator ONE FRAME AFTER THE CHOREO BOUNDARY,
+// start line: `racePlanner.js:687` runs the hero generator ONE FRAME AFTER THE CHOREO BOUNDARY,
 // on the live post-chaos ranks and rank-velocities. So a DISCOVERY pass runs first with no arm
 // and stops the moment the plan is delivered; the measured pass then re-runs the same seed with
 // the arm set on one of the racers that pass named.
@@ -265,7 +265,7 @@ for (const geo of tracks) {
         if (!cp) return true;
         // ★ `comebacker` ONLY, and after 2026-09-18 that is load-bearing rather than incidental.
         // This models the CAMERA's cast, and `comebackDetector.js` admits exactly `'comebacker'` —
-        // so the unstaged `pursuer` (`heroCurveGenerator.js:722`) is excluded here for the same
+        // so the unstaged `pursuer` (`heroCurveGenerator.js:724`) is excluded here for the same
         // reason the camera excludes him. Widening this to both roles would make the diagnostic
         // disagree with the director it exists to model. The other three role filters in this file
         // are the camera's population too and are left alone for the same reason.
@@ -423,7 +423,7 @@ for (const geo of tracks) {
     const stateFrames = new Map();
     // THE BEATS IN TIME. A beat is written in race PROGRESS and the camera's moment happens at a
     // wall clock, so one has to be carried into the other's units to answer "how far apart in time".
-    // Progress is monotone here (`raceCore.js:524` takes a running max), so the crossing is the
+    // Progress is monotone here (`raceCore.js:528` takes a running max), so the crossing is the
     // first frame at or past the beat, recorded as it happens rather than reconstructed after.
     const crossedAt = new Map(); // progress value -> ms since race start on the frame it was reached
     const watch = []; // every beat progress this race needs a time for
@@ -437,8 +437,8 @@ for (const geo of tracks) {
     // or the plan does — every read is a read.
     //
     // ★ WHAT CANNOT BE RECORDED HERE, and it is not worked around. The plan's AUTHORED rank at each
-    // beat lives in `plan._heroCurves` (`racePlanner.js:1159` — every curve point is
-    // `{progress, rank}`), and `buildCameraPlan` (`heroCurveGenerator.js:781`) keeps only
+    // beat lives in `plan._heroCurves` (`racePlanner.js:1162` — every curve point is
+    // `{progress, rank}`), and `buildCameraPlan` (`heroCurveGenerator.js:783`) keeps only
     // `{progress, event}`. The controller exposes `getCameraPlan` and `getHeroRoles` and no getter
     // for the curves, so the authored rank is NOT reachable from the delivered plan. What is
     // recorded instead is the racer's ACTUAL rank at the moment the authored progress is reached —
@@ -639,7 +639,7 @@ for (const geo of tracks) {
           // COMEBACK-SHAPE-1 — where in the field he was when the shot began.
           rankAtStart: who == null ? null : rankOf(state, who),
           // ★ THE TWO PROGRESS AXES ARE NOT THE SAME NUMBER, and a report that mixed them would be
-          // wrong. `st.raceProgress` (`raceCore.js:239`) is a running MAX over UNFINISHED racers,
+          // wrong. `st.raceProgress` (`raceCore.js:243`) is a running MAX over UNFINISHED racers,
           // clamped to 1 — it is the axis the race plan's beats are written in. The director compares
           // its own `leader.t / finishT` (`CameraDirector.js:968`) over ALL racers, uncapped. They
           // agree until the first racer finishes. Both are recorded so the gap can be shown rather

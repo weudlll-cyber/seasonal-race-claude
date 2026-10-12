@@ -244,12 +244,12 @@ line numbers are the address; read the value there.
 
 | candidate key | where | what it plausibly governs |
 | --- | --- | --- |
-| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1206-1209` | how hard a gap is closed by re-drawing |
-| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:1181-1183` | how many attackers rise, and how far |
-| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:1032-1034` | how much and how often tempo is re-drawn |
-| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:1132-1133` | how strongly the plan shapes the field |
-| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:1077-1084`, `:1321` | the lead-rotation mechanism's reach and its realism clamp |
-| `chaosSteerGain` | `defaults.js:1062` | the steering noise added to the field |
+| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1213-1216` | how hard a gap is closed by re-drawing |
+| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:1188-1190` | how many attackers rise, and how far |
+| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:1037-1039` | how much and how often tempo is re-drawn |
+| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:1139-1140` | how strongly the plan shapes the field |
+| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:1082-1089`, `:1329` | the lead-rotation mechanism's reach and its realism clamp |
+| `chaosSteerGain` | `defaults.js:1067` | the steering noise added to the field |
 
 ### The two surfaces, with addresses
 
@@ -722,7 +722,7 @@ here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns 
 **verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
 here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
 was still denying it: race outcomes ARE persisted, in a real database
-(`server/src/races/raceStore.js:64,221`, served by `server/src/routes/races.js`); branding profiles
+(`server/src/races/raceStore.js:262`, `createRaceStore`, served by `server/src/routes/races.js`); branding profiles
 ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
 (`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
 **What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
@@ -782,7 +782,7 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★★ **THE AUTH QUESTION, NARROWED TO TWO FALSIFIABLE ITEMS.** "Admin auth hardened for
       public-facing use" was an open row with no bar, which is why it could not be settled. The
       decisions behind it are settled; what is measurable is exactly two things:
-      **(1) CSP is switched off** — `server/src/app.js:36` runs
+      **(1) CSP is switched off** — `server/src/app.js:37` runs
       `helmet({ contentSecurityPolicy: false })`; **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
@@ -1003,9 +1003,9 @@ verified against `git log` / `git tag`.
 
 **🔜 / ⏳ Open**
 
-- **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
+- **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:148/155) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :459). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:166`) still produces one `realizedIntensity` for the whole cast at `:533`. Waiting on the eye-test the entry itself asks for before building.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:168`) still produces one `realizedIntensity` for the whole cast at `:535`. Waiting on the eye-test the entry itself asks for before building.
 
 - **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest. **AND SO DOES THE OPEN POINT IT NOW CARRIES (PART TWO D14):** the beats a faller shot would need are delivered to the director and discarded by `comebackDetector.setPlan` along with everybody else's.
 
@@ -1811,6 +1811,9 @@ owner's hand**: parked here with enough context to be actionable months from now
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and the number has grown:** the built bundle is **874 KB** today (`client/dist/assets/index-*.js`), against the ≈763 KB the entry records and the 500 kB warning threshold. Waiting on the code-split.
 
+  ★ **DECIDED 2026-10-12: left as is** — AUDIT-1 A9-01 (1,007 KB, 295 KB gzipped) was decided that
+  day, and the decision covers this entry; see PART TWO.
+
 - ⏳ **CAMERA-GLIDE-PATH-1 — view-change detour.** A camera view change travels fast but takes a visible
   DETOUR rather than the direct line. Standing hypothesis: the pan is interpolated in **track space (T-lerp)**
   and so follows the curvature of the track, instead of on a straight **screen-space** line between the two
@@ -1842,54 +1845,10 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Security and access — his word
 
-- [ ] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one
-      proxy hop whenever `NODE_ENV=production`; on a source install with the port reachable directly,
-      `X-Forwarded-For` then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an
-      explicit `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed
-      logins against a directly exposed production-mode install — refused only after the fix)*
-- [ ] **AUDIT-1 A5M-12 · no write quota.** Any signed-in user can store unlimited races, tracks and
-      10 MB images. Proposal: per-user write limits or a disk alarm. *(verify: a decision, then a test)*
-- [ ] **AUDIT-1 A5M-13 · records accept any field and any number.** `tracks.js:504` stores every extra
-      body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
-      *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
-- [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
-      edits any team's records (`docs/API.md:294`). *(verify: a decision — scope them, or record it)*
-- [ ] **AUDIT-1 A5M-15 · the only password rule is "not blank".** `usersStore.js:30`; the installer
-      asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
-- [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
-      (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
-- [ ] **AUDIT-1 A5T-02 · root `sharp` has a high advisory** fixable only by 0.34 → 0.35 (a major);
-      it is used by two sprite-generation scripts and never shipped. *(verify: `npm audit --prefix .`
-      reports 0 high)*
-- [ ] **AUDIT-1 A5T-06 · master is unprotected** — no branch protection, no ruleset. Proposal: forbid
-      force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
-      is not `[]`)*
-- [ ] **AUDIT-1 A5T-07 · Dependabot alerts, private vulnerability reporting and a SECURITY.md are all
-      absent.** *(verify: `gh api …/vulnerability-alerts` answers 204; a SECURITY.md names a contact)*
-- [ ] **AUDIT-1 A5T-08 · the "require SHA pinning" Actions setting is off**; every workflow pins
-      anyway since `c369ea81`. *(verify: `gh api …/actions/permissions` shows
-      `"sha_pinning_required": true`)*
-- [ ] **AUDIT-1 A6-06 · licensing note:** the project is AGPL-3.0-or-later and the session store
-      `better-sqlite3-session-store` is GPL-3.0-only; the combination is permitted, and the "-only"
-      pins the shipped image's combined work to version 3. *(verify: a decision — accept, or replace
-      the store)*
-
-### Robustness — his word
-
-- [ ] **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
-      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks the
-      event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk, and his
-      live data folder is in OneDrive. *(verify: `node reports/release/AUDIT-1/tools/a10-store.mjs
-      <clone>` prints `journal_mode: wal` and a save under a held read lock succeeds)*
-- [ ] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in.** With `users.json` damaged the
-      server starts and `/api/health` answers ok. The VPS update and rollback read health, so what it
-      reports is a decision. *(verify: `a10-corrupt.mjs` — health is not ok with a damaged store)*
-- [ ] **AUDIT-1 A10-07 · a damaged sessions file stops the server.** `SqliteError: file is not a
-      database`, exit 1. Proposal: move it aside and start fresh (everyone signs in again).
-      *(verify: `a10-corrupt.mjs` — "starts: yes" for the sessions scenario)*
-- [ ] **AUDIT-1 A12 · retention.** Player names are stored forever in `races.sqlite` (immutable rows,
-      no delete route) and backup archives are never pruned. *(verify: a decision; then a retention
-      rule with a test)*
+- [ ] **SECURITY.md contact e-mail (with the domain).** [SECURITY.md](../SECURITY.md) names no
+      e-mail address; it is to get one once the project has its own domain (decided 2026-10-12).
+      Until then it points to GitHub's private vulnerability reporting, which is switched on.
+      *(verify: SECURITY.md names a contact address at the project's domain)*
 
 ### Visible changes — his eye
 
@@ -1907,63 +1866,51 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
       -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
       *(verify: each text read against `defaults.js`)*
-- [ ] **AUDIT-1 A9-01 · one 1,007 KB JavaScript chunk** (295 KB gzipped). Code splitting changes how
-      the app loads. *(verify: `npm run build` prints no chunk over 500 KB)*
 
 ### Records and decisions
 
-- [ ] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written** into every new track (`tracks.js:515`)
-      and carried by the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes
-      the seed records. *(verify: `grep -r defaultWinners server/` finds nothing)*
-- [ ] **AUDIT-1 A2-50 · `viewerProbe.js:414` passes world pixels where a normalised value belongs**
-      (the file's own rule), so invariant 3 is too lenient. Fixing it changes the instrument's verdicts.
-      *(verify: the probe's invariant-3 call uses the normalised band, re-measured)*
-- [ ] **AUDIT-1 A3-22 · CLAUDE.md's closing inventory** names two FINISH-PAIR-1 quotations in
-      `docs/fingerprints.json`, which carries none; CLAUDE.md forbids editing that list.
-      *(verify: a decision — annotate or leave)*
-- [ ] **AUDIT-1 A3-25 · OPEN.md §2-§5 still show un-struck items** no row backs ("Pause and resume",
-      "HTTPS is not arranged", …). *(verify: each item either struck or backed by a PART ONE row)*
-- [ ] **AUDIT-1 A6-03 · about 200 MB of old measurement blobs in history.** Shrinking it rewrites every
-      SHA. *(verify: a decision)*
-- [ ] **AUDIT-1 A7-02 · the source-install floor still says Node 20**, which ended 2026-04-30; the image
-      and CI run 24 since `c2530f29`. *(verify: `engines` reads `>=22` in all three manifests)*
-- [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
-      better-sqlite3 13 — each a migration, none a security fix today. *(verify: a decision per
-      package)*
-- [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
-      covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
+- [ ] **AUDIT-1 A7-03 · major upgrades — after v1.0.0, one package at a time** (decided 2026-10-12):
+      React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
+      fix today. *(verify: a decision per package)*
 
-### Test hygiene (no decision needed; not urgent)
+### Found on 2026-10-12 while re-measuring A2-50
 
-- [ ] **AUDIT-1 A4-02 · two Dev Screen test files run ~9.5 s against a 10 s `beforeAll` limit** and
-      time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
-      run with a parallel `docker build`)*
-- [ ] **AUDIT-1 A4-03 · seven tests read source files relative to the working directory** and fail
-      unless run from `client/`. *(verify: `npx vitest run --root client` from the repository root
-      passes)*
+- [ ] **The `viewer-invariants` gate records ZERO frames and still prints PASS.** Run as shipped
+      (`node scripts/viewer-invariants.mjs --gate`, in a fresh clone, isolated ports 4461/4462) it
+      printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, "no in-window frames
+      were recorded", both sheet rows NOT SCORABLE — and *"Every frame of every race swept satisfied
+      every invariant. PASS"*, exit 0. The cause, read from the code: the harness opens `/race`
+      directly, the race camera calls `beginViewerProbe` on mount, and at that moment the test-aids
+      answer has not arrived, so `testAidsOn()` is still false and the probe never runs — the switch
+      is OFF-until-answered by design (TEST-AIDS-1). Loading `/` first, waiting for the
+      `/api/settings/test-aids` answer and entering `/race` inside the same page recorded 6,128 and
+      5,190 frames (a scratch change, not committed). Two things are owed: the harness waits for the
+      answer, and **a run that records no frames FAILS** instead of passing. This gate runs inside
+      `npm run verify -- --premerge`. *(verify: `--gate` prints a non-zero frame count for both
+      races, and a run forced to record nothing exits non-zero)*
 
-### What the cleanup (piece B) could not land
+### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
 
-- [ ] **AUDIT-1 B · comment fixes held back by the measured-stamp guard — his word.** About 40 of the
-      audit's comment corrections are in files inside the import closure of `scripts/tracking-lag.mjs`
-      and `scripts/straggler-truth.mjs` (the camera, the race engine, `defaults.js`, `raceDriver.mjs`).
-      `check-measured-stamps` marks those two stamps stale on ANY commit there, comment-only included,
-      by design; re-stamping was refused by this session's permission check on 2026-10-09, and it is
-      not a cleanup's decision to make. Every edit is ready and proven token-inert:
-      [reports/release/AUDIT-1/b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)
-      (17 files; applies cleanly on top of the cleanup merge). Choose: re-measure the two stamps after
-      applying it, or re-stamp them as unchanged because the edits are comments only. *(verify:
-      `git apply --check` the patch, then `node scripts/check-measured-stamps.mjs` reports 0 stale)*
-- [ ] **AUDIT-1 B · the rest left on purpose.** A2-25 and A2-26 (variables holding seconds named "Ms")
-      are in engine-hull scripts, where a rename is a code change; A2-60's unquoted items could not be
-      located without the group-B notes; A2-04 and A2-05 (header conventions in `scripts/` and tests);
-      A3-20 (`check-language-closed`'s declared scope changes when verify selects it); A3-24, -26, -27
-      (OPEN.md items, which are row A3-25's decision). Also found while cleaning, not in the audit:
-      single German words the language guard cannot see — a report table heading
-      (`scripts/sim/observers/report.mjs`, around line 78), a log line (`scripts/sim-fairness.mjs`,
-      around line 5713), and two comments (`client/src/modules/raceGovernor.js:38`, inside the
-      stamped closure; `DynamicsTuningSection.jsx`, around line 1230). *(verify: each item closed or
-      struck with a reason)*
+Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
+a row here; the detail stays where it already lives in this part.
+
+- [ ] **Pause and resume a running race (`B-UX-Pause`).** Unbuilt: there is no pause or resume path in
+      `client/src/screens/RaceScreen/` (searched 2026-10-12). Its description and priority are under
+      *Phase B* in this part. *(verify: in the browser, pausing freezes the race loop and resuming
+      continues the same race)*
+- [ ] **The Phase V verification sittings — his eye.** Manual checks of shipped work that nobody has
+      performed: loading a saved player list (`V-1`), a track with missing geometry being refused
+      (`V-2`), backup → restore → reset end to end (`V-5`/`B-5`), the Dev Screen sections (`V-6`),
+      physics and collisions (`V-7`), storage edge cases (`V-8`), fullscreen (`V-9`). Each entry is
+      in this part under its id. *(verify: each id recorded as performed, with the date and the
+      result)*
+- [ ] **`Q-19` — the `TrackEditor.effects.test.jsx` flake, NARROWED and not closed.** 0 failures in 20
+      local full-suite runs (2026-09-24), and 0 in the 62 CI runs since then in which the client suite
+      ran (all 62 green; the 4 red CI runs of that period failed in the audit gate or the script
+      suite, not here) — 0 in 82. A one-in-five flake is refuted; a one-in-fifty one would still be
+      missed 19% of the time (0.98^82). Its own rule stands: close it on a much larger N, or when the
+      file goes. The entry is under *Phase Q* in this part. *(verify: a recorded N at which a
+      one-in-fifty flake would be missed less than 5% of the time — 150 runs — with 0 failures)*
 
 ---
 
@@ -1975,6 +1922,338 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A2-50 · invariant 3 reads the finish band with the normalised lateral — CLOSED
+      2026-10-12 (branch `chore/audit-1-decisions-repo`).** `client/src/modules/viewerProbe.js`
+      invariant 3 now calls `getPosition(tAt, k / 40 - 0.5)`, as the file's own rule at `bandPct`
+      says, instead of multiplying by `trackWidthPx`. A new test,
+      `client/src/modules/viewerProbe.invariant3.test.js`, puts the finish band off screen on a
+      corridor 200 px wide and expects a `3-line` event; with the old line restored it fails
+      (`byInvariant['3-line']` undefined), with the fix it passes. **Re-measured on the standard
+      cases** (`viewer-invariants --gate`: city-circuit and space-sprint, seed 9, shipped arm), before
+      and after the fix: **0 violations of every invariant in both runs** — 1-course, 2-leader,
+      3-line, 4-widthstep, 4-panstep, 5-tootight, 5-toowide, 6-leaderedge all 0; the acceptance sheet
+      identical (items 2 and 9 ACC on city-circuit, band min/median 100/100 and 70.7/100). So on these
+      two races the fix changes no verdict: the band is genuinely in shot through the window. ★ Both
+      runs needed a scratch change to the harness, because run as shipped it records no frames at all
+      — its own PART ONE row. `viewerProbe.js` is in the engine hull by `engine-reach`, so `verify`
+      will run the world fingerprint for it; the probe only reads a frame and returns nothing to the
+      race, and it is off unless `?viewerprobe=1` and the test-aids switch are both on. The row as it
+      stood: **`viewerProbe.js:414` passes world pixels where a normalised value belongs** (the file's
+      own rule), so invariant 3 is too lenient. *(verify: the probe's invariant-3 call uses the
+      normalised band, re-measured)*
+
+- [x] **AUDIT-1 A4-02 · the two Dev Screen chapter walks have headroom — CLOSED 2026-10-12 (branch
+      `chore/audit-1-decisions-repo`).** `devScreenChapters.guard.test.jsx` and
+      `.savedSettings.test.jsx` pass `CHAPTER_WALK_TIMEOUT_MS = 60_000` to their `beforeAll`, with a
+      comment saying why; vitest's other limits are untouched, so a hung walk still fails. Measured:
+      unloaded the files take ~4.6 s each; under load — the full client suite with coverage
+      (`npm run test:coverage`) running beside a browser sweep (`viewer-invariants`, a build, two
+      servers and Chromium) — they took **20.2 s and 15.2 s and passed**, where the old 10 s hook
+      limit would have failed them. Sabotage: the limit set to 2 s turned the guard file red ("Hook
+      timed out in 2000ms"); restored, green. ★ **Noticed in that same loaded run, not changed:**
+      `src/modules/sim-fairness.test.js` › *computeFairnessStats over 10 races* timed out at vitest's
+      5 s test limit (7.8 s) — the same load-sensitivity in a third file; the other 5,070 tests passed.
+      The row as it stood: **two Dev Screen test files run ~9.5 s against a 10 s `beforeAll` limit**
+      and time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
+      run with a parallel `docker build`)*
+
+- [x] **AUDIT-1 — eight rows decided 2026-10-12: left as is.** Each reason in one line, from the row's
+      own text; each row as it stood follows its reason.
+      - **A5M-12 · no write quota** — decided 2026-10-12: left as is; every writer is a signed-in
+        account the operator created, so a quota would guard against the operator's own people. *(As
+        it stood: any signed-in user can store unlimited races, tracks and 10 MB images; proposal:
+        per-user write limits or a disk alarm.)*
+      - **A5M-14 · tracks, brands, racers and player groups are not team-scoped** — decided
+        2026-10-12: left as is, as decided 2026-10-01 — the tenancy boundary is not built, organizers
+        on one installation share these records and only races are scoped per team. *(As it stood:
+        any operator edits any team's records, `docs/API.md:294`.)*
+      - **A5M-16 · no per-account sign-in counter** — decided 2026-10-12: left as is; a lockout risk
+        for real users outweighs it, and the per-IP limiter stays. *(As it stood: the limiter keys
+        on the IP only, `rateLimit.js:16`; it can lock out a real user.)*
+      - **A6-06 · licensing note** — decided 2026-10-12: left as is; the combination is permitted,
+        and the store is kept. *(As it stood: the project is AGPL-3.0-or-later and
+        `better-sqlite3-session-store` is GPL-3.0-only; the "-only" pins the shipped image's combined
+        work to version 3.)*
+      - **A12 · retention** — decided 2026-10-12: left as is; stored races are kept for ever as
+        decided 2026-10-08, and backup archives are the operator's to prune (the VPS install on the
+        unmerged `feat/vps-install` keeps 14 days). *(As it stood: player names are stored forever in `races.sqlite`, immutable rows
+        with no delete route, and backup archives are never pruned.)*
+      - **A9-01 · one 1,007 KB JavaScript chunk** — decided 2026-10-12: left as is; code splitting
+        changes how the app loads, and the size is a build warning, not a failure. *(As it stood: 295 KB
+        gzipped; verify was `npm run build` printing no chunk over 500 KB.)*
+      - **A3-22 · CLAUDE.md's closing inventory** — decided 2026-10-12: left as is; CLAUDE.md
+        forbids editing that list, and the stale entry is recorded here and in the audit.
+        *(As it stood: the inventory names two FINISH-PAIR-1 quotations in `docs/fingerprints.json`,
+        which carries none.)*
+      - **A6-03 · about 200 MB of old measurement blobs in history** — decided 2026-10-12: left as
+        is; shrinking it rewrites every SHA, and every tag, stamp and register line names one.
+        *(As it stood: verify was a decision.)*
+
+- [x] **AUDIT-1 A3-25 · every un-struck item in OPEN.md §2-§5 is struck or backed by a row — CLOSED
+      2026-10-12 (branch `chore/audit-1-decisions-repo`).** Item by item, checked at the tree:
+      **§2** *Pause and resume* — still unbuilt → a new PART ONE row. **§3.1** *the verification
+      sittings* — still unperformed → a new PART ONE row; its address `docs/BACKLOG.md:1743` (which
+      is *Re-apply --jobs parallelism*, A3-27) corrected to the `V-1`…`V-9` entries. **§3.2** *the
+      0.75 decisive phase* — struck: superseded on 2026-10-02, when SHIP-OWNER-COSMETIC-1 shipped the
+      owner's own camera settings (`062f5bb2`) and `outcomePhaseThreshold` went 0.75 → 0.65.
+      **§3.3** *`archive/front-group`* — struck: built and retired, superseded by CONTENDER-ZOOM-1
+      (TAGS.md, DEAD-ENDS.md §N); nothing is owed. **§4** *the flaky editor test* — still open by its
+      own rule → a new PART ONE row with the larger N (0 in 82). **§4** *4 solo breakaways and 9
+      pairs* — struck: closed by the owner's two decisions of 2026-09-24 (rows in this part).
+      **§5** *Going online* — backed by the GOING ONLINE row. **§5** *HTTPS is not arranged* —
+      struck: the same subject as GOING ONLINE, and its "sign-in stops working" claim is the one
+      corrected there (A3-26). **§5** *`deploy.yml.disabled`* — struck: closed 2026-09-25
+      (TRUTH-UP-1, a row in this part). A3-24 (the title date) already agreed with the header.
+      The row as it stood: **OPEN.md §2-§5 still show un-struck items** no row backs ("Pause and
+      resume", "HTTPS is not arranged", …). *(verify: each item either struck or backed by a PART ONE
+      row)*
+
+- [x] **AUDIT-1 B · the rest left on purpose — CLOSED 2026-10-12, item by item (branch
+      `chore/audit-1-decisions-repo`).** The fate of each:
+      - **The German words — fixed.** The report table heading in `scripts/sim/observers/report.mjs`
+        ("#### A — Band fidelity"), the log line in `scripts/sim-fairness.mjs` ("Report → …"), the
+        comment in `DynamicsTuningSection.jsx` ("option B"), and `raceGovernor.js`'s comments
+        ("guardrail", with the held-back comment fixes). The same word in two test descriptions and in
+        `docs/RACE-ACTION.md` §6 went with them. Neither the heading nor the log line feeds anything
+        fingerprinted: the world fingerprint hashes `fairness-data.json`'s `rawData`, not the Markdown
+        report or the console. **Left:** the `RangeError` message in `raceGovernor.js`
+        (`assertNaturalnessFloor`) still says "leitplanke" — it is a string in the engine hull, so
+        changing it is a code change, not a comment fix; and the German identifiers `sollBereich` /
+        `bereichBounds`, which are data keys in the sim's output and are named as such in
+        `check-language-closed`'s own header.
+      - **A2-25, A2-26 — left:** variables holding seconds named "Ms" in engine-hull scripts; a rename
+        there is a code change.
+      - **A2-60 — left:** its unquoted items cannot be located without the group-B notes.
+      - **A2-04, A2-05 — left:** the header conventions of `scripts/` and of tests are conventions of
+        their own.
+      - **A3-20 — left:** `check-language-closed`'s declared scope decides when `verify` selects it, so
+        widening the declaration is a routing change, not a cleanup.
+      - **A3-24, A3-26, A3-27 — handed to A3-25 and settled there:** the OPEN.md title date already
+        agrees with its header (2026-10-09); the stale HTTPS line and the Phase V address are dealt
+        with in the A3-25 pass over OPEN.md §2-§5.
+      The row as it stood: **the rest left on purpose** — A2-25/-26, A2-60, A2-04/-05, A3-20,
+      A3-24/-26/-27, and single German words the language guard cannot see (a report table heading,
+      a log line, two comments). *(verify: each item closed or struck with a reason)*
+
+- [x] **AUDIT-1 A4-03 · the seven cwd-relative tests resolve from their own file — CLOSED 2026-10-12
+      (branch `chore/audit-1-decisions-repo`).** `buildIdentityReason`, `buildIdentitySource`,
+      `buildIdentityWorktree`, `chaseWiring`, `nameLimits`, `api` and `labelBoxGeometry` now build
+      every path from `import.meta.url` (`fileURLToPath(new URL(…))`, or `dirname` of it) instead of
+      `process.cwd()`. Two of them carried a comment saying `import.meta.url` is not a `file:` URL
+      under vitest; that is no longer true (seventeen other test files already resolve that way), and
+      the comments are replaced. Before: from the repository root, `vitest run --root client` on the
+      seven failed 6 of 7 files (5 tests red, 16 skipped, one worker timeout). After: 7 of 7 files,
+      53 of 53 tests green from the root, and the same from `client/`. The row as it stood: **seven
+      tests read source files relative to the working directory** and fail unless run from
+      `client/`. *(verify: `npx vitest run --root client` from the repository root passes)*
+
+- [x] **AUDIT-1 B · the comment fixes held back by the measured-stamp guard — APPLIED AND RE-STAMPED
+      AS UNCHANGED, 2026-10-12 (decided that day: re-stamp, do not re-measure; branch
+      `chore/audit-1-decisions-repo`).** `git apply --check` passed on master and the patch
+      [reports/release/AUDIT-1/b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)
+      (17 files) was applied as it stood. In the same commit: the German word in
+      `client/src/modules/raceGovernor.js` (four comments: "guardrail"), and **139 `file:line`
+      citations** in living documents and code comments that the edits shifted, rewritten through the
+      diff's own line map (a citation that was right stays right; dated records — `reports/`, the
+      archive, the morning sheet, the tag register and this part — keep their numbers). One shifted
+      citation was left on purpose: `GovernorDiagHUD.jsx` cites `heroCurveGenerator.js:722` (now
+      `:724`), but the file is in the engine hull and the inertness predicate cannot read JSX, so
+      touching it would make `engine-reach` call the diff race-changing. ★ **The proof that nothing
+      executable moved:** all 38 changed JavaScript files have the identical token stream and the
+      identical line breaks between tokens before and after, by `scripts/lib/inertChange.mjs`'s own
+      predicate (acorn), which was shown to fire on a one-token change; `engine-reach --check` over
+      the diff reports none of its 49 paths able to change the race (21 in the hull, all inert). The
+      `tracking-lag` and `straggler-truth` stamps were then re-stamped with a dated note beside each
+      ([CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md), [ENDING-PHASES.md](ENDING-PHASES.md)); their
+      numbers are the 2026-10-06 runs. The row as it stood: **comment fixes held back by the
+      measured-stamp guard — his word.** About 40 of the audit's comment corrections are in files
+      inside the import closure of `scripts/tracking-lag.mjs` and `scripts/straggler-truth.mjs`;
+      re-stamping was refused by that session's permission check on 2026-10-09. Choose: re-measure the
+      two stamps after applying it, or re-stamp them as unchanged because the edits are comments only.
+      *(verify: `git apply --check` the patch, then `node scripts/check-measured-stamps.mjs` reports 0
+      stale)*
+
+- [x] **AUDIT-1 A7-02 · the source-install floor is Node 22 — CLOSED 2026-10-12 (AUDIT-1 decisions,
+      branch `chore/audit-1-decisions-repo`).** `engines.node` reads `>=22` in `package.json`,
+      `client/package.json` and `server/package.json`; each lockfile's root entry moved with it and
+      nothing else in the lockfiles changed. `README.md`, `docs/SETUP.md`, `docs/DEPLOYMENT.md` and
+      `docs/DEPLOY-NOTES.md` say Node 22. ★ **It is held now, not only written:**
+      `scripts/runtime-node.test.mjs` asserts that all three manifests declare exactly `>=FLOOR`
+      (its existing `FLOOR = 22`), and it names the manifests in the form `dataReach` recognises, so
+      a manifest change selects the script suite (sabotaged once: `server/package.json` back to
+      `>=20` turned it red, restored green). The row as it stood: **the source-install floor still
+      says Node 20**, which ended 2026-04-30; the image and CI run 24 since `c2530f29`.
+      *(verify: `engines` reads `>=22` in all three manifests)*
+
+- [x] **AUDIT-1 A5T-06 · master is protected against force-push and deletion — CLOSED 2026-10-12
+      (AUDIT-1 decisions).** A repository ruleset was created that day with `gh api`: id
+      **24917406**, "master: no force-push, no deletion", enforcement **active**, target
+      `refs/heads/master`, rules `non_fast_forward` and `deletion`, **no bypass actors**. It has no
+      pull-request or review rule, so ordinary pushes to master keep working.
+      `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets` answered `[]` before. The row as it
+      stood: **master is unprotected** — no branch protection, no ruleset. Proposal: forbid
+      force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
+      is not `[]`)*
+- [x] **AUDIT-1 A5T-08 · "require SHA pinning" for Actions is on — CLOSED 2026-10-12 (AUDIT-1
+      decisions).** Switched on that day with `gh api`: `gh api …/actions/permissions` answers
+      `{"enabled":true,"allowed_actions":"all","sha_pinning_required":true}` (it was `false`). Every
+      workflow already pinned its actions to commits since `c369ea81`, so nothing had to change in
+      them. The row as it stood: **the "require SHA pinning" Actions setting is off**; every
+      workflow pins anyway since `c369ea81`. *(verify: `gh api …/actions/permissions` shows
+      `"sha_pinning_required": true`)*
+
+- [x] **AUDIT-1 A5T-07 · Dependabot alerts, private vulnerability reporting and a SECURITY.md —
+      CLOSED 2026-10-12 (AUDIT-1 decisions).** The two repository settings were switched on that day
+      with `gh api`: `gh api -i …/vulnerability-alerts` answers **204** (it answered 404
+      "Vulnerability alerts are disabled." before), and `gh api …/private-vulnerability-reporting`
+      answers `{"enabled":true}` (it was `false`). [SECURITY.md](../SECURITY.md) is new at the
+      repository root (branch `chore/audit-1-decisions-repo`): reports go privately through GitHub's
+      "Report a vulnerability" on the Security tab; the scope is the server, the client, the shipped
+      image and compose file, and the repository's own scripts; only the newest release gets fixes.
+      It is linked from `README.md` and `docs/OPERATOR-GUIDE.md` §5, and registered in the root
+      document lists of `check-doc-links` and `check-measured-stamps`. ★ **The contact e-mail address
+      is not in it yet** — it follows the domain, and is its own PART ONE row. The row as it stood:
+      **Dependabot alerts, private vulnerability reporting and a SECURITY.md are all absent.**
+      *(verify: `gh api …/vulnerability-alerts` answers 204; a SECURITY.md names a contact)*
+
+- [x] **AUDIT-1 A5T-02 · root `sharp` lifted to 0.35 — CLOSED 2026-10-12 (AUDIT-1 decisions,
+      branch `chore/audit-1-decisions-repo`).** The root dev dependency moved from `^0.34.5` to
+      `^0.35.5` (installed 0.35.5); `npm audit --prefix .` now reports `found 0 vulnerabilities`.
+      Both scripts that import it still run: `scripts/audit-sprite-crops.mjs` read every shipped sheet
+      and printed its table, and `scripts/gen-snowmobile-sprite.mjs` (copied into a scratch tree,
+      since its source sheet `snowboard-ride.png` is no longer in the repository) resized a
+      synthetic 16-frame sample into the expected 3072×192 sheet. Nothing shipped changes: neither
+      script is in the image. The row as it stood: **root `sharp` has a high advisory** fixable only
+      by 0.34 → 0.35 (a major); it is used by two sprite-generation scripts and never shipped.
+      *(verify: `npm audit --prefix .` reports 0 high)*
+- [x] **AUDIT-1 A5M-13 · records accept any field and any number — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      Allow-lists `TRACK_FIELDS`, `RACER_FIELDS`, `BRAND_FIELDS`, `GROUP_FIELDS` beside each route,
+      derived from every field the client sends (Track Editor, Track Manager, Racer Editor, branding
+      profiles, player-groups manager and its localStorage migration), every seed key, the server's
+      own fields and legacy names; number bounds at least as wide as the editors and seeds
+      (`TRACK_NUMBER_BOUNDS`, `RACER_NUMBER_BOUNDS`; brands were already bounded; every number
+      inside a track effect within ±480000). Unknown field or out-of-range number → 400 with a
+      plain-English message. The rule for doubt is built into the shared
+      `server/utils/recordFields.js`: on an update a key the stored record already has, and a number
+      equal to the stored one, always pass. Nothing is checked on read. Test:
+      `server/src/routes/recordFields.test.js` — all 12 seed records and editor-shaped fixtures at
+      the editors' limits round-trip through PUT unchanged; `PUT /api/tracks/<id>` with `worldWidth:
+      1e9` → 400 `worldWidth must be a number from 1 to 10000`. Sabotage (no field ever unknown): 4
+      red. The row as it stood: **AUDIT-1 A5M-13 · records accept any field and any number.**
+      `tracks.js:504` stores every extra body field; `racers.js:93` checks no ranges. Proposal: an
+      allow-list and the editors' own bounds. *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9`
+      refused 400)*
+
+- [x] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`, and
+      narrower than the row's proposal on purpose: `POST /api/tracks` no longer writes
+      `defaultWinners` (`server/src/routes/tracks.js`), but the 10 seed records are left
+      byte-identical — removing it there would redeliver them to every installation
+      (`check-seed-versions` passes unchanged) — so the row's `grep -r defaultWinners server/` will
+      still find the seeds. A stored track that has the field keeps loading and keeps it on every
+      re-save, and it stays accepted in a body (item A5M-13's allow-list). Test:
+      `server/src/routes/tracksDefaultWinners.test.js` — sabotage (the default put back) red:
+      `expected {...} to not have property "defaultWinners"`. The row as it stood: **AUDIT-1 A2-14 ·
+      `defaultWinners: 3` is still written** into every new track (`tracks.js:515`) and carried by
+      the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes the seed
+      records. *(verify: `grep -r defaultWinners server/` finds nothing)*
+
+- [x] **AUDIT-1 A10-02 · a held lock blocks the whole server — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `RA_RACES_WAL` (`1`/`true` on, unset/`0`/`false` off, anything else refuses to start):
+      `resolveRacesWal` and `applyJournalMode` in `server/src/races/raceStore.js`;
+      `createRaceStore(path, { wal })`. Off is today's behaviour exactly (on a rollback-journal file
+      only `journal_mode` is read); turning it off again switches a WAL file back at the next open.
+      The backup is unchanged — SQLite's online backup API reads through the WAL and side files are
+      never archived; `scripts/backup.test.mjs` round-trips 25 rows that existed only in the `-wal`
+      file (sabotage, a plain file copy instead of `.backup()`: red, `SQLITE_ERROR`). Server test
+      `server/src/races/raceStoreWal.test.js`: with WAL a save goes through under a held READ
+      transaction (sabotage, WAL never set: red, `expected 'delete' to be 'wal'`). `a10-store.mjs`
+      gained the read-lock case (what a backup holds) and with `RA_RACES_WAL=1` prints
+      `journal_mode: wal` and `read lock: the save went through while another connection held a READ
+      transaction (21 ms)`; without it the same save failed after 5840 ms. The row as it stood:
+      **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
+      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks
+      the event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk,
+      and his live data folder is in OneDrive. *(verify: `node
+      reports/release/AUDIT-1/tools/a10-store.mjs <clone>` prints `journal_mode: wal` and a save
+      under a held read lock succeeds)*
+
+- [x] **AUDIT-1 A10-07 · a damaged sessions file stops the server — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `openSessionDatabase` (`server/src/auth/session.js`) reads the schema on open; on
+      `SQLITE_NOTADB` or `SQLITE_CORRUPT` it renames the file (and any `-wal`/`-shm`/`-journal`
+      still beside it) to `sessions.sqlite.damaged-<UTC time>`, never deletes it, starts a fresh one
+      and logs one line; everyone signs in again. Any other error (a lock, a permission) still stops
+      the start. Test: `server/src/auth/sessionRecovery.test.js` — sabotage (no code counted as
+      damage) turns two red with `SqliteError: file is not a database`. `a10-corrupt.mjs`, sessions
+      scenario: `starts: yes`, health 200 ok, login 200. The row as it stood: **AUDIT-1 A10-07 · a
+      damaged sessions file stops the server.** `SqliteError: file is not a database`, exit 1.
+      Proposal: move it aside and start fresh (everyone signs in again). *(verify: `a10-corrupt.mjs`
+      — "starts: yes" for the sessions scenario)*
+
+- [x] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `GET /api/health` (handler now in `server/src/health.js`) answers 503 `{status: "error",
+      timestamp, build, problems: [{store: "users", code, message}]}` when `users.json` cannot be
+      read; the message is a fixed sentence and no file path reaches the public route. The healthy
+      answer is unchanged key for key (200 `{status: "ok", timestamp, build}`), and a missing
+      `users.json` (a fresh install) is healthy. Test: `server/src/health.test.js` — sabotage (the
+      store read removed) turns the two damaged-store cases red: `expected 200 to be 503`.
+      `a10-corrupt.mjs` now counts a 503 answer as "started" (it read only `ok` before) and prints
+      for the users scenario: `starts: yes`, `health: 503 application/json {"status":"error",...`,
+      login 500. The row as it stood: **AUDIT-1 A10-05 · health says "ok" while nobody can sign
+      in.** With `users.json` damaged the server starts and `/api/health` answers ok. The VPS update
+      and rollback read health, so what it reports is a decision. *(verify: `a10-corrupt.mjs` —
+      health is not ok with a damaged store)*
+
+- [x] **AUDIT-1 A4-04 · the race-source migration has no test — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** built on `fix/audit-1-decisions-server`.
+      `server/src/races/migrateRaceSource.test.js` builds a realistic pre-RACE-SOURCE-1 database
+      from fixtures (12 races of two teams through the real store, shared rosters and racer types,
+      the index and the immutability triggers, then the column dropped), migrates a COPY twice: the
+      first run adds the column and keeps every row (all legacy rows NULL, read as unmarked); the
+      second reports `skipped` and changes nothing — the same rows, the same schema and the same
+      SHA-256 of the file. Also: a dry run writes nothing, a missing file creates nothing, and the
+      migrated rows stay immutable. Sabotage: the `hasRaceSourceColumn` guard removed — the second
+      run throws `duplicate column name: race_source`. The row as it stood: **AUDIT-1 A4-04 · the
+      race-source migration has no test** (`migrateRaceSource.js`, 0 % covered; it already ran on
+      his database). *(verify: a test that runs it twice on a copy)*
+
+- [x] **AUDIT-1 A5M-15 · the only password rule is "not blank" — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`. A
+      new password needs at least `PASSWORD_MIN_LENGTH` = 10 characters (counted as characters, not
+      UTF-16 units). One constant and one check, `assertNewPassword` in
+      `server/src/auth/usersStore.js`, which every new password passes through: first-admin setup
+      (checked before the marker is taken), `POST /api/users`, `PUT /api/users/:id`, `POST
+      /api/auth/change-password` and `scripts/recover-admin.mjs`. The refusal is 400 `Password must
+      be at least 10 characters long`. Sign-in never checks it, so older shorter passwords keep
+      working. The installer's 10 lives in `deploy/install.sh` on `feat/vps-install`, named beside
+      the constant. The client has no length check of its own, so nothing there was aligned; it
+      shows the server's message. Test: `server/src/auth/passwordMinLength.test.js` (all four
+      routes, and a pre-rule 3-character password still signing in); the short password literals of eight
+      test files were lengthened. The row as it stood: **AUDIT-1 A5M-15 · the only password rule is
+      "not blank".** `usersStore.js:30`; the installer asks for 10 characters. *(verify: `POST
+      /api/users` with a 3-character password refused 400)*
+
+- [x] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `RA_TRUST_PROXY` is the number of trusted proxy hops (`0` = none); one home,
+      `server/src/trustProxy.js` (`resolveTrustProxy`, `applyTrustProxy`, `trustProxyNotice`),
+      applied in `createApp` and judged before anything listens in `index.js` — set but not a whole
+      number refuses to start, like `RA_BIND_ADDRESS`. Unset keeps the old rule exactly (one hop
+      when `NODE_ENV=production`, none otherwise) and logs one startup line recommending the
+      setting. Documented in ENVIRONMENT.md, DEPLOYMENT.md (the Caddy example sets
+      `RA_TRUST_PROXY=1`) and OPERATOR-GUIDE.md. Test: `server/src/trustProxy.test.js` — with
+      `NODE_ENV=production` and `RA_TRUST_PROXY=0` a forged `X-Forwarded-For` is not `req.ip`.
+      Setting it on the VPS stack is that branch's work. The row as it stood: **AUDIT-1 A5M-07 ·
+      trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one proxy hop whenever
+      `NODE_ENV=production`; on a source install with the port reachable directly, `X-Forwarded-For`
+      then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an explicit
+      `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed logins
+      against a directly exposed production-mode install — refused only after the fix)*
 
 - [x] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — CLOSED 2026-10-06 (SERVER-DEFECTS-1):
       BOTH FIXED AND MERGED.** (1) An `async` route whose unexpected error used to escape now answers
@@ -2356,7 +2635,7 @@ proposal arriving again in six months looking new.
       `races.results`, `races.winners` and `rosters` (`races.sqlite`) — `server/src/routes/races.js`
       has POST and GET only, and nothing issues a DELETE; (2) the **admin-recovery audit log**,
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
-      `createdBy`** on the users they created (`usersStore.js:258`; `updateUser` never touches it).
+      `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
       (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**

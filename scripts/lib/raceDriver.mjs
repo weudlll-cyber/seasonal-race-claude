@@ -3,8 +3,9 @@
 // Project:     RaceArena — ONE-DRIVER-1
 //
 // WHAT THIS IS FOR: building and running one seeded race for a MEASUREMENT harness, and returning the
-// RACE IDENTITY it ran so the harness can print it. One driver, so four scripts cannot drift apart
-// while their numbers are read side by side.
+// RACE IDENTITY it ran so the harness can print it. One driver, so the scripts that use it cannot
+// drift apart while their numbers are read side by side. (It was written for four callers; dozens
+// of measurement scripts import it now. "The four callers" below is that original set.)
 //
 // WHY THE IDENTITY IS THE POINT, not the deduplication. The four callers were never identical and
 // were not meant to be: `his-shot-truth` runs the OWNER'S real race context (n=65, boarder, his
@@ -87,10 +88,10 @@ export const TRACK_DEFAULT_RACER = "track-default";
  *
  * ── THIS IS THE BROWSER'S OWN APPLICATION, NOT A SECOND ONE (HARNESS-WORLD-1) ───────────────────
  *
- * The browser applies the stage in exactly one place — `exportRaceConfig.js:buildWorldConfig`, one
- * line: `raceDynamicsConfig: applyRaceActionStage(loadRaceDynamicsConfig(), stage)`. That function
- * cannot be called from here: it reaches into `localStorage` through the config loaders, and there is
- * no localStorage in node. So this reuses the thing UNDER it — `applyRaceActionStage` itself, in
+ * The browser applies the stage in two places that read the same way — the race itself in
+ * `RaceScreen/raceWorldSetup.js` and the recorded world in `exportRaceConfig.js` `buildWorldConfig`,
+ * both `applyRaceActionStage(loadRaceDynamicsConfig(), stage)`. Neither can be called from here:
+ * both reach into `localStorage` through the config loaders, and there is no localStorage in node. So this reuses the thing UNDER it — `applyRaceActionStage` itself, in
  * `client/src/modules/raceActionStage.js`, which is the single author of the two keys and carries
  * the whole decision in its own header.
  *
@@ -473,7 +474,7 @@ export function buildRace(geo, identity, cameraConfig, configWorld = DEFAULT_CON
 /**
  * Drive the countdown and then the race, calling `onFrame` once per rendered frame.
  *
- * The loop is the one all four harnesses already ran: a 60 Hz frame clock, at most two fixed physics
+ * The loop is the one the original four harnesses already ran: a 60 Hz frame clock, at most two fixed physics
  * steps per frame, and a 200 s wall-clock ceiling so a stuck race cannot hang a sweep.
  *
  * TWO ADDITIVE HOOKS, for harnesses that measure a WINDOW rather than a race. `onCountdownFrame`
@@ -582,9 +583,9 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
         finishT: st.finishT,
         // ── OUTCOME-WINDOW-1 / HARNESS-OUTCOME-1: THE BROWSER'S VALUE, NOT A CONSTANT ──────────
         // This read `false` unconditionally, so the camera here was measured with the outcome
-        // window permanently SHUT — a shot the product never takes. The browser derives it at
-        // `RaceScreen/index.jsx:1492` as `rpPhase === 'OUTCOME'`, where `rpPhase` is
-        // `racePlanController.getPhase(physicsTs, raceProgress)` (`index.jsx:1271`). Same call,
+        // window permanently SHUT — a shot the product never takes. The browser derives it in
+        // `RaceScreen/index.jsx` as `rpPhase === 'OUTCOME'`, where `rpPhase` is
+        // `racePlanController.getPhase(physicsTs, raceProgress)`. Same call,
         // same two arguments, so the harness and the product cannot disagree about the window.
         isOutcomePhase:
           raceCfg.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",

@@ -30,6 +30,7 @@ import {
   promoteOrCreate,
   rearmSetup,
 } from "../server/src/auth/recoverAdmin.js";
+import { assertNewPassword } from "../server/src/auth/usersStore.js";
 
 // ── Argument parsing ──────────────────────────────────────────────────────────
 
@@ -159,10 +160,12 @@ async function main() {
 
   if (ACTION === "promote") {
     const newPassword = await readPassword();
-    if (!newPassword || !newPassword.trim()) {
-      process.stderr.write(
-        "[recover-admin] ERROR: Password must not be empty.\n",
-      );
+    // AUDIT-1 A5M-15: the same new-password rule as every other path (usersStore.js), checked
+    // here so the refusal comes before the "Promoting" line instead of as a FATAL after it.
+    try {
+      assertNewPassword(newPassword);
+    } catch (err) {
+      process.stderr.write(`[recover-admin] ERROR: ${err.message}.\n`);
       process.exit(1);
     }
 

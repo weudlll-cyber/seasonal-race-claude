@@ -135,6 +135,12 @@ function openChapter(title) {
 let before;
 const seen = {};
 
+// AUDIT-1 A4-02: this hook renders the whole Dev Screen and walks all seven chapters, and it ran
+// ~9.5 s against vitest's default 10 s hook limit — it timed out twice under load (beside a scanner,
+// and under coverage instrumentation) while passing in every unloaded run. The limit is raised for
+// this hook only, so a genuinely hung walk still fails, just later.
+const CHAPTER_WALK_TIMEOUT_MS = 60_000;
+
 beforeAll(async () => {
   storeSavedConfiguration();
   before = readStored();
@@ -170,7 +176,7 @@ beforeAll(async () => {
       seen.sound = field('RaceDefaults:soundEffects').checked;
     }
   }
-});
+}, CHAPTER_WALK_TIMEOUT_MS);
 
 describe('DEVSCREEN-CHAPTERS-1 — a saved configuration survives the chapter layout', () => {
   it('the controls show the saved values', () => {
