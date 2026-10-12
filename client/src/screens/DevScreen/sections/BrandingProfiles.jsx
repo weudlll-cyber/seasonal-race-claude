@@ -183,9 +183,7 @@ function BrandingProfiles() {
 
   async function handleDelete(id, isDefault) {
     if (isDefault) {
-      setActionError(
-        'Ein Default-Brand kann nicht gelöscht werden. Entferne zuerst den Default-Status.'
-      );
+      setActionError('A default brand cannot be deleted. Remove its default status first.');
       return;
     }
     if (!window.confirm('Delete this branding profile?')) return;

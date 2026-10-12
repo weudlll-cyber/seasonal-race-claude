@@ -31,6 +31,8 @@
 // ── ★ WHAT IS REUSED RATHER THAN REBUILT ───────────────────────────────────────────────────────
 // `server/src/dataPaths.js` — `resolveDataRoot()` is THE resolver and is imported, never
 // re-derived. If the default ever moves, this tool moves with it.
+// `shared/backupArchive.mjs` — the archive's name and checksum format (AUDIT-1 D2). It moved there
+// from this file so the server can read backups too; it is re-exported below, unchanged.
 //
 // ── ★★ WHY IT REFUSES WHEN A PER-STORE OVERRIDE POINTS OUTSIDE THE ROOT ────────────────────────
 // Three environment variables can each relocate ONE store away from the data root: `RA_USERS_DB`,
@@ -63,7 +65,14 @@ import {
   constants as FS,
 } from 'node:fs';
 import {join, resolve, relative, dirname, sep, basename} from 'node:path';
-import { createHash } from 'node:crypto';
+import {
+  stampUtc,
+  archiveName,
+  archiveTakenAt,
+  checksumPath,
+  checksumLine,
+  verifyChecksum,
+} from '../shared/backupArchive.mjs';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 // ★ fileURLToPath, never URL.pathname: this repository's path contains spaces, and pathname
@@ -115,63 +124,12 @@ export function strayOverrides(dataRoot, env = process.env) {
   return stray;
 }
 
-/** UTC stamp with no characters a filesystem dislikes: 20260924T143001Z. */
-export function stampUtc(d = new Date()) {
-  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-}
-
-/** The archive name. Two backups in the same second on the same root would still collide, so the
- *  seconds-resolution stamp is the naming rule and the tests pin it. */
-export function archiveName(d = new Date()) {
-  return `racearena-backup-${stampUtc(d)}.tar`;
-}
-
-/** The reverse of `archiveName`: the UTC instant a backup was taken, read from its NAME, or `null`
- *  for a file that is not one of ours. Lives beside `archiveName` so the format is one fact in one
- *  file; `scripts/status.mjs` reads backup ages through this rather than through file mtimes, which
- *  a copy to another disk resets. (RELEASE-BASICS-1) */
-export function archiveTakenAt(name) {
-  const m = /^racearena-backup-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z\.tar$/.exec(name);
-  if (!m) return null;
-  const [, y, mo, d, h, mi, s] = m;
-  return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
-}
-
-// ── the integrity checksum (TIDY-C-1) ──────────────────────────────────────────────────────────
-// Every archive gets a `<archive>.sha256` beside it in the standard `sha256sum` format
-// ("<hex>  <filename>"), so `sha256sum -c` checks it on any Linux host with no tool of ours, and
-// `npm run status` checks it through `verifyChecksum` below. Lives here, beside `archiveName`, so the
-// archive and its checksum are one format in one file. Not to be confused with the tar HEADER
-// checksum in `tarHeader`, which is part of the tar format and says nothing about the whole archive.
-
-/** The checksum file that belongs to an archive path (or name). */
-export function checksumPath(archive) {
-  return `${archive}.sha256`;
-}
-
-/** The `sha256sum` line for an archive's bytes: lowercase hex, TWO spaces, the bare file name. */
-export function checksumLine(bytes, archiveFileName) {
-  return `${createHash('sha256').update(bytes).digest('hex')}  ${archiveFileName}
-`;
-}
-
-/**
- * Does the archive still match its checksum file? `{ ok, detail }`, never a throw, so a caller can
- * report it as one line. A missing or malformed checksum file is NOT a pass: an archive that cannot
- * be checked cannot be trusted to restore.
- */
-export function verifyChecksum(archive) {
-  const sumFile = checksumPath(archive);
-  if (!existsSync(sumFile)) return { ok: false, detail: `no checksum file ${basename(sumFile)}` };
-  const m = /^([0-9a-f]{64}) [ *](.+)$/m.exec(readFileSync(sumFile, 'utf8'));
-  if (!m) return { ok: false, detail: `checksum file ${basename(sumFile)} is not in sha256sum format` };
-  if (m[2].trim() !== basename(archive))
-    return { ok: false, detail: `checksum file ${basename(sumFile)} names ${m[2].trim()}, not ${basename(archive)}` };
-  const actual = createHash('sha256').update(readFileSync(archive)).digest('hex');
-  return actual === m[1]
-    ? { ok: true, detail: 'checksum matches' }
-    : { ok: false, detail: `checksum MISMATCH for ${basename(archive)} — the archive changed after it was written` };
-}
+// ── the archive's name and its checksum file (RELEASE-BASICS-1, TIDY-C-1) ─────────────────────
+// The FORMAT lives in `shared/backupArchive.mjs` since AUDIT-1 D2, so the server's admin status
+// route can read backups without this file (which is not in the server image). It is re-exported
+// here unchanged: this tool writes with it, and every existing import of these names from
+// `backup.mjs` keeps working.
+export { stampUtc, archiveName, archiveTakenAt, checksumPath, checksumLine, verifyChecksum };
 
 // ── a minimal, correct USTAR writer ────────────────────────────────────────────────────────────
 // Written here rather than shelled out to `tar`: Windows has no tar with the same flags, and a

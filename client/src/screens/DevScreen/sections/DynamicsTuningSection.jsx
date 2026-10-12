@@ -315,6 +315,7 @@ function DynamicsTuningSection({ part }) {
                   type="number"
                   data-testid="normal-speed-input"
                   className={s.input}
+                  aria-label="Normal Speed (px/s)"
                   min={10}
                   max={2000}
                   step={5}
@@ -351,6 +352,7 @@ function DynamicsTuningSection({ part }) {
                   type="number"
                   data-testid="min-speed-input"
                   className={s.input}
+                  aria-label="Min Speed"
                   min={0.0001}
                   max={0.005}
                   step={0.00001}
@@ -373,6 +375,7 @@ function DynamicsTuningSection({ part }) {
                   type="number"
                   data-testid="max-speed-input"
                   className={s.input}
+                  aria-label="Max Speed"
                   min={0.0001}
                   max={0.005}
                   step={0.00001}
@@ -1136,7 +1139,7 @@ function DynamicsTuningSection({ part }) {
             </p>
             <SubHeading
               label="Phase-Split Bonuses"
-              note="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos) and POST — via the master switch below (it also gates the PULK-phase area/row bonuses, which live in the PULK Phase section). Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full."
+              note="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos) and POST — via the master switch below (it also gates the PULK-phase area/row bonuses, which live in the PULK Phase section). Area strengths are measured against Race Plan Bonus Strength above: a strength equal to it gives that phase the full Race Plan bonus, half of it gives half, 0 is off. Row strengths are fractions (1 = full, 0 = off)."
               onReset={resetPhaseSplit}
               resetTestId="reset-phase-split"
               resetControlId="DynamicsTuningSection:reset-phase-split"
@@ -1535,7 +1538,7 @@ function DynamicsTuningSection({ part }) {
               an operator comparing them should not have to hunt for the second one. ── */}
           <SubCard
             title="Gap Leader Brake"
-            subtitle="The outcome-phase brake on a runaway lead. Acts on the GAP, never on rank. SHIPPED OFF."
+            subtitle="The outcome-phase brake on a runaway lead. Acts on the GAP, never on rank. SHIPPED ON."
           >
             <SubHeading
               label="Gap Leader Brake"
@@ -1725,7 +1728,7 @@ function DynamicsTuningSection({ part }) {
             onReset={resetFrameTiming}
             resetTestId="reset-frame-timing"
             resetControlId="DynamicsTuningSection:reset-frame-timing"
-            subtitle="Controls how browser frame-time variation is smoothed before being applied to camera movement and visual effects. Physics is always fixed at 16ms steps and is not affected by this setting."
+            subtitle="Controls how browser frame-time variation is smoothed before it drives the track effects. The camera follows the raw frame time, and physics is always fixed at 16ms steps; neither is affected by this setting."
           >
             <div className={s.formGrid}>
               <div className={s.formGroup} data-control-id="DynamicsTuningSection:dtSmoothingAlpha">
@@ -1770,7 +1773,7 @@ function DynamicsTuningSection({ part }) {
                     ? 'Light smoothing — fast response'
                     : frameTimingConfig.dtSmoothingAlpha < 0.8
                       ? 'Moderate smoothing — balanced (recommended)'
-                      : 'Strong smoothing — very stable camera, slow adaptation'}
+                      : 'Strong smoothing — very steady effects, slow adaptation'}
               </p>
             </div>
             <div

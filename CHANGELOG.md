@@ -45,12 +45,17 @@ is.
   already stored keep theirs (audit finding A2-14). *(on `master`, 2026-10-12)*
 - An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
-  the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*
+  the server at most once a day; "unknown" when the check fails). *(on `master`, 2026-10-12)*
 
 ### Changed
 
 - A source install (the plain-Node path) needs Node 22 or newer; it said 20, which no longer
   receives security fixes. The Docker image already runs Node 24. *(on `master`, 2026-10-12)*
+- The Dev Screen is easier to read and to use with a screen reader: the active view toggle and the
+  reset buttons have enough contrast, and every number field in the first chapter and both Track
+  Editor dropdowns carry their label. The setup screen fits a 390 px phone; the three "cannot delete
+  a default" messages are in English; five Dev Screen help texts now match what ships.
+  *(on `master`, 2026-10-12)*
 
 ### Security
 
@@ -66,7 +71,7 @@ is.
   *(on `master`, 2026-10-12)*
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
-  keeps working. *(branch `feat/csp`)*
+  keeps working. *(on `master`, 2026-10-12)*
 - The data and backup folders on a single-server install are private to the app's own account
   (audit finding A5M-06), also after a restore. *(branch `feat/vps-install`)*
 - `SECURITY.md`: how to report a security problem privately (GitHub's "Report a vulnerability"),

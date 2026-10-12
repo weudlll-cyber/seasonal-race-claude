@@ -17,6 +17,7 @@ import racersRouter from './routes/racers.js';
 import seedNoticesRouter from './routes/seedNotices.js';
 import racesRouter from './routes/races.js';
 import settingsRouter from './routes/settings.js';
+import adminStatusRouter from './routes/adminStatus.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
 import usersRouter from './auth/usersRouter.js';
@@ -27,6 +28,7 @@ import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLi
 import { mountClientAssets, mountSpaFallback, mountApiNotFound } from './staticClient.js';
 import { apiErrorHandler } from './apiErrorHandler.js';
 import { applyTrustProxy } from './trustProxy.js';
+import { cspDirectives } from './csp.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -34,8 +36,13 @@ const sessionMiddleware = createSessionMiddleware();
 export function createApp() {
   const app = express();
   applyTrustProxy(app); // AUDIT-1 A5M-07: RA_TRUST_PROXY; unset keeps the NODE_ENV rule
+  // AUDIT-1 D1: the Content-Security-Policy is ON; its directives and why each is what it is live in
+  // csp.js. CORP stays `cross-origin` for the development split (5173 → 4000).
   app.use(
-    helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } })
+    helmet({
+      contentSecurityPolicy: { useDefaults: false, directives: cspDirectives() },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
   );
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
@@ -77,6 +84,8 @@ export function createApp() {
   app.use('/api/seed-notices', seedNoticesRouter);
   app.use('/api/races', racesRouter);
   app.use('/api/settings', settingsRouter);
+  // AUDIT-1 D2: the admin status box — read-only, admin-only by ROUTE_POLICY (all of /api/admin).
+  app.use('/api/admin', adminStatusRouter);
 
   // SERVE-SPA-1: LAST, so every real route above wins. An unknown path under /api/ now answers as
   // the API rather than as Express's default HTML error page.

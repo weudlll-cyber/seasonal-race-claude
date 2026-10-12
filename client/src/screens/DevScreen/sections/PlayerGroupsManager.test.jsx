@@ -310,7 +310,7 @@ describe('PlayerGroupsManager — delete group', () => {
 //  API is never called and confirm never shown.)
 
 describe('PlayerGroupsManager — default group: client-side guard', () => {
-  it('shows German error immediately without calling confirm or deletePlayerGroup', async () => {
+  it('shows the error immediately without calling confirm or deletePlayerGroup', async () => {
     fetchPlayerGroups.mockResolvedValue([DEFAULT_GROUP]);
     const confirmSpy = vi.spyOn(window, 'confirm');
 
@@ -322,7 +322,7 @@ describe('PlayerGroupsManager — default group: client-side guard', () => {
     });
 
     const alert = screen.getByRole('alert');
-    expect(alert.textContent).toMatch(/Eine Default-Gruppe kann nicht gelöscht werden/i);
+    expect(alert.textContent).toMatch(/A default group cannot be deleted/i);
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(deletePlayerGroup).not.toHaveBeenCalled();
   });
@@ -369,18 +369,18 @@ describe('PlayerGroupsManager — tooltip render (pre-D2 parity)', () => {
   });
 });
 
-// ── L126: Default-Lösch-Guard ─────────────────────────────────────────────────
-// OHNE isDefault-Check: confirm + API werden aufgerufen → ROT
-// MIT isDefault-Check:  Fehlermeldung sofort, kein confirm, kein API-Call → GRÜN
+// ── L126: the default-delete guard ────────────────────────────────────────────
+// WITHOUT the isDefault check: confirm + API are called → RED
+// WITH the isDefault check:    error at once, no confirm, no API call → GREEN
 
-describe('PlayerGroupsManager — handleDelete: Default-Gruppe wird sofort abgelehnt', () => {
+describe('PlayerGroupsManager — handleDelete: a default group is refused at once', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchPlayerGroups.mockResolvedValue([DEFAULT_GROUP]); // isDefault: true
     migrateLocalPlayerGroupsToServer.mockResolvedValue(true);
   });
 
-  it('zeigt sofort Fehlermeldung, ruft weder confirm noch deletePlayerGroup auf', async () => {
+  it('shows the error at once and calls neither confirm nor deletePlayerGroup', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     renderManager();
     await waitFor(() => screen.getByText('Example Group'));
@@ -389,12 +389,12 @@ describe('PlayerGroupsManager — handleDelete: Default-Gruppe wird sofort abgel
       fireEvent.click(screen.getByTitle('Delete'));
     });
 
-    expect(screen.getByText(/Eine Default-Gruppe kann nicht gelöscht werden/i)).toBeInTheDocument();
+    expect(screen.getByText(/A default group cannot be deleted/i)).toBeInTheDocument();
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(deletePlayerGroup).not.toHaveBeenCalled();
   });
 
-  it('normaler (nicht-default) Eintrag zeigt confirm und ruft API auf', async () => {
+  it('a normal (non-default) entry shows confirm and calls the API', async () => {
     fetchPlayerGroups.mockResolvedValue([CUSTOM_GROUP]); // isDefault: false
     deletePlayerGroup.mockResolvedValue(undefined);
     vi.spyOn(window, 'confirm').mockReturnValue(true);

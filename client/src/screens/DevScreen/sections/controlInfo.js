@@ -393,7 +393,7 @@ export const CONTROL_INFO = {
   'DynamicsTuningSection:reset-frame-timing':
     'Puts the three smoothness settings back to shipped. It is separate from the race reset on purpose: these change the picture, not the race.',
   'DynamicsTuningSection:dtSmoothingAlpha':
-    'Smooths uneven browser frame times before they move the camera and effects. Higher is a smoother camera that reacts later to real frame-rate changes; zero uses the raw timing. The race itself is not affected.',
+    'Smooths uneven browser frame times before they drive the track effects. Higher is steadier effects that react later to real frame-rate changes; zero uses the raw timing. The camera always follows the raw timing, and the race itself is not affected.',
   'DynamicsTuningSection:renderInterpolation':
     'Smooths racer and camera movement between the race’s fixed steps, removing rhythmic jitter on uneven frame rates. Off is the older look, kept for comparison. Takes effect at once.',
   'DynamicsTuningSection:scoreboardIntervalMs':
@@ -615,6 +615,8 @@ export const CONTROL_INFO = {
   "DevScreen:navigate('/setup')":
     'Leaves the Dev Screen and returns to Race Setup. Settings are already saved.',
   'DevScreen:logout': 'Signs you out of this browser.',
+  'AdminStatusSection:admin-status-box':
+    'Read-only, admins only; nothing here changes anything. Build: the commit and branch this server was built from, the same answer its health check gives, or unknown with the reason. Newest backup: when the newest backup in the backup directory was taken, or “not visible from the app” when this server cannot see where backups are kept. Status: the checks of npm run status that the server can run on itself — free disk space, a writable data folder and, when backups are visible, the newest backup’s age and checksum; OK only when every one of them passed. Newer release: whether GitHub has a release newer than this build, asked by the server at most once a day; “unknown” when it could not be asked, and no comparison when this build’s version is not known.',
   'ChangePasswordSection:setCurrentPassword':
     'Your existing password. Verified by the server; a wrong value returns the same error the login screen uses.',
   'ChangePasswordSection:setNewPassword':

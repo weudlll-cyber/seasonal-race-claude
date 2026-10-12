@@ -20,8 +20,9 @@ is marked as such. Where this page and the code disagree, the code is right.
 - **Whose data:** the race directors who have accounts, and the **players whose names are typed into
   races and player groups**. Players have no account and never sign in.
 - **Where:** in one data folder on the server, and in the browser of each person who uses the app.
-- **Nothing goes to any third party** — no analytics, no external fonts or scripts, no outbound call
-  from the server.
+- **Nothing goes to any third party** — no analytics, no external fonts or scripts. The server's one
+  outbound call is the admin status box's release check: it asks GitHub's public API for the
+  project's release tags, at most once a day, carrying nothing from the installation (see below).
 - ★ **Player names in stored races are kept forever, and there is no way in the app to remove them.**
 - ★ **Backups contain everything, including the password hashes, and nothing deletes old backups**
   (except on the unmerged VPS install, see below).
@@ -61,12 +62,12 @@ install path is in [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md), section 1.
 
 ## What leaves the machine
 
-**Nothing, today.** The app loads no external script, font or analytics (the font is shipped with the
-app), and the server makes no outbound network call. Nothing is sent anywhere unless the operator
-copies it — a backup moved to another machine is the operator's own transfer.
+**Nothing from the installation.** The app loads no external script, font or analytics (the font is
+shipped with the app). Nothing is sent anywhere unless the operator copies it — a backup moved to
+another machine is the operator's own transfer.
 
-★ **When the admin status box is merged** (built on branch `feat/admin-status-box`, not yet merged), it
-will be the **first outbound call**: the server asks GitHub's public API for the project's tag list
+★ **The server's one outbound call is the admin status box's release check** (merged 2026-10-12): the
+server asks GitHub's public API for the project's tag list
 (`api.github.com/repos/weudlll-cyber/seasonal-race-claude/git/matching-refs/tags/v`), without
 credentials, at most once a day per server process, and only when an admin opens the Dev Screen. The
 request carries nothing from the installation beyond what any HTTPS request reveals (the server's IP
