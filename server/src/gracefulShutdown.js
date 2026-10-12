@@ -18,7 +18,8 @@
 // is forced after `timeoutMs`, inside Docker's default 10 s grace period, so the outcome is never
 // worse than before.
 //
-// It does NOT close the databases by hand. Both are SQLite with a rollback journal and every JSON
+// It does NOT close the databases by hand. Both are SQLite (a rollback journal, or WAL for the race
+// store with RA_RACES_WAL — a WAL left at exit is replayed on the next open) and every JSON
 // store writes by atomic rename, so the files are consistent at any instant; better-sqlite3 closes
 // its handles at exit. Reaching into each store to close it would couple this file to all of them
 // for no gain in safety.

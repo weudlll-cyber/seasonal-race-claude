@@ -41,7 +41,7 @@ afterEach(() => {
 async function seedFounder(team = FOUNDING_TEAM) {
   return store.createUser({
     username: `founder-${randomUUID().slice(0, 8)}`,
-    password: 'pw-123456',
+    password: 'pw-123456-',
     role: 'admin',
     team,
     allowNewTeam: true,
@@ -95,7 +95,7 @@ describe('createUser — the team is required', () => {
     await expect(
       store.createUser({
         username: 'a',
-        password: 'pw-123456',
+        password: 'pw-123456-',
         role: 'operator',
         allowNewTeam: true,
       })
@@ -111,7 +111,7 @@ describe('createUser — the team is required', () => {
     await expect(
       store.createUser({
         username: 'a',
-        password: 'pw-123456',
+        password: 'pw-123456-',
         role: 'operator',
         team,
         allowNewTeam: true,
@@ -142,7 +142,7 @@ describe('createUser — two users cannot land in different teams by typo', () =
     const err = await store
       .createUser({
         username: 'bob',
-        password: 'pw-123456',
+        password: 'pw-123456-',
         role: 'operator',
         team: 'Seasonal entertainmnet',
       })
@@ -160,7 +160,7 @@ describe('createUser — two users cannot land in different teams by typo', () =
 
     const bob = await store.createUser({
       username: 'bob',
-      password: 'pw-123456',
+      password: 'pw-123456-',
       role: 'operator',
       team: '  seasonal   ENTERTAINMENT ', // the same team, typed carelessly
       createdBy: 'test',
@@ -176,7 +176,7 @@ describe('createUser — two users cannot land in different teams by typo', () =
     await expect(
       store.createUser({
         username: 'c',
-        password: 'pw-123456',
+        password: 'pw-123456-',
         role: 'operator',
         team: 'Other Team',
       })
@@ -184,7 +184,7 @@ describe('createUser — two users cannot land in different teams by typo', () =
 
     const made = await store.createUser({
       username: 'c',
-      password: 'pw-123456',
+      password: 'pw-123456-',
       role: 'operator',
       team: 'Other Team',
       allowNewTeam: true,
@@ -200,7 +200,12 @@ describe('createUser — two users cannot land in different teams by typo', () =
 
   it('refuses even the FIRST team when the caller did not say it was founding one', async () => {
     await expect(
-      store.createUser({ username: 'a', password: 'pw-123456', role: 'operator', team: 'Anything' })
+      store.createUser({
+        username: 'a',
+        password: 'pw-123456-',
+        role: 'operator',
+        team: 'Anything',
+      })
     ).rejects.toMatchObject({ code: 'UNKNOWN_TEAM' });
   });
 });
@@ -218,7 +223,7 @@ describe('updateUser — the same gate applies to an edit', () => {
     const founder = await seedFounder();
     await store.createUser({
       username: 'b',
-      password: 'pw-123456',
+      password: 'pw-123456-',
       role: 'operator',
       team: 'Other Team',
       allowNewTeam: true,
@@ -232,7 +237,7 @@ describe('updateUser — the same gate applies to an edit', () => {
     const founder = await seedFounder();
     await store.createUser({
       username: 'b',
-      password: 'pw-123456',
+      password: 'pw-123456-',
       role: 'operator',
       team: 'Other Team',
       allowNewTeam: true,
@@ -261,7 +266,7 @@ describe('listTeams', () => {
     await seedFounder();
     await store.createUser({
       username: 'b',
-      password: 'pw-123456',
+      password: 'pw-123456-',
       role: 'operator',
       team: FOUNDING_TEAM,
       createdBy: 'test',
@@ -281,7 +286,7 @@ describe('migrateTeams — the one-time backfill', () => {
     for (let i = 0; i < n; i++) {
       await store.createUser({
         username: `old-${i}`,
-        password: 'pw-123456',
+        password: 'pw-123456-',
         role: i === 0 ? 'admin' : 'operator',
         team: 'placeholder',
         allowNewTeam: true,
@@ -328,7 +333,7 @@ describe('migrateTeams — the one-time backfill', () => {
     await migrateTeams({ store });
     const outsider = await store.createUser({
       username: 'outsider',
-      password: 'pw-123456',
+      password: 'pw-123456-',
       role: 'operator',
       team: 'Other Team',
       allowNewTeam: true,

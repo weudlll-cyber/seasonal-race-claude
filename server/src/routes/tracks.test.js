@@ -1523,7 +1523,7 @@ describe('GET /api/tracks/:id/background — C4: X-Content-Type-Options', () => 
 
 // ★★ Q-24 (POLISH-2026-09-24B): A DEFAULT TRACK CANNOT BE UN-DEFAULTED THROUGH PUT.
 // The audit found the protection present but UNTESTED: `PUT /api/tracks/:id` spreads the client body
-// and then writes `isDefault: existing.isDefault` AFTER it (`tracks.js:542`), so a client-sent value
+// and then writes `isDefault: existing.isDefault` AFTER it (`tracks.js:664`), so a client-sent value
 // is discarded. Nothing asserted that, so restructuring the handler could drop the line silently.
 //
 // ★ THE BEHAVIOUR WAS ALREADY CORRECT — this is a test gap and not a defect, and it is recorded as

@@ -43,13 +43,14 @@ so on an install that already has an admin a wrong token is never reported as su
 | `RA_BIND_ADDRESS` | unset — listens on **every interface**, as it always has | An IP address (`127.0.0.1`, `::1`, …) the API listens on instead. **`127.0.0.1` is the recommended setting behind a reverse proxy**: the API then answers only on the machine itself. **Set but not an IP address → the server refuses to start**, naming the variable (a hostname is refused on purpose — see `server/src/bindAddress.js`). **Not inside a Docker container**: `127.0.0.1` there makes the published port unreachable; bind the published port instead. Added 2026-10-01, RELEASE-BASICS-1. |
 | `RA_CLIENT_DIST` | `client/dist`, resolved relative to the server's own module — never to the working directory | If there is no build there, the server **starts anyway**, logs one line naming the path it tried, and serves the API only. `GET /` is then a 404. |
 | `RA_CLIENT_ORIGIN` | unset — CORS is **off** (`origin: false`), i.e. same-origin only | Needed only for **split hosting**, where the app is served from a different origin than the API. Comma-separated for more than one. A browser on an origin not in the list is refused by CORS, which in the browser looks like the server being down rather than a configuration problem. In the same-origin model it should stay unset. |
+| `RA_TRUST_PROXY` | unset — trusts **one** proxy hop when `NODE_ENV=production` and none otherwise, as it always has, and logs one startup line recommending the setting | The number of reverse-proxy hops in front of the server: **`1` behind one proxy (Caddy, nginx), `0` when clients reach the port directly.** It decides whose address the sign-in rate limiter counts (`X-Forwarded-For` is believed only from trusted hops), so trusting a hop that is not there lets a direct caller choose its own key. **Set but not a whole number → the server refuses to start**, naming the variable (`server/src/trustProxy.js`). Added 2026-10-12, AUDIT-1 A5M-07. |
 | `RA_PUBLIC_ORIGIN` | derived from the `Host` header per request | The canonical self-origin for CSRF validation. Set it whenever the public address differs from what Express would derive — behind a reverse proxy, most often. Wrong value: mutating requests are rejected as cross-origin. |
 
 ## Cookies and CSRF
 
 | variable | accepted | default | notes |
 | --- | --- | --- | --- |
-| `NODE_ENV` | `production`, `test`, anything | unset | `production` turns on trust-proxy, and is what the three `auto` settings below key off. |
+| `NODE_ENV` | `production`, `test`, anything | unset | `production` turns on trust-proxy (one hop) while `RA_TRUST_PROXY` is unset, and is what the three `auto` settings below key off. |
 | `RA_COOKIE_SECURE` | `true`, `false`, `auto` | follows `NODE_ENV=production` | Marks the session cookie `Secure`. `auto` delegates to Express's trust-proxy logic. Set it explicitly when a terminating proxy means `NODE_ENV` does not tell the truth about HTTPS. |
 | `RA_COOKIE_NAME_MODE` | `auto`, `host`, `legacy` | `auto` | `auto` uses the `__Host-` cookie prefix only when `Secure` is guaranteed. **`host` THROWS at startup (`COOKIE_NAME_MODE_INVALID`) unless `RA_COOKIE_SECURE=true`** — one of the two variables that can stop the server from booting. |
 | `RA_CSRF_STRICT` | `true`, `false`, `auto` | follows `NODE_ENV=production` | Rejects mutating requests with no `Origin` header. Wrong value: either mutations from real browsers are refused, or the protection is off. |
@@ -60,7 +61,9 @@ so on an install that already has an admin a wrong token is never reported as su
 | --- | --- | --- |
 | `RA_DATA_DIR` | `server/data`, resolved relative to the server's own module | The whole runtime store. **It holds your accounts as well as the seeded content** — see the warning below. |
 | `RA_USERS_DB` | `users.json` inside the data root | The account store. |
-| `RA_SESSION_DB` | `sessions.sqlite` inside the data root | The session store. In-memory under test. |
+| `RA_SESSION_DB` | `sessions.sqlite` inside the data root | The session store. In-memory under test. A damaged file is moved aside and a fresh one started (see [AUTH.md](AUTH.md)). |
+| `RA_RACES_DB` | `races.sqlite` inside the data root | The race store. For test isolation; `npm run backup` refuses when it points outside the data root. |
+| `RA_RACES_WAL` | unset — **off**: the rollback journal, as it always was | `1` or `true` runs the race store in WAL (write-ahead log) mode, so a save is no longer blocked while a backup reads the database (AUDIT-1 A10-02: about 7 s and a failed save without it). WAL keeps `races.sqlite-wal` and `-shm` beside the file while the server runs — **do not use it with the data folder in a synced folder** such as OneDrive. `npm run backup` reads through the WAL and works in both modes. Turning it off again switches the file back at the next start. `0`/`false` = off. **Anything else → the server refuses to start**, naming the variable. Added 2026-10-12. |
 
 **Your accounts live beside the seeded records.** `users.json`, `sessions.sqlite` and
 `setup-complete.json` sit in the same directory as the tracks, backgrounds, brands and player groups.

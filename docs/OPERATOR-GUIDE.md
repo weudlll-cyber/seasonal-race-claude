@@ -187,7 +187,10 @@ In production the request also needs an `Origin` header naming the install's add
 Signed in as an admin: **Dev Screen → Accounts and system → Race directors.** Each account gets a role
 and a team. The last admin can be neither deleted nor demoted. **Each user changes their own
 password** in *Accounts and system → Your password*; doing so signs out that user's other sessions.
-An admin resetting someone else's password signs out all of that user's sessions.
+An admin resetting someone else's password signs out all of that user's sessions. **Every new
+password needs at least 10 characters** — at first-admin setup, on an account created or reset, on
+your own, and in the recovery tool; a shorter one is refused with a message saying so. Passwords
+set before this rule keep working until they are changed.
 
 ### A forgotten admin password
 
@@ -221,7 +224,7 @@ The server speaks plain HTTP. **On a public address, HTTPS comes from a proxy in
 
 | path | how |
 | --- | --- |
-| Node | a reverse proxy such as Caddy, with `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in — DEPLOYMENT.md, *Behind a reverse proxy*, a tested example |
+| Node | a reverse proxy such as Caddy, with `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in and `RA_TRUST_PROXY=1` so the server believes the one proxy's forwarded address — DEPLOYMENT.md, *Behind a reverse proxy*, a tested example |
 | Docker | the same proxy; the shipped compose file publishes port 4000 on **every** interface, so close it in your own override file with `ports: !override` and `- "127.0.0.1:4000:4000"` (DEPLOYMENT.md, *Docker*) |
 | VPS install (branch feat/vps-install, not yet merged) | automatic: Caddy obtains and renews the certificate; only ports 22, 80 and 443 are open |
 
@@ -273,8 +276,8 @@ Read the first lines it prints; each start-up refusal names its cause.
 | no `RA_SESSION_SECRET` with `NODE_ENV=production` | refuses to start (`SESSION_SECRET_MISSING`) | set it in the settings (§5) |
 | `RA_PUBLIC_ORIGIN` set but malformed | refuses to start, naming what is wrong | correct the address |
 | `RA_BIND_ADDRESS` not an IP address | refuses to start, naming the variable | an IP address, or leave it out |
+| `RA_TRUST_PROXY` not a whole number | refuses to start, naming the variable | the number of proxies in front (`1` behind Caddy, `0` for none), or leave it out |
 | `RA_COOKIE_NAME_MODE=host` without a guaranteed secure cookie | refuses to start | leave the variable unset |
-| `sessions.sqlite` damaged | refuses to start: `SqliteError: file is not a database` | see *A damaged data file* below |
 | no client build present | **starts**, logs where it looked, and serves only the API | build the client (Node path, install step 3) |
 
 On the Docker path: `docker compose logs server`. On the VPS install (branch feat/vps-install, not yet
@@ -294,17 +297,20 @@ nothing deletes them. Copy them off the server before deleting them.
 
 | file | what happens (measured) | what to do |
 | --- | --- | --- |
-| `users.json` | starts, health says `ok`, **sign-in and every signed-in page fail** | restore from a backup (§2) |
+| `users.json` | starts; **health answers `503`, status `error`**, naming the account store (so `npm run status` and the container's health check fail); **sign-in and every signed-in page fail** | restore from a backup (§2) |
 | `races.sqlite` | starts; only the race history fails; tracks and everything else work | restore from a backup |
-| `sessions.sqlite` | **the server will not start** | sessions are disposable: stop the server, move the file aside (do not delete it), start again — everybody has to sign in again. *The server opens the session database in a way that creates a missing file (`server/src/auth/session.js`), but this recovery was not part of the audit's measurement; automating it is an open decision.* Or restore from a backup |
+| `sessions.sqlite` | **starts anyway** (since AUDIT-1 A10-07): the damaged file is renamed `sessions.sqlite.damaged-<time>` beside it, a fresh one is started and one log line says so — **everybody has to sign in again**, nothing else is lost | nothing; delete the renamed file once you no longer want it |
 | one track file | starts; that track is skipped with a warning, the others are served | restore from a backup, or re-save the track |
 
 ★ **Before any restore, move the damaged data folder aside rather than deleting it.** A restore goes
 into an empty folder, and what you set aside may still hold something the backup does not.
 
 ★ **A save can hold the server for several seconds** when something else holds the race database open
-(measured: about 7 seconds, then the save fails). This is an open decision in the audit, not a fault
-you can fix by configuration.
+(measured: about 7 seconds, then the save fails) — a running backup is enough. **`RA_RACES_WAL=1` ends
+that**: the race database then uses write-ahead logging, and a save goes through while a backup
+reads (measured: about 20 ms). It is off by default because it keeps two more files beside
+`races.sqlite` while the server runs (`-wal`, `-shm`); do not put the data folder in a synced folder
+(OneDrive, Dropbox) with it on. Backups and restores work in both modes ([ENVIRONMENT.md](ENVIRONMENT.md)).
 
 ---
 

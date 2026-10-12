@@ -97,18 +97,18 @@ describe('POST /api/auth/setup — the client/server contract', () => {
   });
 
   it('the client sends the bootstrap token in the x-bootstrap-token HEADER', async () => {
-    await setup('admin', 'pw123456', TOKEN);
+    await setup('admin', 'pw123456-0', TOKEN);
     expect(seen).toHaveLength(1);
     expect(seen[0].headers['x-bootstrap-token']).toBe(TOKEN);
   });
 
   it('the client does NOT put the token in the body — the server would ignore it there', async () => {
-    await setup('admin', 'pw123456', TOKEN);
-    expect(JSON.parse(seen[0].body)).toEqual({ username: 'admin', password: 'pw123456' });
+    await setup('admin', 'pw123456-0', TOKEN);
+    expect(JSON.parse(seen[0].body)).toEqual({ username: 'admin', password: 'pw123456-0' });
   });
 
   it('END TO END: the real client call against the real handler CREATES the first admin', async () => {
-    const out = await setup('admin', 'pw123456', TOKEN);
+    const out = await setup('admin', 'pw123456-0', TOKEN);
     // The founding team is asserted as a LITERAL, not imported from teams.js, and deliberately so:
     // the spelling is the owner's ("Seasonal Entertainment", 2026-09-05) and it is the join key
     // every existing user was backfilled onto. Importing the constant would make this test agree
@@ -119,7 +119,7 @@ describe('POST /api/auth/setup — the client/server contract', () => {
   });
 
   it('a WRONG token is refused, so the success above is the token and not the bridge', async () => {
-    await expect(setup('admin', 'pw123456', 'NOT-THE-TOKEN')).rejects.toMatchObject({
+    await expect(setup('admin', 'pw123456-0', 'NOT-THE-TOKEN')).rejects.toMatchObject({
       status: 403,
     });
     expect(existsSync(markerPath)).toBe(false);
@@ -131,7 +131,7 @@ describe('POST /api/auth/setup — the client/server contract', () => {
   it('CONTROL: a body-only token is refused — the shipped-until-2026-08-18 request', async () => {
     const res = await request(app)
       .post('/api/auth/setup')
-      .send({ username: 'admin', password: 'pw123456', token: TOKEN });
+      .send({ username: 'admin', password: 'pw123456-0', token: TOKEN });
     expect(res.status).toBe(403);
     expect(existsSync(markerPath)).toBe(false);
   });

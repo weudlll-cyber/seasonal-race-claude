@@ -722,7 +722,7 @@ here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns 
 **verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
 here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
 was still denying it: race outcomes ARE persisted, in a real database
-(`server/src/races/raceStore.js:64,221`, served by `server/src/routes/races.js`); branding profiles
+(`server/src/races/raceStore.js:262`, `createRaceStore`, served by `server/src/routes/races.js`); branding profiles
 ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
 (`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
 **What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
@@ -782,7 +782,7 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★★ **THE AUTH QUESTION, NARROWED TO TWO FALSIFIABLE ITEMS.** "Admin auth hardened for
       public-facing use" was an open row with no bar, which is why it could not be settled. The
       decisions behind it are settled; what is measurable is exactly two things:
-      **(1) CSP is switched off** — `server/src/app.js:36` runs
+      **(1) CSP is switched off** — `server/src/app.js:37` runs
       `helmet({ contentSecurityPolicy: false })`; **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
@@ -1802,20 +1802,10 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Security and access — his word
 
-- [ ] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one
-      proxy hop whenever `NODE_ENV=production`; on a source install with the port reachable directly,
-      `X-Forwarded-For` then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an
-      explicit `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed
-      logins against a directly exposed production-mode install — refused only after the fix)*
 - [ ] **AUDIT-1 A5M-12 · no write quota.** Any signed-in user can store unlimited races, tracks and
       10 MB images. Proposal: per-user write limits or a disk alarm. *(verify: a decision, then a test)*
-- [ ] **AUDIT-1 A5M-13 · records accept any field and any number.** `tracks.js:504` stores every extra
-      body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
-      *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
 - [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
-      edits any team's records (`docs/API.md:294`). *(verify: a decision — scope them, or record it)*
-- [ ] **AUDIT-1 A5M-15 · the only password rule is "not blank".** `usersStore.js:30`; the installer
-      asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
+      edits any team's records (`docs/API.md:309`). *(verify: a decision — scope them, or record it)*
 - [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
       (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
 - [ ] **AUDIT-1 A5T-02 · root `sharp` has a high advisory** fixable only by 0.34 → 0.35 (a major);
@@ -1836,17 +1826,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Robustness — his word
 
-- [ ] **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
-      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks the
-      event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk, and his
-      live data folder is in OneDrive. *(verify: `node reports/release/AUDIT-1/tools/a10-store.mjs
-      <clone>` prints `journal_mode: wal` and a save under a held read lock succeeds)*
-- [ ] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in.** With `users.json` damaged the
-      server starts and `/api/health` answers ok. The VPS update and rollback read health, so what it
-      reports is a decision. *(verify: `a10-corrupt.mjs` — health is not ok with a damaged store)*
-- [ ] **AUDIT-1 A10-07 · a damaged sessions file stops the server.** `SqliteError: file is not a
-      database`, exit 1. Proposal: move it aside and start fresh (everyone signs in again).
-      *(verify: `a10-corrupt.mjs` — "starts: yes" for the sessions scenario)*
 - [ ] **AUDIT-1 A12 · retention.** Player names are stored forever in `races.sqlite` (immutable rows,
       no delete route) and backup archives are never pruned. *(verify: a decision; then a retention
       rule with a test)*
@@ -1872,9 +1851,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Records and decisions
 
-- [ ] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written** into every new track (`tracks.js:515`)
-      and carried by the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes
-      the seed records. *(verify: `grep -r defaultWinners server/` finds nothing)*
 - [ ] **AUDIT-1 A2-50 · `viewerProbe.js:414` passes world pixels where a normalised value belongs**
       (the file's own rule), so invariant 3 is too lenient. Fixing it changes the instrument's verdicts.
       *(verify: the probe's invariant-3 call uses the normalised band, re-measured)*
@@ -1890,8 +1866,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
       better-sqlite3 13 — each a migration, none a security fix today. *(verify: a decision per
       package)*
-- [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
-      covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
 
 ### Test hygiene (no decision needed; not urgent)
 
@@ -1935,6 +1909,134 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A5M-13 · records accept any field and any number — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      Allow-lists `TRACK_FIELDS`, `RACER_FIELDS`, `BRAND_FIELDS`, `GROUP_FIELDS` beside each route,
+      derived from every field the client sends (Track Editor, Track Manager, Racer Editor, branding
+      profiles, player-groups manager and its localStorage migration), every seed key, the server's
+      own fields and legacy names; number bounds at least as wide as the editors and seeds
+      (`TRACK_NUMBER_BOUNDS`, `RACER_NUMBER_BOUNDS`; brands were already bounded; every number
+      inside a track effect within ±480000). Unknown field or out-of-range number → 400 with a
+      plain-English message. The rule for doubt is built into the shared
+      `server/utils/recordFields.js`: on an update a key the stored record already has, and a number
+      equal to the stored one, always pass. Nothing is checked on read. Test:
+      `server/src/routes/recordFields.test.js` — all 12 seed records and editor-shaped fixtures at
+      the editors' limits round-trip through PUT unchanged; `PUT /api/tracks/<id>` with `worldWidth:
+      1e9` → 400 `worldWidth must be a number from 1 to 10000`. Sabotage (no field ever unknown): 4
+      red. The row as it stood: **AUDIT-1 A5M-13 · records accept any field and any number.**
+      `tracks.js:504` stores every extra body field; `racers.js:93` checks no ranges. Proposal: an
+      allow-list and the editors' own bounds. *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9`
+      refused 400)*
+
+- [x] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`, and
+      narrower than the row's proposal on purpose: `POST /api/tracks` no longer writes
+      `defaultWinners` (`server/src/routes/tracks.js`), but the 10 seed records are left
+      byte-identical — removing it there would redeliver them to every installation
+      (`check-seed-versions` passes unchanged) — so the row's `grep -r defaultWinners server/` will
+      still find the seeds. A stored track that has the field keeps loading and keeps it on every
+      re-save, and it stays accepted in a body (item A5M-13's allow-list). Test:
+      `server/src/routes/tracksDefaultWinners.test.js` — sabotage (the default put back) red:
+      `expected {...} to not have property "defaultWinners"`. The row as it stood: **AUDIT-1 A2-14 ·
+      `defaultWinners: 3` is still written** into every new track (`tracks.js:515`) and carried by
+      the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes the seed
+      records. *(verify: `grep -r defaultWinners server/` finds nothing)*
+
+- [x] **AUDIT-1 A10-02 · a held lock blocks the whole server — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `RA_RACES_WAL` (`1`/`true` on, unset/`0`/`false` off, anything else refuses to start):
+      `resolveRacesWal` and `applyJournalMode` in `server/src/races/raceStore.js`;
+      `createRaceStore(path, { wal })`. Off is today's behaviour exactly (on a rollback-journal file
+      only `journal_mode` is read); turning it off again switches a WAL file back at the next open.
+      The backup is unchanged — SQLite's online backup API reads through the WAL and side files are
+      never archived; `scripts/backup.test.mjs` round-trips 25 rows that existed only in the `-wal`
+      file (sabotage, a plain file copy instead of `.backup()`: red, `SQLITE_ERROR`). Server test
+      `server/src/races/raceStoreWal.test.js`: with WAL a save goes through under a held READ
+      transaction (sabotage, WAL never set: red, `expected 'delete' to be 'wal'`). `a10-store.mjs`
+      gained the read-lock case (what a backup holds) and with `RA_RACES_WAL=1` prints
+      `journal_mode: wal` and `read lock: the save went through while another connection held a READ
+      transaction (21 ms)`; without it the same save failed after 5840 ms. The row as it stood:
+      **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
+      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks
+      the event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk,
+      and his live data folder is in OneDrive. *(verify: `node
+      reports/release/AUDIT-1/tools/a10-store.mjs <clone>` prints `journal_mode: wal` and a save
+      under a held read lock succeeds)*
+
+- [x] **AUDIT-1 A10-07 · a damaged sessions file stops the server — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `openSessionDatabase` (`server/src/auth/session.js`) reads the schema on open; on
+      `SQLITE_NOTADB` or `SQLITE_CORRUPT` it renames the file (and any `-wal`/`-shm`/`-journal`
+      still beside it) to `sessions.sqlite.damaged-<UTC time>`, never deletes it, starts a fresh one
+      and logs one line; everyone signs in again. Any other error (a lock, a permission) still stops
+      the start. Test: `server/src/auth/sessionRecovery.test.js` — sabotage (no code counted as
+      damage) turns two red with `SqliteError: file is not a database`. `a10-corrupt.mjs`, sessions
+      scenario: `starts: yes`, health 200 ok, login 200. The row as it stood: **AUDIT-1 A10-07 · a
+      damaged sessions file stops the server.** `SqliteError: file is not a database`, exit 1.
+      Proposal: move it aside and start fresh (everyone signs in again). *(verify: `a10-corrupt.mjs`
+      — "starts: yes" for the sessions scenario)*
+
+- [x] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `GET /api/health` (handler now in `server/src/health.js`) answers 503 `{status: "error",
+      timestamp, build, problems: [{store: "users", code, message}]}` when `users.json` cannot be
+      read; the message is a fixed sentence and no file path reaches the public route. The healthy
+      answer is unchanged key for key (200 `{status: "ok", timestamp, build}`), and a missing
+      `users.json` (a fresh install) is healthy. Test: `server/src/health.test.js` — sabotage (the
+      store read removed) turns the two damaged-store cases red: `expected 200 to be 503`.
+      `a10-corrupt.mjs` now counts a 503 answer as "started" (it read only `ok` before) and prints
+      for the users scenario: `starts: yes`, `health: 503 application/json {"status":"error",...`,
+      login 500. The row as it stood: **AUDIT-1 A10-05 · health says "ok" while nobody can sign
+      in.** With `users.json` damaged the server starts and `/api/health` answers ok. The VPS update
+      and rollback read health, so what it reports is a decision. *(verify: `a10-corrupt.mjs` —
+      health is not ok with a damaged store)*
+
+- [x] **AUDIT-1 A4-04 · the race-source migration has no test — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** built on `fix/audit-1-decisions-server`.
+      `server/src/races/migrateRaceSource.test.js` builds a realistic pre-RACE-SOURCE-1 database
+      from fixtures (12 races of two teams through the real store, shared rosters and racer types,
+      the index and the immutability triggers, then the column dropped), migrates a COPY twice: the
+      first run adds the column and keeps every row (all legacy rows NULL, read as unmarked); the
+      second reports `skipped` and changes nothing — the same rows, the same schema and the same
+      SHA-256 of the file. Also: a dry run writes nothing, a missing file creates nothing, and the
+      migrated rows stay immutable. Sabotage: the `hasRaceSourceColumn` guard removed — the second
+      run throws `duplicate column name: race_source`. The row as it stood: **AUDIT-1 A4-04 · the
+      race-source migration has no test** (`migrateRaceSource.js`, 0 % covered; it already ran on
+      his database). *(verify: a test that runs it twice on a copy)*
+
+- [x] **AUDIT-1 A5M-15 · the only password rule is "not blank" — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`. A
+      new password needs at least `PASSWORD_MIN_LENGTH` = 10 characters (counted as characters, not
+      UTF-16 units). One constant and one check, `assertNewPassword` in
+      `server/src/auth/usersStore.js`, which every new password passes through: first-admin setup
+      (checked before the marker is taken), `POST /api/users`, `PUT /api/users/:id`, `POST
+      /api/auth/change-password` and `scripts/recover-admin.mjs`. The refusal is 400 `Password must
+      be at least 10 characters long`. Sign-in never checks it, so older shorter passwords keep
+      working. The installer's 10 lives in `deploy/install.sh` on `feat/vps-install`, named beside
+      the constant. The client has no length check of its own, so nothing there was aligned; it
+      shows the server's message. Test: `server/src/auth/passwordMinLength.test.js` (all four
+      routes, and a pre-rule 3-character password still signing in); the short password literals of eight
+      test files were lengthened. The row as it stood: **AUDIT-1 A5M-15 · the only password rule is
+      "not blank".** `usersStore.js:30`; the installer asks for 10 characters. *(verify: `POST
+      /api/users` with a 3-character password refused 400)*
+
+- [x] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `RA_TRUST_PROXY` is the number of trusted proxy hops (`0` = none); one home,
+      `server/src/trustProxy.js` (`resolveTrustProxy`, `applyTrustProxy`, `trustProxyNotice`),
+      applied in `createApp` and judged before anything listens in `index.js` — set but not a whole
+      number refuses to start, like `RA_BIND_ADDRESS`. Unset keeps the old rule exactly (one hop
+      when `NODE_ENV=production`, none otherwise) and logs one startup line recommending the
+      setting. Documented in ENVIRONMENT.md, DEPLOYMENT.md (the Caddy example sets
+      `RA_TRUST_PROXY=1`) and OPERATOR-GUIDE.md. Test: `server/src/trustProxy.test.js` — with
+      `NODE_ENV=production` and `RA_TRUST_PROXY=0` a forged `X-Forwarded-For` is not `req.ip`.
+      Setting it on the VPS stack is that branch's work. The row as it stood: **AUDIT-1 A5M-07 ·
+      trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one proxy hop whenever
+      `NODE_ENV=production`; on a source install with the port reachable directly, `X-Forwarded-For`
+      then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an explicit
+      `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed logins
+      against a directly exposed production-mode install — refused only after the fix)*
 
 - [x] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — CLOSED 2026-10-06 (SERVER-DEFECTS-1):
       BOTH FIXED AND MERGED.** (1) An `async` route whose unexpected error used to escape now answers
@@ -2316,7 +2418,7 @@ proposal arriving again in six months looking new.
       `races.results`, `races.winners` and `rosters` (`races.sqlite`) — `server/src/routes/races.js`
       has POST and GET only, and nothing issues a DELETE; (2) the **admin-recovery audit log**,
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
-      `createdBy`** on the users they created (`usersStore.js:258`; `updateUser` never touches it).
+      `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
       (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**

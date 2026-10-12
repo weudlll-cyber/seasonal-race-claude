@@ -31,12 +31,33 @@ none of it should be relied on until it is merged. Each entry names its branch.
   *(branch `feat/vps-install`)*
 - `racearena uninstall`: a final backup first, the domain typed to confirm; the data and backups are
   kept unless `--purge-data`, which asks a second time. *(branch `feat/vps-install`)*
+- `/api/health` answers `503`, status `error`, when the account store (`users.json`) cannot be read, so
+  a server nobody can sign in to no longer reports itself healthy; the healthy answer is unchanged
+  (audit finding A10-05). *(branch `fix/audit-1-decisions-server`)*
+- A damaged session file no longer stops the server: it is renamed `sessions.sqlite.damaged-<time>`, a
+  fresh one is started, one log line says so, and everyone signs in again (audit finding A10-07).
+  *(branch `fix/audit-1-decisions-server`)*
+- `RA_RACES_WAL=1`: the race history database in write-ahead-log mode, so saving a race is no longer
+  held up (about 7 s, then a failure) while a backup reads it. Off by default; backups and restores
+  work in both modes (audit finding A10-02). *(branch `fix/audit-1-decisions-server`)*
+- A new track no longer carries the unused `defaultWinners` field; the built-in tracks and tracks
+  already stored keep theirs (audit finding A2-14). *(branch `fix/audit-1-decisions-server`)*
 - An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
   the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*
 
 ### Security
 
+- `RA_TRUST_PROXY`: the number of reverse proxies the server trusts for the visitor's address
+  (audit finding A5M-07). Left unset, nothing changes and the server says once at start that it
+  should be set. *(branch `fix/audit-1-decisions-server`)*
+- Every new password needs at least 10 characters — at first-admin setup, on an account an admin
+  creates or resets, on your own, and in the recovery tool (audit finding A5M-15). Passwords set
+  before keep signing in until they are changed. *(branch `fix/audit-1-decisions-server`)*
+- Tracks, racers, brands and player groups accept only the fields the app itself sends, and numbers
+  within bounds at least as wide as the editors; anything else is refused with a message naming it.
+  Re-saving a record you already have is never refused (audit finding A5M-13).
+  *(branch `fix/audit-1-decisions-server`)*
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
   keeps working. *(branch `feat/csp`)*

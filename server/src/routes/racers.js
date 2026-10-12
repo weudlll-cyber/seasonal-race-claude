@@ -38,6 +38,7 @@ import { removeStoredAsset } from '../../utils/removeStoredAsset.js';
 import { BUILTIN_RACER_IDS } from '../constants/builtinRacerIds.js';
 import { isValidId } from '../../utils/isValidId.js';
 import { DATA_ROOT } from '../dataPaths.js';
+import { unknownFields, unknownFieldsMessage, checkNumber } from '../../utils/recordFields.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'racers');
 export const SPRITE_DIR = join(DATA_ROOT, 'racer-sprites');
@@ -118,6 +119,69 @@ export function validateBody(body, bodyId = null) {
   return errors;
 }
 
+// ── The field allow-list and the number bounds (AUDIT-1 A5M-13, the owner's decision 2026-10-12) ──
+//
+// The routes below already store only the fields they name, so an extra field was IGNORED here, not
+// stored; it is now refused, so a typo is not silently lost. The list: what the Racer Editor sends
+// (client/src/screens/RacerEditor/RacerEditor.jsx via serverRacerTypes.js `registerRacerType`),
+// the server's own fields, and `spriteDataUrl`/`spriteUrl`, which the client strips or never sends
+// but which are allowed in doubt (and ignored). On an update, keys the stored record already has and
+// values equal to the stored ones always pass (server/utils/recordFields.js).
+const RACER_FIELDS = new Set([
+  'id',
+  'name',
+  'emoji',
+  'frameCount',
+  'basePeriodMs',
+  'displaySize',
+  'trailStyle',
+  'coats',
+  'defaultCoatId',
+  'primaryColor',
+  'speedMultiplier',
+  'baseRotationOffset',
+  'surfaceClasses',
+  'tintMode',
+  'bodyFillX',
+  'bodyFillY',
+  'frameWidth',
+  'frameHeight',
+  'spriteFile',
+  'spriteUrl',
+  'spriteDataUrl',
+  'isDefault',
+  'createdAt',
+  'updatedAt',
+]);
+
+// Each at least as wide as the Racer Editor: frames — pills 4/8/16; period — slider 200–2000 ms
+// (type defaults 300–1500); display size — slider 16–80; speed — slider 0.3–2.0; rotation —
+// slider −π…π; body fill — (0, 1]; frame size — 128 for an editor-built sheet. Stored values load
+// unclamped, which the equal-to-stored rule covers. There are no racer seeds.
+const RACER_NUMBER_BOUNDS = {
+  frameCount: { min: 1, max: 256, integer: true },
+  basePeriodMs: { min: 1, max: 60_000 },
+  displaySize: { min: 1, max: 1000 },
+  speedMultiplier: { min: 0, max: 10 },
+  baseRotationOffset: { min: -7, max: 7 },
+  bodyFillX: { min: 0, max: 1 },
+  bodyFillY: { min: 0, max: 1 },
+  frameWidth: { min: 1, max: 10_000 },
+  frameHeight: { min: 1, max: 10_000 },
+};
+
+/** The allow-list and bound errors for a create (`existing` null) or an update. */
+export function validateRacerFields(body, existing = null) {
+  const errors = [];
+  const unknown = unknownFields(body, RACER_FIELDS, existing);
+  if (unknown.length) errors.push(unknownFieldsMessage(unknown, 'A racer'));
+  for (const [key, bound] of Object.entries(RACER_NUMBER_BOUNDS)) {
+    const err = checkNumber(body, key, bound, existing);
+    if (err) errors.push(err);
+  }
+  return errors;
+}
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 const router = express.Router();
@@ -139,7 +203,7 @@ router.post('/', (req, res) => {
   const hasBodyId = req.body.id !== undefined;
   const bodyId = hasBodyId ? req.body.id : null;
 
-  const errors = validateBody(req.body, bodyId);
+  const errors = [...validateBody(req.body, bodyId), ...validateRacerFields(req.body)];
   if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
 
   const id = hasBodyId ? req.body.id : randomUUID();
@@ -191,7 +255,7 @@ router.put('/:id', (req, res) => {
   const existing = racersMap.get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Racer not found' });
 
-  const errors = validateBody(req.body);
+  const errors = [...validateBody(req.body), ...validateRacerFields(req.body, existing)];
   if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
 
   const now = new Date().toISOString();
