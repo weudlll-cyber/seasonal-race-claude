@@ -42,6 +42,7 @@ import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 import { removeStoredAsset } from '../../utils/removeStoredAsset.js';
 import { isValidId } from '../../utils/isValidId.js';
+import { unknownFields, unknownFieldsMessage } from '../../utils/recordFields.js';
 
 export const DATA_DIR = join(DATA_ROOT, 'brands');
 const LOGO_DIR = join(DATA_ROOT, 'brand-logos');
@@ -153,6 +154,39 @@ export function validateBody(body) {
   return errors;
 }
 
+// ── The field allow-list (AUDIT-1 A5M-13, the owner's decision 2026-10-12) ─────────────────────
+//
+// The routes below already store only the fields they name, so an extra field was IGNORED; it is
+// now refused. The list: what the Dev Screen's branding profiles send (BrandingProfiles.jsx), the
+// keys of the shipped seed (server/seeds/brands/seasonal-entertainment.json), the server's own
+// fields, and the form-only `logo` preview, allowed in doubt (and ignored). The two numbers were
+// already bounded in `validateBody` — logoMaxHeight (0, 500] against the editor's slider 40–160,
+// logoOpacity 0–1 against its slider 0–1 [seed 90 and 0.9]. On an update, keys the stored record
+// already has always pass (server/utils/recordFields.js).
+const BRAND_FIELDS = new Set([
+  'id',
+  'name',
+  'eventName',
+  'subtitle',
+  'primaryColor',
+  'secondaryColor',
+  'sponsorText',
+  'logoMaxHeight',
+  'logoOpacity',
+  'logoCorner',
+  'logo',
+  'logoFile',
+  'isDefault',
+  'createdAt',
+  'updatedAt',
+]);
+
+/** The allow-list error for a create (`existing` null) or an update. */
+function validateBrandFields(body, existing = null) {
+  const unknown = unknownFields(body, BRAND_FIELDS, existing);
+  return unknown.length ? [unknownFieldsMessage(unknown, 'A brand')] : [];
+}
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 const router = express.Router();
@@ -172,7 +206,7 @@ router.get('/:id', (req, res) => {
 // POST /api/brands
 // isDefault is ALWAYS set to false — body.isDefault is never used (Invariant 2).
 router.post('/', (req, res) => {
-  const errors = validateBody(req.body);
+  const errors = [...validateBody(req.body), ...validateBrandFields(req.body)];
 
   let id = req.body.id;
   if (id !== undefined) {
@@ -220,7 +254,7 @@ router.put('/:id', (req, res) => {
   const existing = brandsMap.get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Brand not found' });
 
-  const errors = validateBody(req.body);
+  const errors = [...validateBody(req.body), ...validateBrandFields(req.body, existing)];
   if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
 
   const now = new Date().toISOString();

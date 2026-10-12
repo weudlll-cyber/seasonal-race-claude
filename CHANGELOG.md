@@ -9,8 +9,9 @@ describe what an operator or a race director notices, not how it was done.
 
 ## [Unreleased]
 
-Everything below is **built on a branch and NOT merged into `master`**. None of it is in 1.0.0, and
-none of it should be relied on until it is merged. Each entry names its branch.
+Nothing below is in 1.0.0. An entry marked *on `master`* is merged and ships with the next version.
+An entry that names a branch is **built there and NOT merged**, and should not be relied on until it
+is.
 
 ### Added
 
@@ -31,6 +32,17 @@ none of it should be relied on until it is merged. Each entry names its branch.
   *(branch `feat/vps-install`)*
 - `racearena uninstall`: a final backup first, the domain typed to confirm; the data and backups are
   kept unless `--purge-data`, which asks a second time. *(branch `feat/vps-install`)*
+- `/api/health` answers `503`, status `error`, when the account store (`users.json`) cannot be read, so
+  a server nobody can sign in to no longer reports itself healthy; the healthy answer is unchanged
+  (audit finding A10-05). *(on `master`, 2026-10-12)*
+- A damaged session file no longer stops the server: it is renamed `sessions.sqlite.damaged-<time>`, a
+  fresh one is started, one log line says so, and everyone signs in again (audit finding A10-07).
+  *(on `master`, 2026-10-12)*
+- `RA_RACES_WAL=1`: the race history database in write-ahead-log mode, so saving a race is no longer
+  held up (about 7 s, then a failure) while a backup reads it. Off by default; backups and restores
+  work in both modes (audit finding A10-02). *(on `master`, 2026-10-12)*
+- A new track no longer carries the unused `defaultWinners` field; the built-in tracks and tracks
+  already stored keep theirs (audit finding A2-14). *(on `master`, 2026-10-12)*
 - An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
   the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*
@@ -38,19 +50,27 @@ none of it should be relied on until it is merged. Each entry names its branch.
 ### Changed
 
 - A source install (the plain-Node path) needs Node 22 or newer; it said 20, which no longer
-  receives security fixes. The Docker image already runs Node 24. *(branch
-  `chore/audit-1-decisions-repo`)*
+  receives security fixes. The Docker image already runs Node 24. *(on `master`, 2026-10-12)*
 
 ### Security
 
+- `RA_TRUST_PROXY`: the number of reverse proxies the server trusts for the visitor's address
+  (audit finding A5M-07). Left unset, nothing changes and the server says once at start that it
+  should be set. *(on `master`, 2026-10-12)*
+- Every new password needs at least 10 characters — at first-admin setup, on an account an admin
+  creates or resets, on your own, and in the recovery tool (audit finding A5M-15). Passwords set
+  before keep signing in until they are changed. *(on `master`, 2026-10-12)*
+- Tracks, racers, brands and player groups accept only the fields the app itself sends, and numbers
+  within bounds at least as wide as the editors; anything else is refused with a message naming it.
+  Re-saving a record you already have is never refused (audit finding A5M-13).
+  *(on `master`, 2026-10-12)*
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
   keeps working. *(branch `feat/csp`)*
 - The data and backup folders on a single-server install are private to the app's own account
   (audit finding A5M-06), also after a restore. *(branch `feat/vps-install`)*
 - `SECURITY.md`: how to report a security problem privately (GitHub's "Report a vulnerability"),
-  what is in scope, and that only the newest release receives fixes.
-  *(branch `chore/audit-1-decisions-repo`)*
+  what is in scope, and that only the newest release receives fixes. *(on `master`, 2026-10-12)*
 
 ## [1.0.0] — not yet tagged
 

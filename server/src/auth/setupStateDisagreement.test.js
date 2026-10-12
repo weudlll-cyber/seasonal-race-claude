@@ -37,7 +37,7 @@ import { createUsersStore } from './usersStore.js';
 import { createAuthRouter } from './authRouter.js';
 
 const TOKEN = 'PIN-TOKEN';
-const BODY = { username: 'newadmin', password: 'pw123456' };
+const BODY = { username: 'newadmin', password: 'pw123456-0' };
 
 describe('setup when the marker and the store disagree — TODAY’S behaviour, pinned', () => {
   let usersPath, markerPath, store, app;
@@ -147,7 +147,7 @@ describe('setup when the marker and the store disagree — TODAY’S behaviour, 
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'existing',
-        password: 'pw123456',
+        password: 'pw123456-0',
         role: 'admin',
       });
     });

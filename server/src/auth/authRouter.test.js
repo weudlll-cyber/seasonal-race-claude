@@ -84,7 +84,7 @@ describe('authRouter', () => {
     await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
     const res = await agent.get('/api/auth/setup-needed');
     expect(res.body.setupNeeded).toBe(false);
   });
@@ -92,14 +92,16 @@ describe('authRouter', () => {
   // ── POST /setup ───────────────────────────────────────────────────────────
 
   it('setup: missing token → 403', async () => {
-    const res = await agent.post('/api/auth/setup').send({ username: 'admin', password: 'pw123' });
+    const res = await agent
+      .post('/api/auth/setup')
+      .send({ username: 'admin', password: 'pw123-0123' });
     expect(res.status).toBe(403);
   });
 
   it('setup: token in req.body only (not header) → 403 — header-only enforcement', async () => {
     const res = await agent
       .post('/api/auth/setup')
-      .send({ username: 'admin', password: 'pw123', token: 'TEST-TOKEN' });
+      .send({ username: 'admin', password: 'pw123-0123', token: 'TEST-TOKEN' });
     expect(res.status).toBe(403);
   });
 
@@ -107,7 +109,7 @@ describe('authRouter', () => {
     const res = await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'WRONG')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
     expect(res.status).toBe(403);
   });
 
@@ -115,7 +117,7 @@ describe('authRouter', () => {
     const res = await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
     expect(res.status).toBe(201);
     expect(res.body.username).toBe('admin');
     expect(res.body.role).toBe('admin');
@@ -127,7 +129,7 @@ describe('authRouter', () => {
     const res = await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: '', password: 'pw123' });
+      .send({ username: '', password: 'pw123-0123' });
     expect(res.status).toBe(400);
     expect(store.countUsers()).toBe(0);
     expect(existsSync(markerPath)).toBe(false);
@@ -149,7 +151,7 @@ describe('authRouter', () => {
         request(app)
           .post('/api/auth/setup')
           .set('x-bootstrap-token', 'TEST-TOKEN')
-          .send({ username: 'admin', password: 'pw123' })
+          .send({ username: 'admin', password: 'pw123-0123' })
       )
     );
     const statuses = results.map((r) => r.status);
@@ -162,11 +164,11 @@ describe('authRouter', () => {
     await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
     const res = await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin2', password: 'pw123' });
+      .send({ username: 'admin2', password: 'pw123-0123' });
     expect(res.status).toBe(409);
     expect(store.countUsers()).toBe(1);
   });
@@ -176,13 +178,13 @@ describe('authRouter', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'existing',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
     });
     const res = await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
     expect(res.status).toBe(409);
     expect(store.countUsers()).toBe(1);
   });
@@ -190,7 +192,9 @@ describe('authRouter', () => {
   // ── POST /login ───────────────────────────────────────────────────────────
 
   it('login: unknown user → 401', async () => {
-    const res = await agent.post('/api/auth/login').send({ username: 'nobody', password: 'pw' });
+    const res = await agent
+      .post('/api/auth/login')
+      .send({ username: 'nobody', password: 'pw-0123456' });
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('invalid credentials');
   });
@@ -200,10 +204,12 @@ describe('authRouter', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'alice',
-      password: 'correct',
+      password: 'correct-01',
       role: 'operator',
     });
-    const res = await agent.post('/api/auth/login').send({ username: 'alice', password: 'wrong' });
+    const res = await agent
+      .post('/api/auth/login')
+      .send({ username: 'alice', password: 'wrong-0123' });
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('invalid credentials');
   });
@@ -213,12 +219,12 @@ describe('authRouter', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'alice',
-      password: 'correct',
+      password: 'correct-01',
       role: 'operator',
     });
     const res = await agent
       .post('/api/auth/login')
-      .send({ username: 'alice', password: 'correct' });
+      .send({ username: 'alice', password: 'correct-01' });
     expect(res.status).toBe(200);
     expect(res.body.username).toBe('alice');
     expect(res.body.role).toBe('operator');
@@ -238,10 +244,10 @@ describe('authRouter', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'alice',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
-    await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
+    await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw-0123456' });
     const res = await agent.get('/api/auth/me');
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ username: 'alice', role: 'operator' });
@@ -259,10 +265,10 @@ describe('authRouter', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'alice',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
-    await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
+    await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw-0123456' });
     const logoutRes = await agent.post('/api/auth/logout');
     expect(logoutRes.status).toBe(200);
     expect(logoutRes.body.ok).toBe(true);
@@ -275,10 +281,10 @@ describe('authRouter', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'alice',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
-    await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
+    await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw-0123456' });
     const logoutRes = await agent.post('/api/auth/logout');
     expect(logoutRes.status).toBe(200);
     const setCookie = logoutRes.headers['set-cookie'] ?? [];
@@ -305,11 +311,11 @@ describe('authRouter', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'alice',
-        password: 'pw',
+        password: 'pw-0123456',
         role: 'operator',
       });
       const localAgent = request.agent(localApp);
-      await localAgent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
+      await localAgent.post('/api/auth/login').send({ username: 'alice', password: 'pw-0123456' });
       const logoutRes = await localAgent.post('/api/auth/logout');
       expect(logoutRes.status).toBe(200);
       const setCookie = logoutRes.headers['set-cookie'] ?? [];
@@ -340,7 +346,7 @@ describe('authRouter', () => {
     const res = await request(localApp)
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
 
     expect(res.status).toBe(500);
     expect(res.body.error).toBe('setup failed');
@@ -395,7 +401,7 @@ describe('authRouter', () => {
     const res = await request(localApp)
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
 
     expect(res.status).toBe(201);
     expect(res.body.username).toBe('admin');
@@ -417,7 +423,7 @@ describe('authRouter', () => {
     const setupRes = await agent
       .post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
     expect(setupRes.status).toBe(201);
     expect(Object.keys(setupRes.body).sort()).toEqual(['role', 'team', 'username']);
 
@@ -430,7 +436,7 @@ describe('authRouter', () => {
     await agent.post('/api/auth/logout');
     const loginRes = await agent
       .post('/api/auth/login')
-      .send({ username: 'admin', password: 'pw123' });
+      .send({ username: 'admin', password: 'pw123-0123' });
     expect(loginRes.status).toBe(200);
     expect(Object.keys(loginRes.body).sort()).toEqual(['role', 'team', 'username']);
   });

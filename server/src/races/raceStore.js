@@ -211,19 +211,61 @@ END;`
   )
   .join('\n');
 
+// ── The journal: RA_RACES_WAL (AUDIT-1 A10-02, the owner's decision of 2026-10-12) ──────────────
+//
+// OFF BY DEFAULT, AND OFF IS TODAY'S BEHAVIOUR EXACTLY: the rollback journal SQLite starts with, and
+// on a database already in that mode nothing is written — only `journal_mode` is read. ON switches
+// the file to write-ahead logging, so a reader (a running backup) no longer blocks a save: AUDIT-1
+// measured a save blocking the whole server 6.9 s and then failing under a held lock. WAL changes
+// the files on disk (a `-wal` and a `-shm` beside `races.sqlite` while the server runs), which is
+// why it is a setting and not the default — the owner's live data folder is in OneDrive. The
+// backup takes the database through SQLite's own backup API (scripts/backup.mjs), which reads the
+// WAL too, and never archives the side files. WAL mode is stored IN the file, so turning the
+// setting off again switches a WAL file back to the rollback journal the next time it is opened.
+// Set but not one of 1/true/0/false: the server refuses to start (index.js), like RA_BIND_ADDRESS.
+
+/**
+ * Is the race store asked to run in WAL mode? Throws when the setting is present but unreadable.
+ *
+ * @param {object} [env]
+ * @returns {boolean}
+ */
+export function resolveRacesWal(env = process.env) {
+  const raw = env.RA_RACES_WAL;
+  if (raw === undefined || raw === null || String(raw).trim() === '') return false;
+  const value = String(raw).trim().toLowerCase();
+  if (value === '1' || value === 'true') return true;
+  if (value === '0' || value === 'false') return false;
+  throw new Error(
+    `RA_RACES_WAL is set but is not 1, true, 0 or false: "${String(raw).trim()}". ` +
+      'Use 1 to run the race store in WAL mode, or unset it for the rollback journal as before.'
+  );
+}
+
+/** Puts the database in the journal mode the setting asks for; a no-op write-wise when it is. */
+function applyJournalMode(db, wal) {
+  if (wal) {
+    db.pragma('journal_mode = WAL');
+    return;
+  }
+  if (db.pragma('journal_mode', { simple: true }) === 'wal') db.pragma('journal_mode = DELETE');
+}
+
 // ── Store factory ─────────────────────────────────────────────────────────────
 
 /**
  * Open (creating if needed) the race database.
  *
  * @param {string} [filePath] defaults to RA_RACES_DB, else DATA_ROOT/races.sqlite
+ * @param {{ wal?: boolean }} [opts] the journal mode; defaults to `RA_RACES_WAL` (off when unset)
  */
-export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
+export function createRaceStore(filePath = DEFAULT_RACES_PATH, { wal = resolveRacesWal() } = {}) {
   const db = new Database(filePath);
 
   // Referential integrity is OFF by default in SQLite and must be asked for per connection. It is
   // what stops a roster an old race still points at from being deleted out from under it.
   db.pragma('foreign_keys = ON');
+  applyJournalMode(db, wal);
   db.exec(SCHEMA);
   db.exec(IMMUTABILITY_TRIGGERS);
 

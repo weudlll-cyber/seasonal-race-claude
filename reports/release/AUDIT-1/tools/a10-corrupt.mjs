@@ -28,7 +28,10 @@ async function boot(dataDir) {
     const code = await Promise.race([exited, new Promise((r) => setTimeout(() => r('wait'), 300))]);
     if (code !== 'wait') return { up: false, exitCode: code, log, base, stop: async () => {} };
     try {
-      if ((await fetch(`${base}/api/health`)).ok) { up = true; break; }
+      // "Started" = health ANSWERS. Since AUDIT-1 DECISIONS A10-05 (2026-10-12) a server that is up
+      // with a damaged account store answers 503, which this loop used to read as "not started".
+      const h = await fetch(`${base}/api/health`);
+      if (h.ok || h.status === 503) { up = true; break; }
     } catch { /* not yet */ }
   }
   const stop = async () => { child.kill(); await exited; };

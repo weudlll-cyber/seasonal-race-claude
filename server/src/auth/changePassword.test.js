@@ -80,7 +80,7 @@ describe('POST /api/auth/change-password — access', () => {
   it('anonymous → 401', async () => {
     const res = await request(app)
       .post('/api/auth/change-password')
-      .send({ currentPassword: 'x', newPassword: 'y' });
+      .send({ currentPassword: 'x-01234567', newPassword: 'y-01234567' });
     expect(res.status).toBe(401);
   });
 
@@ -138,7 +138,7 @@ describe('POST /api/auth/change-password — the current password is required', 
 
     await u.agent
       .post('/api/auth/change-password')
-      .send({ currentPassword: 'wrong', newPassword: 'Nope-1!' });
+      .send({ currentPassword: 'wrong-0123', newPassword: 'Nope-1!-01' });
 
     expect((await u.agent.get('/api/auth/me')).status).toBe(200);
     expect((await second.get('/api/auth/me')).status).toBe(200);
@@ -151,10 +151,10 @@ describe('POST /api/auth/change-password — the current password is required', 
 
     const change = await u.agent
       .post('/api/auth/change-password')
-      .send({ currentPassword: 'wrong', newPassword: 'Whatever-1!' });
+      .send({ currentPassword: 'wrong-0123', newPassword: 'Whatever-1!' });
     const login = await request(app)
       .post('/api/auth/login')
-      .send({ username: u.username, password: 'wrong' });
+      .send({ username: u.username, password: 'wrong-0123' });
 
     expect(change.status).toBe(login.status);
     expect(change.body.error).toBe(login.body.error);

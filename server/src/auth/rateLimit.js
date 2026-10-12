@@ -21,7 +21,7 @@ export function createLoginLimiter(opts = {}) {
     legacyHeaders: false,
     skipSuccessfulRequests: opts.skipSuccessfulRequests ?? true, // only failed logins count
     skip: opts.skip ?? (() => isTest), // off in test (shared-IP buckets)
-    validate: { trustProxy: false }, // app.set('trust proxy', 1) is deliberate — suppress warning
+    validate: { trustProxy: false }, // trust proxy is set on purpose (trustProxy.js) — no warning
     handler: (_req, res) =>
       res.status(429).json({ error: 'too many attempts, please try again later' }),
   });

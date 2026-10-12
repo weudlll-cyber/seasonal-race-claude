@@ -42,23 +42,23 @@ describe('normalizeUsername', () => {
 
 describe('hashPassword / verifyPassword', () => {
   it('hashes to a bcrypt string distinct from plaintext', async () => {
-    const hash = await hashPassword('secret');
-    expect(hash).not.toBe('secret');
+    const hash = await hashPassword('secret-012');
+    expect(hash).not.toBe('secret-012');
     expect(hash.startsWith('$2')).toBe(true);
   });
 
   it('verifyPassword returns true for correct password', async () => {
-    const hash = await hashPassword('correct');
-    expect(await verifyPassword('correct', hash)).toBe(true);
+    const hash = await hashPassword('correct-01');
+    expect(await verifyPassword('correct-01', hash)).toBe(true);
   });
 
   it('verifyPassword returns false for wrong password', async () => {
-    const hash = await hashPassword('correct');
-    expect(await verifyPassword('wrong', hash)).toBe(false);
+    const hash = await hashPassword('correct-01');
+    expect(await verifyPassword('wrong-0123', hash)).toBe(false);
   });
 
   it('verifyPassword returns false for a malformed hash without throwing', async () => {
-    expect(await verifyPassword('anything', 'not-a-hash')).toBe(false);
+    expect(await verifyPassword('anything-0', 'not-a-hash')).toBe(false);
   });
 
   it('rejects empty password with INVALID_PASSWORD', async () => {
@@ -149,7 +149,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'Alice',
-      password: 'pass1',
+      password: 'pass1-0123',
       role: 'admin',
     });
     expect(store.countUsers()).toBe(1);
@@ -163,7 +163,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: ' Bob ',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
       createdBy: 'test',
     });
@@ -181,7 +181,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'carol',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
     expect(user.createdBy).toBe('setup');
@@ -192,7 +192,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'Alice',
-      password: 'pass',
+      password: 'pass-01234',
       role: 'admin',
     });
     expect(store.findAuthRecordByUsername('ALICE')).not.toBeNull();
@@ -208,7 +208,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'Dave',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
     const found = store.findAuthRecordByUsername('dave');
@@ -220,7 +220,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'Eve',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
     const found = store.findAuthRecordById(safeUser.id);
@@ -239,7 +239,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'Alice',
-      password: 'pw1',
+      password: 'pw1-012345',
       role: 'admin',
     });
     await expect(
@@ -247,7 +247,7 @@ describe('createUsersStore', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: '  alice  ',
-        password: 'pw2',
+        password: 'pw2-012345',
         role: 'operator',
       })
     ).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
@@ -260,7 +260,7 @@ describe('createUsersStore', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'eve',
-        password: 'pw',
+        password: 'pw-0123456',
         role: 'superuser',
       })
     ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
@@ -272,7 +272,7 @@ describe('createUsersStore', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: '   ',
-        password: 'pw',
+        password: 'pw-0123456',
         role: 'operator',
       })
     ).rejects.toMatchObject({ code: 'INVALID_USERNAME' });
@@ -337,7 +337,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'permtest',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
     expect(statSync(tempPath).mode & 0o777).toBe(0o600);
@@ -354,7 +354,7 @@ describe('createUsersStore', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'permfail',
-        password: 'pw',
+        password: 'pw-0123456',
         role: 'operator',
       })
     ).rejects.toMatchObject({ code: 'USERS_STORE_PERM' });
@@ -370,7 +370,7 @@ describe('createUsersStore', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'permsafe',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
     });
     expect(user).not.toHaveProperty('passwordHash');
@@ -397,14 +397,14 @@ describe('createUser — concurrency serialization (C2)', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'userA',
-        password: 'passA-123',
+        password: 'passA-123-',
         role: 'operator',
       }),
       store.createUser({
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'userB',
-        password: 'passB-456',
+        password: 'passB-456-',
         role: 'operator',
       }),
     ]);
@@ -419,14 +419,14 @@ describe('createUser — concurrency serialization (C2)', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'dupuser',
-        password: 'pass1-xxx',
+        password: 'pass1-xxx-',
         role: 'operator',
       }),
       store.createUser({
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'dupuser',
-        password: 'pass2-xxx',
+        password: 'pass2-xxx-',
         role: 'admin',
       }),
     ]);
@@ -446,7 +446,7 @@ describe('createUser — concurrency serialization (C2)', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'existing',
-      password: 'pass-xyz',
+      password: 'pass-xyz-0',
       role: 'operator',
     });
     // Cause USERNAME_TAKEN
@@ -455,7 +455,7 @@ describe('createUser — concurrency serialization (C2)', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'existing',
-        password: 'other-pw',
+        password: 'other-pw-0',
         role: 'operator',
       })
     ).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
@@ -465,7 +465,7 @@ describe('createUser — concurrency serialization (C2)', () => {
         team: 'Seasonal Entertainment',
         allowNewTeam: true,
         username: 'newuser',
-        password: 'pw',
+        password: 'pw-0123456',
         role: 'superuser',
       })
     ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
@@ -503,7 +503,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'todel',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
       createdBy: 'test',
     });
@@ -512,7 +512,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'admin2',
-      password: 'pw2',
+      password: 'pw2-012345',
       role: 'admin',
       createdBy: 'test',
     });
@@ -521,7 +521,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'admin1',
-      password: 'pw1',
+      password: 'pw1-012345',
       role: 'admin',
       createdBy: 'test',
     });
@@ -535,7 +535,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'da1',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -543,7 +543,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'da2',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -563,7 +563,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'soleadmin',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -576,7 +576,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'adel1',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -584,7 +584,7 @@ describe('deleteUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'adel2',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -615,7 +615,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'uprole',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
       createdBy: 'test',
     });
@@ -630,7 +630,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'soleadm',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -645,7 +645,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'demote1',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -653,7 +653,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'demote2',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -666,7 +666,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'badrole',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
       createdBy: 'test',
     });
@@ -680,7 +680,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'resetpw',
-      password: 'oldpass',
+      password: 'oldpass-01',
       role: 'operator',
       createdBy: 'test',
     });
@@ -699,7 +699,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'epochtest',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
       createdBy: 'test',
     });
@@ -714,7 +714,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'safereset',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
       createdBy: 'test',
     });
@@ -733,7 +733,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'emptyup',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'operator',
       createdBy: 'test',
     });
@@ -749,7 +749,7 @@ describe('updateUser', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'noblk',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -788,7 +788,7 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'toctou1',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -796,7 +796,7 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'toctou2',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -821,7 +821,7 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'dtoctou1',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -829,7 +829,7 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'dtoctou2',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
