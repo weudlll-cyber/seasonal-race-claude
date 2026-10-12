@@ -1853,10 +1853,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Visible changes — his eye
 
-- [ ] **AUDIT-1 A2 · Dev Screen info texts that contradict the shipped settings** — "shipped OFF"
-      for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
-      -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
-      *(verify: each text read against `defaults.js`)*
 - [ ] **AUDIT-1 A9-01 · one 1,007 KB JavaScript chunk** (295 KB gzipped). Code splitting changes how
       the app loads. *(verify: `npm run build` prints no chunk over 500 KB)*
 
@@ -1925,6 +1921,27 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A2 · THE DEV SCREEN INFO TEXTS SAY WHAT SHIPS — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** Each text
+      read against `defaults.js` and the code that consumes the value, and corrected without
+      stating a config value (the rule `check-tooltip-values` enforces): **A2-34** the Gap Leader
+      Brake card said "SHIPPED OFF" while `gapBrakeEnabled` ships true — it says "SHIPPED ON".
+      **A2-40** Phase-Split Bonuses called an area strength of 2.0 "full" and the shipped EARLY and
+      POST "full"; the engine divides the phase strength by Race Plan Bonus Strength, so the
+      shipped strengths give half — the note now explains the scale against that control and no
+      longer claims a shipped level. **A2-41** the Frame Timing subtitle, the smoothing control's
+      info text and its "very stable camera" read-out said the smoothing moves the camera; the
+      camera is fed the raw frame time and the smoothing reaches the track effects only — all
+      three now say so. **A2-42** the comeback card said the Race Plan needs an open track of at
+      least 60 s; the gate is the race's duration against Race Plan min duration, on every track —
+      the card now says that and points at the control. **A2-43** the Speed Brake subtitle
+      promised controls for how close, how directly behind and how strongly; the card has one, the
+      open-track warm-up, and now says so. Left: the matching comments inside `defaults.js` are in
+      the measured-stamp closure and are in the held-back patch (row "AUDIT-1 B · comment fixes
+      held back" above). The row as it stood: *"A2 · Dev Screen info texts that contradict the
+      shipped settings — "shipped OFF" for settings now ON, the camera-lerp help text, the
+      race-plan duration (A2-34, -40, -41, -42, -43)."*
 
 - [x] **AUDIT-1 A3-19 · THE THREE GERMAN ALERTS ARE ENGLISH — CLOSED 2026-10-12 (AUDIT-1 DECISIONS),
       on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** Deleting a default

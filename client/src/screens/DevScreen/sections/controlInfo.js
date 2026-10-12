@@ -393,7 +393,7 @@ export const CONTROL_INFO = {
   'DynamicsTuningSection:reset-frame-timing':
     'Puts the three smoothness settings back to shipped. It is separate from the race reset on purpose: these change the picture, not the race.',
   'DynamicsTuningSection:dtSmoothingAlpha':
-    'Smooths uneven browser frame times before they move the camera and effects. Higher is a smoother camera that reacts later to real frame-rate changes; zero uses the raw timing. The race itself is not affected.',
+    'Smooths uneven browser frame times before they drive the track effects. Higher is steadier effects that react later to real frame-rate changes; zero uses the raw timing. The camera always follows the raw timing, and the race itself is not affected.',
   'DynamicsTuningSection:renderInterpolation':
     'Smooths racer and camera movement between the race’s fixed steps, removing rhythmic jitter on uneven frame rates. Off is the older look, kept for comparison. Takes effect at once.',
   'DynamicsTuningSection:scoreboardIntervalMs':
