@@ -27,6 +27,7 @@ import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLi
 import { mountClientAssets, mountSpaFallback, mountApiNotFound } from './staticClient.js';
 import { apiErrorHandler } from './apiErrorHandler.js';
 import { applyTrustProxy } from './trustProxy.js';
+import { cspDirectives } from './csp.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -34,8 +35,13 @@ const sessionMiddleware = createSessionMiddleware();
 export function createApp() {
   const app = express();
   applyTrustProxy(app); // AUDIT-1 A5M-07: RA_TRUST_PROXY; unset keeps the NODE_ENV rule
+  // AUDIT-1 D1: the Content-Security-Policy is ON; its directives and why each is what it is live in
+  // csp.js. CORP stays `cross-origin` for the development split (5173 → 4000).
   app.use(
-    helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } })
+    helmet({
+      contentSecurityPolicy: { useDefaults: false, directives: cspDirectives() },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
   );
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
