@@ -504,7 +504,9 @@ router.post('/', (req, res) => {
     // are seeded: closed geometries read defaultLaps, open ones defaultDurationSec.
     defaultLaps: 2,
     defaultDurationSec: 60,
-    defaultWinners: 3,
+    // No `defaultWinners` (AUDIT-1 A2-14, 2026-10-12): nothing has read it since the podium became
+    // three places everywhere (REMOVE-WINNERS-SETTING-1). The ten seed records keep theirs, byte for
+    // byte, so no installation is redelivered; a stored track that has it keeps it on every save.
     surfaceClasses: [],
     trackLights: CUSTOM_TRACK_LIGHTS_DEFAULT,
     ...rest,

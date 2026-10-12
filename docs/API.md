@@ -358,13 +358,14 @@ tracks. Every create, update, upload or background removal also writes a timesta
     (`steady|sequence|sync_pulse|random_flash`) and `speed?` (number, 0.1–3.0) (`:362-365`, `:100-123`).
   - `effects?`: an array of objects; `config.count`, when present, must be an integer from 0 to
     480000 (`:366-369`, `:166-192`, `:131`).
-  - `geometryId?` and `createdAt?` are taken from the body if given (`:493`, `:515`).
-  - **Every other body field is stored as sent**, spread over the defaults (`:496-517`), except that
+  - `geometryId?` and `createdAt?` are taken from the body if given (`:493`, `:517`).
+  - **Every other body field is stored as sent**, spread over the defaults (`:496-519`), except that
     `backgroundImage` is dropped and `id`, `isDefault: false` and `backgroundImageFile: null` are forced.
 - **Response:** 201 with the new record minus `backgroundImageFile`. The `id` is 12 hex characters
   (`server/src/routes/tracks.js:245-247`). Defaults for unsent fields: `icon`, `description`,
   `defaultRacerTypeId: 'horse'`, `color`, `defaultLaps: 2`, `defaultDurationSec: 60`,
-  `defaultWinners: 3`, `surfaceClasses: []`, `trackLights` (`:497-517`, `:524-525`).
+  `surfaceClasses: []`, `trackLights` (`:497-519`, `:526-527`). No `defaultWinners` since 2026-10-12 (AUDIT-1
+  A2-14); a stored track that has it keeps it, and it is still accepted in a body.
 - **Errors:** 400 `{error: "<messages joined by '; '>"}` (`server/src/routes/tracks.js:489-490`). 401.
   CSRF 403.
 
@@ -377,40 +378,40 @@ tracks. Every create, update, upload or background removal also writes a timesta
   create. If any geometry key is present, the geometry must be complete (`:398-420`). `geometryId`
   must be a string or `null` (`:421-425`). Other fields are merged over the existing record. `id`,
   `isDefault`, `backgroundImageFile` and `createdAt` are preserved; `geometryId` is taken from the
-  body if the key is present (`:536-546`).
-- **Response:** 200 with the updated record minus `backgroundImageFile` (`server/src/routes/tracks.js:552-553`).
-- **Errors:** 404 `Track not found` (`server/src/routes/tracks.js:531`). 400 joined messages
-  (`:533-534`). 401. CSRF 403.
+  body if the key is present (`:538-548`).
+- **Response:** 200 with the updated record minus `backgroundImageFile` (`server/src/routes/tracks.js:554-555`).
+- **Errors:** 404 `Track not found` (`server/src/routes/tracks.js:533`). 400 joined messages
+  (`:535-536`). 401. CSRF 403.
 
 ### `DELETE /api/tracks/:id`
 
 - **Who:** any signed-in user (`server/src/auth/guards.js:151`).
 - **Request:** path `id`.
 - **Response:** 204, empty. The JSON file and the background image are removed; the image is removed
-  only if its stored name is safe (`server/src/routes/tracks.js:567-573`, `:291-294`).
-- **Errors:** 404 `Track not found` (`server/src/routes/tracks.js:559`). 403 `Cannot delete default
-  track…` when `isDefault` is set (`:560-565`). 401. CSRF 403.
+  only if its stored name is safe (`server/src/routes/tracks.js:569-575`, `:291-294`).
+- **Errors:** 404 `Track not found` (`server/src/routes/tracks.js:561`). 403 `Cannot delete default
+  track…` when `isDefault` is set (`:562-567`). 401. CSRF 403.
 
 ### `DELETE /api/tracks/:id/background`
 
 - **Who:** any signed-in user (`server/src/auth/guards.js:151`).
 - **Request:** path `id`.
 - **Response:** 204. The file is removed only if its name is safe, and `backgroundImageFile` is set
-  to `null` (`server/src/routes/tracks.js:577-589`). It is still 204 when the track had no background.
-- **Errors:** 404 `Track not found` (`server/src/routes/tracks.js:579`). 401. CSRF 403.
+  to `null` (`server/src/routes/tracks.js:579-591`). It is still 204 when the track had no background.
+- **Errors:** 404 `Track not found` (`server/src/routes/tracks.js:581`). 401. CSRF 403.
 
 ### `POST /api/tracks/:id/background`
 
 - **Who:** any signed-in user (`server/src/auth/guards.js:151`).
 - **Request:** path `id`. `multipart/form-data` with the file in field **`background`**
-  (`server/src/routes/tracks.js:592`), at most 10 MB, PNG/JPEG/WebP. It is stored as `<id>.<ext>`;
-  an older file under another extension is deleted, only if its stored name is safe (`:613-614`).
-- **Response:** 200 `{backgroundImageFile: "<id>.<png|jpg|webp>"}` (`server/src/routes/tracks.js:627`).
+  (`server/src/routes/tracks.js:594`), at most 10 MB, PNG/JPEG/WebP. It is stored as `<id>.<ext>`;
+  an older file under another extension is deleted, only if its stored name is safe (`:615-616`).
+- **Response:** 200 `{backgroundImageFile: "<id>.<png|jpg|webp>"}` (`server/src/routes/tracks.js:629`).
 - **Errors:**
   - Upload-helper 413 or 400 (`server/utils/imageUpload.js:115-125`), before the record lookup.
-  - 404 `Track not found` (`server/src/routes/tracks.js:594`).
-  - 400 `No file uploaded (field name: background)` (`:595-596`).
-  - 400 `File type not allowed…`: the magic bytes are not PNG, JPEG or WebP (`:600-605`).
+  - 404 `Track not found` (`server/src/routes/tracks.js:596`).
+  - 400 `No file uploaded (field name: background)` (`:597-598`).
+  - 400 `File type not allowed…`: the magic bytes are not PNG, JPEG or WebP (`:602-607`).
   - 401. CSRF 403.
 
 ### `POST /api/tracks/:id/set-default`
@@ -419,7 +420,7 @@ tracks. Every create, update, upload or background removal also writes a timesta
 - **Request:** path `id`; no body.
 - **Response:** 200 with the full stored record, now `isDefault: true` with a new `updatedAt`. This
   is the raw record, so `backgroundImageFile` is included (`server/src/routes/_defaultPromote.js:34-40`,
-  attached at `server/src/routes/tracks.js:633-638`).
+  attached at `server/src/routes/tracks.js:635-640`).
 - **Errors:** 404 `Not found` (`server/src/routes/_defaultPromote.js:36`). 401. 403
   (`server/src/auth/guards.js:206-207`). CSRF 403.
 
@@ -436,7 +437,7 @@ tracks. Every create, update, upload or background removal also writes a timesta
 - **Request:** path `id`.
 - **Response:** 200 with the full record. When there is a background, it also carries
   `_backgroundAssetRelPath: "server/data/backgrounds/<file>"`
-  (`server/src/routes/_defaultPromote.js:50-58`, `server/src/routes/tracks.js:639-645`).
+  (`server/src/routes/_defaultPromote.js:50-58`, `server/src/routes/tracks.js:641-647`).
 - **Errors:** 404 `Not found` (`server/src/routes/_defaultPromote.js:52`). 401. 403.
 
 ---

@@ -1854,9 +1854,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Records and decisions
 
-- [ ] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written** into every new track (`tracks.js:515`)
-      and carried by the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes
-      the seed records. *(verify: `grep -r defaultWinners server/` finds nothing)*
 - [ ] **AUDIT-1 A2-50 · `viewerProbe.js:414` passes world pixels where a normalised value belongs**
       (the file's own rule), so invariant 3 is too lenient. Fixing it changes the instrument's verdicts.
       *(verify: the probe's invariant-3 call uses the normalised band, re-measured)*
@@ -1915,6 +1912,20 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`, and
+      narrower than the row's proposal on purpose: `POST /api/tracks` no longer writes
+      `defaultWinners` (`server/src/routes/tracks.js`), but the 10 seed records are left
+      byte-identical — removing it there would redeliver them to every installation
+      (`check-seed-versions` passes unchanged) — so the row's `grep -r defaultWinners server/` will
+      still find the seeds. A stored track that has the field keeps loading and keeps it on every
+      re-save, and it stays accepted in a body (item A5M-13's allow-list). Test:
+      `server/src/routes/tracksDefaultWinners.test.js` — sabotage (the default put back) red:
+      `expected {...} to not have property "defaultWinners"`. The row as it stood: **AUDIT-1 A2-14 ·
+      `defaultWinners: 3` is still written** into every new track (`tracks.js:515`) and carried by
+      the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes the seed
+      records. *(verify: `grep -r defaultWinners server/` finds nothing)*
 
 - [x] **AUDIT-1 A10-02 · a held lock blocks the whole server — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.

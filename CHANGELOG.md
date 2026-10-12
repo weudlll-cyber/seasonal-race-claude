@@ -40,6 +40,8 @@ none of it should be relied on until it is merged. Each entry names its branch.
 - `RA_RACES_WAL=1`: the race history database in write-ahead-log mode, so saving a race is no longer
   held up (about 7 s, then a failure) while a backup reads it. Off by default; backups and restores
   work in both modes (audit finding A10-02). *(branch `fix/audit-1-decisions-server`)*
+- A new track no longer carries the unused `defaultWinners` field; the built-in tracks and tracks
+  already stored keep theirs (audit finding A2-14). *(branch `fix/audit-1-decisions-server`)*
 - An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
   the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*
