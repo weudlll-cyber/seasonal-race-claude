@@ -9,7 +9,7 @@
 //              test pins the ten names and refuses an unnamed number field in the chapter.
 // ============================================================
 
-import { render, screen, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -47,6 +47,14 @@ const NAMED = [
   'Racer Count',
 ];
 
+// A number field's name, the three ways the chapter could give one. Read from the DOM rather than
+// through role queries: the chapter holds several hundred elements, and computing the accessible
+// tree for each query cost seconds under a loaded suite.
+const nameOf = (input) =>
+  input.getAttribute('aria-label') ||
+  input.getAttribute('aria-labelledby') ||
+  [...(input.labels ?? [])].map((l) => l.textContent).join(' ');
+
 describe('Dev Screen — number fields have accessible names (AUDIT-1 A8-01)', () => {
   // One render for both checks: the testing library unmounts after every test.
   it('names the ten fields by their visible labels and leaves none in the chapter unnamed', async () => {
@@ -57,9 +65,9 @@ describe('Dev Screen — number fields have accessible names (AUDIT-1 A8-01)', (
       </MemoryRouter>
     );
     await act(async () => {});
-    for (const name of NAMED) expect(screen.getByRole('spinbutton', { name })).toBeTruthy();
-    const all = screen.getAllByRole('spinbutton');
-    const named = screen.getAllByRole('spinbutton', { name: /\S/ });
-    expect(named.length).toBe(all.length);
+    const fields = [...document.querySelectorAll('input[type="number"]')];
+    const names = fields.map(nameOf);
+    for (const name of NAMED) expect(names).toContain(name);
+    expect(fields.filter((f, i) => !names[i].trim())).toEqual([]);
   });
 });
