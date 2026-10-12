@@ -5710,7 +5710,7 @@ if (isMain) {
     );
     const mdPath = join(OUT_DIR, "fairness-report.md");
     writeFileSync(mdPath, report);
-    console.log(`Bericht → ${mdPath}`);
+    console.log(`Report → ${mdPath}`);
   }
 
   // ── HERO-MAP output (--hero-map; NIGHT-SWEEP TIER-1) ────────────────────────

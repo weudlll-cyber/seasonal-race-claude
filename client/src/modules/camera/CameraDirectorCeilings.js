@@ -68,10 +68,9 @@ export const ceilingsMixin = {
       // CONTENDER-ZOOM-1: THE CONTENDERS ARE THE BINDING REQUIREMENT, however many there are.
       //
       // `subjects.pair` is the pinned set. `contenderGuarantee` is `pairGuarantee` over every pair in
-      // it and reduces to exactly `pairGuarantee` at two — which is what the set holds today, so this
-      // line changes no picture until the capture widens. It is here rather than waiting for that
-      // widening because the guarantee is the half that can be built without a membership rule; the
-      // membership rule is the half that cannot. See the block above `_photoFinishContenders`.
+      // it and reduces to exactly `pairGuarantee` at two. With `contenderZoom` ON (the shipped
+      // default) the capture is `_abreastContenders(...)` and can hold more than two; only the OFF arm
+      // keeps `slice(0, 2)`. See the block above `_photoFinishContenders`.
       //
       // THE PADDING IS THE NARROW BODY REFERENCE, and that is stated rather than assumed adequate:
       // `_drawnBodyWidthRefPx` covers a MEDIAN 44.6% of the drawn sprite (measured across ten tracks,
@@ -148,13 +147,12 @@ export const ceilingsMixin = {
    * construction: on the frame the state changed it went from absent to fully applied and took the
    * target from 2.47 to 10.02 — measured, the whole of the "leap" the owner objects to.
    *
-   * SO IT HANGS ON A CONTINUOUS QUANTITY INSTEAD, and the run-in already owns exactly one:
-   * `_runInProgress`, 0 where the endgame window opens and 1 at the line, clamped monotone. **No
-   * duration, no easing and no new number** — the cap's demand simply grows with the leader's own
-   * approach, which is the quantity the whole endgame is already written in.
+   * WHAT IT DOES TODAY: 0 outside `PHOTO_FINISH`; inside it, a smoothstep from 0 to 1 over
+   * `_corridorCapArriveMs` from `_photoFinishEnteredTs` (1 at once when either is missing). The scope
+   * stays the state and the ONSET gets a duration — see the body.
    *
-   * PAST THE RUN-IN it is 1. The run-in releases at the crossing, by which point progress has
-   * already reached 1, so the hand-over is continuous rather than another step.
+   * (The first design hung the weight on `_runInProgress` with no duration; that was tried and failed,
+   * as the body records, so the two paragraphs that used to stand here no longer describe the code.)
    */
   _corridorCapWeight() {
     // ── (b) WAS TRIED FIRST AND IT FAILED — recorded so it is not tried again ──────────────────
@@ -261,10 +259,11 @@ export const ceilingsMixin = {
    * and degrades silently. So the fix is not "pass it everywhere"; it is to make an aim
    * uncomputable without the floor.
    *
-   * **HOW THAT IS ENFORCED, and it is the whole point:** `anchorScreenPoint` is **no longer
-   * imported into this file**. There is no raw function here to call with four arguments. A future
-   * call site must either use this method — which cannot omit the floor, because it does not take
-   * it — or re-add the import, which is a visible, reviewable act rather than a silent omission.
+   * **HOW THAT IS ENFORCED, and it is the whole point:** `anchorScreenPoint` is imported into this
+   * file only under the alias `anchorScreenPointRaw`, and the one call to it is the one in this
+   * method, which always passes the floor. A future call site must either use this method — which
+   * cannot omit the floor, because it does not take it — or call the alias directly, which is a
+   * visible, reviewable act rather than a silent omission.
    *
    * **WHAT IT COSTS.** The parameter was not made *required* in `framingRule.js`, which would have
    * been the loudest shape: `anchorScreenPoint` has around twenty callers outside this file — six
@@ -333,7 +332,9 @@ export const ceilingsMixin = {
    *   `hudState` — none of them are touched. As the leader closes, `room / distance` rises past the
    *   state's own setting, this term stops being the smallest in `_setTargets`'s `Math.min`, and
    *   what is left is the shot that was always there, bit for bit. There is nothing to hand over
-   *   and nothing to switch off.
+   *   and nothing to switch off. (Since ENDGAME-SCHEDULE-2 this term no longer enters that
+   *   `Math.min` itself: the run-in schedule reads it and places the width, and the `line` slot in
+   *   `_setTargets` is always Infinity.)
    *
    *   THE PHOTO FINISH IS STILL THE PHOTO FINISH. RaceScreen starts the slow motion on
    *   `hudState === 'PHOTO_FINISH'`. The previous shape of this repair made RUN_IN a camera STATE
@@ -358,7 +359,9 @@ export const ceilingsMixin = {
    * OVERVIEW's width (bound so hard it cost the design its point). Bounding at the projection's own
    * minimum measured IDENTICAL to no bound, which is the proof the downstream clamp is the real one.
    *
-   * @returns {number} cam.zoom ceiling; Infinity when the run-in is not composing this frame
+   * @returns {number} cam.zoom ceiling; Infinity when there is no subject point or no finish-line
+   *   point. It does NOT check whether the run-in is composing — `_scheduleEngaged` relies on a
+   *   finite value before engagement.
    */
   _lineCeiling(subjects, frameSize, raceState, framePct = null, atOverride = null) {
     if (!subjects?.point) return Infinity;

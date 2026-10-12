@@ -31,8 +31,8 @@ const MAX_STATE_DURATION = 8000;
 // These three are duplicated in `storage/defaults.js`, which is this module's established
 // arrangement rather than an oversight — see the header: it holds the fallback for a director built
 // with NO config, and defaults.js holds the shipped value. The duplication is GUARDED by a test that
-// asserts the two agree, the same answer `autoSpriteScale.js` gives for CANVAS_H_REF. That is one
-// better than `POST_START_HOLD_MS` beside it, which is duplicated and unguarded.
+// asserts the two agree, the same answer `autoSpriteScale.js` gives for CANVAS_H_REF. (The
+// duplicated and unguarded `POST_START_HOLD_MS` that once sat beside it is retired.)
 // CEREMONY-OPENING-2: 1400 -> 3000, in step with defaults.js. The guard that made this edit
 // necessary is the reason the arrangement is safe at all — `startCeremony.test.js` failed the moment
 // the shipped default moved and this mirror did not, which is exactly what it is for.

@@ -398,8 +398,9 @@ function halfCorridorCeiling(
  *
  * **AT n = 2 IT IS `pairGuarantee`, EXACTLY** — one pair, one call, the same arguments. That is what
  * makes this block's off arm byte-identical rather than approximately so, and it is why the shipped
- * picture cannot move until the contender SET grows beyond two. Today it never does: see
- * `_photoFinishContenders`, which is captured as `slice(0, 2)`.
+ * picture cannot move until the contender SET grows beyond two. With `contenderZoom` ON (the shipped
+ * default) it does: `_photoFinishContenders` is captured as `_abreastContenders(...)`, and only the
+ * OFF arm keeps `slice(0, 2)` (CameraDirector.js).
  *
  * WHY NOT A BOUNDING BOX: an axis-aligned box assumes the worst orientation, which is precisely what
  * `pairGuarantee` was written to stop doing — two racers side by side across a diagonal corridor need
@@ -620,7 +621,8 @@ export function anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen, ro
  *
  * @param {number|null} forwardFrac  the configured fraction
  * @param {number} span              the frame's chord along the heading, in screen px
- * @param {number} roomFloorPx       0/absent = OFF, the shipped default
+ * @param {number} roomFloorPx       0/absent = OFF (the shipped default is ON: `leaderAimRoomFloorPx`
+ *                                   in defaults.js)
  * @returns {number|null} the fraction to use
  */
 export function forwardFracForRoomFloor(forwardFrac, span, roomFloorPx = 0) {

@@ -10,14 +10,15 @@
 //              final-band multiset is preserved (role pairing = same-band endpoint swap only). During
 //              the race a curve may cross ANY bands — a deep comeback (rank 20 → 3) is the action.
 //
-//              Feasibility is DENSITY-based, not a fixed rank-rate: the ±20% speed band over the
-//              remaining time is a DISTANCE budget, converted to ranks via the ACTUAL post-chaos
+//              Feasibility is DENSITY-based, not a fixed rank-rate: the speed authority over the
+//              remaining time (`speedBudgetFrac` to climb, `dropBudgetFrac` to fall) is a DISTANCE budget, converted to ranks via the ACTUAL post-chaos
 //              position (t) distribution. A bunched field lets a racer pass many (deep comeback
 //              feasible); a spread field lets it pass few (deep comeback refused). Only the
 //              physically impossible is refused. Positive OUTCOME handoff budget is a hard constraint
 //              (resolve into band before the checkpoint — no late rescue).
 //
-//              ISOLATED: not wired into the race path (Step 3). Reuses Step-1 primitives
+//              Wired into the race path: racePlanner.js imports `generateHeroCurves` and calls it
+//              once per race when the heroes are cast. Reuses Step-1 primitives
 //              (makeHeroCurve / anchorHeroCurve / sampleHeroCurve) and the shared BAND_EDGES /
 //              mulberry32. Pure + deterministic + fingerprintable. Decomposed into small tested units.
 // ============================================================
@@ -156,7 +157,8 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const lerp = (range, t) => range.at0 + (range.at1 - range.at0) * t;
 
 // ── DENSITY-BASED feasibility: the reachable rank window + per-progress rank rate for one racer,
-// from the ±20% distance budget over the remaining race, counted against the live t-distribution. ─
+// from the directional distance budgets over the remaining race (`speedBudgetFrac` to climb,
+// `dropBudgetFrac` to fall), counted against the live t-distribution. ─
 export function racerFeasibility(racer, postChaos, finishT, config = GENERATOR_CONFIG) {
   const n = postChaos.length;
   const remaining = 1 - config.anchorProgress;
@@ -518,9 +520,9 @@ export function shouldCastFaller(seed, config = GENERATOR_CONFIG) {
 // front racer (`cr + peakDepthFrac * (n - 1)`) — it was simply labelled `sovereign-lead`.
 //
 // ★ NO HOLD ARM IS BUILT, DELIBERATELY, and this is a departure from the brief worth stating. The
-// measurement arms needed one because the racer they held was NOT a hero and `racePlanner.js:805`
-// pins a non-hero to 1.0 before OUTCOME. A CAST hero is already exempt from that pin and already
-// tracks its curve through the pulk phase. Rebuilding the arm would be a second mechanism doing the
+// measurement arms needed one because the racer they held was NOT a hero and the pre-OUTCOME pin
+// in racePlanner.js `update` holds a non-hero at 1.0 before OUTCOME. A CAST hero is already exempt
+// from that pin and already tracks its curve through the pulk phase. Rebuilding the arm would be a second mechanism doing the
 // job the curve already does, and the chain rule is that nothing is built twice.
 //
 // ★ WHERE THE NUMBERS COME FROM — HOLD-GRID-1, read for TOP-5 REACH because that is his
@@ -614,7 +616,7 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
   // ★★ THE OWNER'S DECISION, 2026-09-19: A COMEBACK IS SHOWN WHEN ONE WAS PLANNED, NOT WHEN ONE
   // HAPPENS. This site used to emit `comebacker` whenever the drawn winner was not already inside
   // the front cluster — `wr > cr`, and `cr` starts at 2, so a winner sitting THIRD after chaos was
-  // one. `comebackDetector.js:110` matches `'comebacker'` exactly, so that string was the entire
+  // one. `comebackDetector.js` matches `'comebacker'` exactly, so that string was the entire
   // reason the camera forced a comeback shot on a racer whose comeback nobody had authored: 29 of
   // the 153 COMEBACK_ZOOM shots in a 200-race sweep were his (PLANNED-COMEBACK-ONLY-1 §3).
   //

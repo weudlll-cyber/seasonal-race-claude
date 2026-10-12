@@ -162,11 +162,11 @@ without `RA_CLIENT_ORIGIN` would break the same-origin deployment the project is
 **What is true, and it was searched for rather than assumed.** An uncapped search of `server/`,
 `client/`, `scripts/` and `shared/` for `https.createServer`, `node:https`, `require('https')`,
 `from 'https'`, `createSecureServer`, `tls.`, `node:tls`, key/cert pairs, `letsencrypt` and `certbot`
-returns **nothing**. `server/src/index.js:60` is `listenOn(app, PORT, bindAddress, …)` — plain HTTP.
+returns **nothing**. `server/src/index.js:64` is `listenOn(app, PORT, bindAddress, …)` — plain HTTP.
 
 **But the server is TLS-aware and expects to sit behind a terminator:**
 
-- `server/src/app.js:34` — `if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)`
+- `server/src/trustProxy.js` — trusts `RA_TRUST_PROXY` hops; unset, one hop when `NODE_ENV=production`
 - `server/src/auth/session.js:23-29` — `resolveCookieSecure` marks the session cookie `Secure` in
   production, overridable with `RA_COOKIE_SECURE=true|false|auto`
 - `server/src/auth/session.js:35-43` — the cookie is named `__Host-ra.sid` when `Secure` is
@@ -175,7 +175,7 @@ returns **nothing**. `server/src/index.js:60` is `listenOn(app, PORT, bindAddres
 So the intended arrangement is: **a reverse proxy terminates TLS and forwards; the app never sees a
 certificate.** That is the ordinary and correct shape, and it is why there is no TLS code to find.
 
-**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:204` reads
+**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:212` reads
 `username` and `password` from `req.body`), and the session cookie carries the session. Over plain
 HTTP both are readable by anything on the path. **`Secure` cookies are not sent over HTTP at all**,
 so an install that sets `NODE_ENV=production` without HTTPS in front does not merely become
@@ -244,7 +244,7 @@ behind a proxy. The Docker publish `4000:4000` below is untouched.
 rented server — **but it would remove a mode that works today.** The shipped model is same-origin:
 the server serves the built app *and* the API on one port (`DEPLOYMENT.md:9-13`), so a browser on
 another machine reaches `http://<host>:4000` directly, and a reverse proxy is described as optional
-(`DEPLOYMENT.md:227-228` recommends `RA_BIND_ADDRESS=127.0.0.1` behind one; the tested example is
+(`DEPLOYMENT.md:229-230` recommends `RA_BIND_ADDRESS=127.0.0.1` behind one; the tested example is
 `:452`). Binding to loopback breaks direct access
 and makes a proxy mandatory. **That is a decision about how the product may be run, so it is his.**
 
@@ -293,7 +293,9 @@ the reasoning as it stood before the order, kept as the record of the trade.
 **BUMPED 2026-10-09 (AUDIT-1 A7): `node:20-alpine` → `node:24-alpine`**, re-read the same way and
 still pinned by digest. Node 20 reached end of life on 2026-04-30; 24 is the active LTS and the
 version this repository's suites already run on. CI (`node-version`) moved with it. The source-install
-floor (`engines: >=20`, "Node 20 or newer") is unchanged — raising it is a row for the owner.
+floor (`engines: >=20`, "Node 20 or newer") was left unchanged that day as a row for the owner.
+**RAISED 2026-10-12 (AUDIT-1 A7-02):** `engines` reads `>=22` in all three `package.json` files,
+and `scripts/runtime-node.test.mjs` now holds them at its `FLOOR`.
 
 ~~**Base image — a floating tag**~~ (`server/Dockerfile:22` and `:33` before TIDY-C-1, both `FROM node:20-alpine`).
 ★★ **The brief asked me to pin it to a digest "if that is purely safer". It is NOT purely safer,

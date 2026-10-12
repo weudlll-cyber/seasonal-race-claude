@@ -9,7 +9,7 @@
 // WHAT THIS FILE OWNS: that the camera's cast admits the STAGED comebacker and refuses the unstaged
 // `pursuer` — the whole behavioural content of the 2026-09-18 rename.
 //
-// ★ WHY IT EXISTS. `heroCurveGenerator.js:722` casts the unstaged front-group racer as `pursuer`
+// ★ WHY IT EXISTS. `heroCurveGenerator.js:724` casts the unstaged front-group racer as `pursuer`
 // instead of `comebacker` so that `comebackDetector.setPlan` stops putting him in `_cast` and the
 // director stops forcing a comeback shot on him. Nothing in `comebackDetector.js` was ADDED to make
 // that true — the match at `:110` is an equality test and already admits exactly one string — so

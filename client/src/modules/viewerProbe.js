@@ -410,8 +410,12 @@ export function recordViewerFrame(f) {
     const HY = (CH * COMPANY_FRAME_PCT) / 2;
     const tAt = f.shape.isOpen ? Math.min(1, f.finishT) : ((f.finishT % 1) + 1) % 1;
     let band = -Infinity;
+    // The lateral argument is NORMALISED, -0.5 to +0.5 across the corridor — this file's own rule,
+    // stated at `bandPct` below. Multiplying it by `trackWidthPx` (as this did until AUDIT-1 A2-50)
+    // sampled a segment hundreds of times too long, and any of those far points landing in the
+    // region passed the check.
     for (let k = 0; k <= 40; k++) {
-      const w = f.shape.getPosition(tAt, (k / 40 - 0.5) * f.trackWidthPx);
+      const w = f.shape.getPosition(tAt, k / 40 - 0.5);
       if (!w) continue;
       const m = Math.min(HX - Math.abs(sx(w) - CW / 2), HY - Math.abs(sy(w) - CH / 2));
       if (m > band) band = m;

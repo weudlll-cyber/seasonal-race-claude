@@ -191,7 +191,7 @@ function planConfig() {
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
     // ★★ BLIND-SITE-1 (2026-09-15) — the same eleven inputs this file omitted against
-    // raceCore.js:257-356: COMBO15 fair-arrival (SHIPPED ON, defaults.js:1008-1012) and the gap
+    // raceCore.js:261-360: COMBO15 fair-arrival (SHIPPED ON, defaults.js:1013-1017) and the gap
     // brake (four keys + its rate window + `pathLengthPx`, inert while the default is OFF).
     // ★ THIS FILE'S OWN CLAIM IS UNAFFECTED. Its checkpoint diff compares two arms that BOTH read
     // this one builder, so a key missing from it cancelled on both sides and the documented

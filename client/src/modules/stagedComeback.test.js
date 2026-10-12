@@ -199,7 +199,7 @@ describe('COMEBACK-STAGED-1 — ★ THE FALL-BACK, which is what keeps the tree 
     const staged = stagedComebackRank(40);
     // Any comebacker present came through today's path (already deep), never through the staging.
     // ★ BOTH ROLES, since 2026-09-18. The unstaged fall-back cast is `pursuer`
-    // (`heroCurveGenerator.js:722`) while the staged site (`:688`) stays `comebacker`. ★ SINCE
+    // (`heroCurveGenerator.js:724`) while the staged site (`:690`) stays `comebacker`. ★ SINCE
     // 2026-09-19 the DRAWN-WINNER site (`:648`) is `sovereign-lead` and no longer lands in either
     // bucket, which is why the vacuity guard below matters more than it did: filtering on
     // `comebacker` alone would make this loop match NOTHING on a refused staging and the assertion

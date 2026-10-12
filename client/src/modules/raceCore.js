@@ -1,5 +1,6 @@
 // ============================================================
-// File:        client/src/modules/raceCore.js
+// File:        raceCore.js
+// Path:        client/src/modules/raceCore.js
 // Project:     RaceArena — the REAL race init + per-step advance, extracted from
 //              screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM.
 //
@@ -9,9 +10,12 @@
 // but it could never expose a divergence that lives in the ORDER RaceScreen executes its own
 // loop — because neither arm ran RaceScreen's loop. This module is that loop, lifted out
 // verbatim: RaceScreen now renders through `createRaceFromIdentity()` + `stepRacePhysics()`
-// (a pure refactor — byte-identical browser physics), and the harness calls the SAME functions
-// headless via `runRaceHeadless()`. What the browser runs and what the harness measures are now
-// the same code, by construction — not a hand-built mirror.
+// (a pure refactor — byte-identical browser physics), and the headless instruments call the SAME
+// functions: sim-fairness.mjs and goldenRunner.mjs step `stepRacePhysics()` directly, and
+// `runRaceHeadless()` below is the full-race convenience wrapper (nothing in the tree calls it
+// today). What the browser
+// runs and what the harness measures are now the same code, by construction — not a hand-built
+// mirror.
 //
 // SCOPE — this is the PHYSICS core only. Rendering, camera, particles, the fixed-timestep
 // accumulator, the 2-step catch-up cap and BATTLE/PHOTO-FINISH slow-motion stay in RaceScreen:
@@ -19,14 +23,14 @@
 // (a seeded race is frame-rate / slow-mo independent — see seedDeterminism.test.js). The
 // headless runner steps FIXED_DT to the finish exactly as a browser under no frame stall would.
 //
-// KEY DIFFERENCE FROM THE SIM (this is deliberate, and is the whole point of the extraction):
-//   RaceScreen order per step:  controller.update() → re-roll draw (reads live field + plan
-//                               state) → advanceRacerT, INTERLEAVED per racer.
-//   sim (runSingleRace) order:  re-roll draw (Pass 1) → controller.update() → advanceRacerT
-//                               (Pass 2), each a SEPARATE pass over the field.
-// When a Race Plan is running, the re-roll's pulk/gap bias reads the controller + neighbour
-// positions at a one-frame offset between the two orders. That offset is the residual the
-// harness now makes machine-visible. This module reproduces the BROWSER order.
+// THE STEP ORDER — and it is now the SIM's order too:
+//   per step:  controller.update() → re-roll draw (reads live field + plan state) →
+//              advanceRacerT, INTERLEAVED per racer.
+// The sim (runSingleRace) once ran its own SEPARATE passes in a different order (re-roll draw →
+// controller.update() → advanceRacerT), which put the re-roll's pulk/gap bias one frame out of step
+// with the browser. Since the step-order alignment of 2026-07-24 the sim imports and calls
+// `stepRacePhysics` itself (sim-fairness.mjs, "STEP-ORDER ALIGNMENT"), so there is ONE order, the
+// BROWSER's, and this module is it.
 // ============================================================
 
 import { deriveRaceDuration } from './durationModel.js';
@@ -50,7 +54,7 @@ import { easeInOutCubic } from '../utils/mathUtils.js';
 /** Fixed physics timestep in ms — the one quantum. Mirrors RaceScreen/index.jsx FIXED_DT. */
 export const FIXED_DT = 16;
 
-/** Closed-track t-wrap helper — identical to RaceScreen/index.jsx:139 and sim tPos. */
+/** Closed-track t-wrap helper — identical to the sim's own `tPos` (sim-fairness.mjs). */
 const tPos = (t) => ((t % 1) + 1) % 1;
 
 /**
@@ -283,8 +287,8 @@ export function createRaceFromIdentity(p) {
         corridorEnd:
           dynamicsConfig.racePlanCorridorEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd,
         pulkBiasGain: dynamicsConfig.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
-        // ── GAP-BRAKE-1 — the gap-based leader brake. Default OFF, so a store that has never heard
-        // of it produces today's race byte-identically. `pathLengthPx` is handed over with the keys
+        // ── GAP-BRAKE-1 — the gap-based leader brake. Shipped ON (decided 2026-09-16,
+        // landed 2026-09-17; `gapBrakeEnabled` in defaults.js), so a store that has never heard of it gets the brake. `pathLengthPx` is handed over with the keys
         // because the brake measures a DISTANCE: `t` counts path lengths, and this turns the
         // leader->2nd t-gap into world px without the physics ever reading the camera.
         gapBrakeEnabled:
@@ -469,7 +473,7 @@ export function createRaceFromIdentity(p) {
     }
   };
 
-  // Frame-constant re-roll scalars (RaceScreen computes these per-rAF at :941-944; they never
+  // Frame-constant re-roll scalars (RaceScreen used to compute these per-rAF; they never
   // change during a race, so hoisting them here is byte-identical).
   const lastRollDeadline =
     rerollDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
@@ -713,7 +717,7 @@ export function stepRacePhysics(st, cfg) {
       r.t += r.baseSpeed * r.runoutDecay;
     }
     // ★ THE REALIZED SPEED FACTOR, and it must carry EVERY term the step applies. `governorMult`
-    // was missing here until 2026-09-17 while `raceStep.js:131` multiplies by it, so this understated
+    // was missing here until 2026-09-17 while `raceStep.js` `advanceRacerT` multiplies by it, so this understated
     // the speed of any racer the PULK contest director was acting on.
     // ★ NOTHING READS `vt` TODAY — it is written here, at the constSpeed diagnostic below, and in
     // scripts/sim-race-visual.mjs, and read nowhere in the tree. So this correction cannot move a

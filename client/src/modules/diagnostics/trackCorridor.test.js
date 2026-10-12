@@ -54,7 +54,7 @@ const MEASURED = SAMPLE_TRACKS.map(({ id }) => {
     // THE WIDTH THE GAME ACTUALLY USES. Every shipped call site prefers the stored value and
     // falls back to the spline estimate: SEVENTEEN of them across sixteen files, counted with
     // `git grep -c "width ?? .*getActualTrackWidth()"` — RaceScreen/index.jsx:429,
-    // sim-fairness.mjs:4307, scripts/lib/raceDriver.mjs:121 and :147, and thirteen more.
+    // sim-fairness.mjs:4307, scripts/lib/raceDriver.mjs:122 and :148, and thirteen more.
     // The old table here computed auto-scale from `getActualTrackWidth()` UNCONDITIONALLY, so
     // from 2026-05-06 until tonight it printed factors derived from a width the game never reads.
     // That is the most useful thing this file turned up when it was armed, and it is why the

@@ -3,7 +3,7 @@
 // note in vitest.config.js. Verified by running it in BOTH environments: same tests, same count.
 // ============================================================
 // raceLengths.test.js — the racer-LENGTH unit is ONE source, and bit-identical to the inline
-// formulas it replaced (GovernorDiagHUD.jsx:62/75, raceGovernor.js:214, sim-fairness.mjs:947).
+// formulas it replaced (GovernorDiagHUD.jsx:62/75, raceGovernor.js:217, sim-fairness.mjs:947).
 // If any of these fail, the HUD number the owner reads has silently moved.
 // ============================================================
 import { describe, it, expect } from 'vitest';

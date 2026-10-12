@@ -1,6 +1,9 @@
 // ============================================================
-// raceStep.js — the ONE per-frame t-update, imported by BOTH the browser race
-// loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs).
+// File:        raceStep.js
+// Path:        client/src/modules/raceStep.js
+// Project:     RaceArena
+// Description: The ONE per-frame t-update, imported by BOTH the browser race
+//              loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs).
 //
 // WHY THIS FILE EXISTS
 // Before this module the advance formula lived inline in two places. The factor

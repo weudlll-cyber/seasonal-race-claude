@@ -5,7 +5,7 @@
 // distance decides nothing about it.
 //
 // THE UNIT IS READ AT SOURCE AND NOT REDEFINED. `contactLength` is
-// `(leader.drawnBodyLengthPx + r.drawnBodyLengthPx) / 2` — CameraDirector.js:2719 in
+// `(leader.drawnBodyLengthPx + r.drawnBodyLengthPx) / 2` — CameraDirector.js:2720 in
 // `_abreastContenders` and :2611 in `_updateContention`, the same expression at both sites, and
 // exactly one body length between two equal racers. No second definition and no config key.
 //
@@ -113,7 +113,7 @@ function measure(geo, seed) {
     for (const r of ordered) {
       if (r.index === leader.index) continue;
       const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
-      // THE UNIT, at source: CameraDirector.js:2719. Not redefined here.
+      // THE UNIT, at source: CameraDirector.js:2720. Not redefined here.
       const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
       if (!(contactLength > 0)) continue;
       if (gapPx <= contactLength) level.push(r.index);

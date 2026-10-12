@@ -54,6 +54,22 @@ t0 = performance.now();
 store.storeRace(race(0));
 console.log(`lock released: the same save succeeds (${Math.round(performance.now() - t0)} ms)`);
 
+// 1b. (AUDIT-1 DECISIONS A10-02, 2026-10-12) A READER holds the database — what a running backup
+// holds. Under the rollback journal this blocks a save exactly as the writer above does; under WAL
+// (RA_RACES_WAL=1) the save goes through. The writer case above stays a writer in both modes.
+const reader = new Database(file);
+reader.exec('BEGIN');
+reader.prepare('SELECT count(*) FROM races').get();
+t0 = performance.now();
+try {
+  store.storeRace(race(10_000));
+  console.log(`read lock: the save went through while another connection held a READ transaction (${Math.round(performance.now() - t0)} ms)`);
+} catch (e) {
+  console.log(`read lock: the save failed after ${Math.round(performance.now() - t0)} ms with ${e.code ?? e.name}: ${e.message}`);
+}
+reader.exec('COMMIT');
+reader.close();
+
 // 2. Integrity after 500 stored races.
 for (let i = 1; i <= 500; i++) store.storeRace(race(i));
 console.log(`integrity_check after 501 races: ${probe.pragma('integrity_check', { simple: true })}`);

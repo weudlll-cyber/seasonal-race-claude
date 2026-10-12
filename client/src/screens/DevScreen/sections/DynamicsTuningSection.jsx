@@ -1230,7 +1230,7 @@ function DynamicsTuningSection({ part }) {
       )}
       {show('pulk') && (
         <>
-          {/* ── Section 5: PULK Phase — the 7 controls in the list below + the PULK bonuses (Weg B, one card) ── */}
+          {/* ── Section 5: PULK Phase — the 7 controls in the list below + the PULK bonuses (option B, one card) ── */}
           <SubCard
             title="PULK Phase"
             onReset={resetPulk}

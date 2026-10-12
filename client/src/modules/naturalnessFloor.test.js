@@ -3,7 +3,7 @@
 // File:        naturalnessFloor.test.js
 // Path:        client/src/modules/naturalnessFloor.test.js
 // Project:     RaceArena — NIGHT-2026-09-24C piece 3(d)
-// Description: The slow side of the naturalness envelope now has a leitplanke, and it REFUSES a
+// Description: The slow side of the naturalness envelope now has a guardrail, and it REFUSES a
 //              configuration below it — while every shipped stage passes untouched.
 // ============================================================
 

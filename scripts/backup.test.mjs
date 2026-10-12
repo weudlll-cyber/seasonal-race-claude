@@ -184,6 +184,46 @@ test('ROUND TRIP: a database with rows survives backup → destroy → restore',
   }
 });
 
+// ── AUDIT-1 A10-02: the race store in WAL mode (RA_RACES_WAL=1) ───────────────────────────────
+// With WAL on, a committed race can live ONLY in `races.sqlite-wal` until a checkpoint, and the
+// side file is never archived. The online backup API reads through the WAL, so the snapshot must
+// carry those rows anyway — this is the case a file copy of `races.sqlite` alone would lose.
+test('ROUND TRIP WITH WAL ON: rows still only in the -wal file, the server connection open, come back', async (t) => {
+  if (!Database) return t.skip('better-sqlite3 is not installed in server/node_modules');
+  const s = scratch();
+  const root = join(s, 'data');
+  const out = join(s, 'archives');
+  const back = join(s, 'restored');
+  seedRoot(root);
+  const live = new Database(join(root, 'races.sqlite')); // the "server", kept open throughout
+  try {
+    assert.equal(live.pragma('journal_mode = WAL', { simple: true }), 'wal');
+    live.pragma('wal_autocheckpoint = 0'); // keep every commit in the -wal file
+    live.exec('CREATE TABLE races (id TEXT PRIMARY KEY, payload TEXT)');
+    const ins = live.prepare('INSERT INTO races (id, payload) VALUES (?, ?)');
+    for (let i = 0; i < 25; i++) ins.run(`r${i}`, JSON.stringify({ i }));
+    assert.ok(statSync(join(root, 'races.sqlite-wal')).size > 0, 'the rows must be in the WAL');
+
+    const res = await backup({ dataRoot: root, outDir: out });
+    assert.ok(!readFileSync(res.archivePath).includes(Buffer.from('races.sqlite-wal')), 'no side file archived');
+
+    live.close();
+    rmSync(root, { recursive: true, force: true }); // ★ destroy
+    restore({ archivePath: res.archivePath, into: back });
+
+    const db = new Database(join(back, 'races.sqlite'));
+    try {
+      assert.equal(db.pragma('integrity_check', { simple: true }), 'ok');
+      assert.equal(db.prepare('SELECT COUNT(*) AS n FROM races').get().n, 25);
+    } finally {
+      db.close();
+    }
+  } finally {
+    if (live.open) live.close();
+    rmSync(s, { recursive: true, force: true });
+  }
+});
+
 // ── AUDIT-1 A5M-05: every file the tool writes is owner-only ──────────────────────────────────
 // The archive carries the password hashes; a 0644 archive, or a 0644 users.json put back by a
 // restore, is readable by every local account. The overwrite case is the one a `mode` option alone
