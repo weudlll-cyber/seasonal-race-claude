@@ -1856,14 +1856,27 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written** into every new track (`tracks.js:515`)
       and carried by the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes
       the seed records. *(verify: `grep -r defaultWinners server/` finds nothing)*
-- [ ] **AUDIT-1 A2-50 · `viewerProbe.js:414` passes world pixels where a normalised value belongs**
-      (the file's own rule), so invariant 3 is too lenient. Fixing it changes the instrument's verdicts.
-      *(verify: the probe's invariant-3 call uses the normalised band, re-measured)*
 - [ ] **AUDIT-1 A7-03 · major upgrades — after v1.0.0, one package at a time** (decided 2026-10-12):
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 - [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
       covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
+
+### Found on 2026-10-12 while re-measuring A2-50
+
+- [ ] **The `viewer-invariants` gate records ZERO frames and still prints PASS.** Run as shipped
+      (`node scripts/viewer-invariants.mjs --gate`, in a fresh clone, isolated ports 4461/4462) it
+      printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, "no in-window frames
+      were recorded", both sheet rows NOT SCORABLE — and *"Every frame of every race swept satisfied
+      every invariant. PASS"*, exit 0. The cause, read from the code: the harness opens `/race`
+      directly, the race camera calls `beginViewerProbe` on mount, and at that moment the test-aids
+      answer has not arrived, so `testAidsOn()` is still false and the probe never runs — the switch
+      is OFF-until-answered by design (TEST-AIDS-1). Loading `/` first, waiting for the
+      `/api/settings/test-aids` answer and entering `/race` inside the same page recorded 6,128 and
+      5,190 frames (a scratch change, not committed). Two things are owed: the harness waits for the
+      answer, and **a run that records no frames FAILS** instead of passing. This gate runs inside
+      `npm run verify -- --premerge`. *(verify: `--gate` prints a non-zero frame count for both
+      races, and a run forced to record nothing exits non-zero)*
 
 ### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
 
@@ -1898,6 +1911,26 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A2-50 · invariant 3 reads the finish band with the normalised lateral — CLOSED
+      2026-10-12 (branch `chore/audit-1-decisions-repo`).** `client/src/modules/viewerProbe.js`
+      invariant 3 now calls `getPosition(tAt, k / 40 - 0.5)`, as the file's own rule at `bandPct`
+      says, instead of multiplying by `trackWidthPx`. A new test,
+      `client/src/modules/viewerProbe.invariant3.test.js`, puts the finish band off screen on a
+      corridor 200 px wide and expects a `3-line` event; with the old line restored it fails
+      (`byInvariant['3-line']` undefined), with the fix it passes. **Re-measured on the standard
+      cases** (`viewer-invariants --gate`: city-circuit and space-sprint, seed 9, shipped arm), before
+      and after the fix: **0 violations of every invariant in both runs** — 1-course, 2-leader,
+      3-line, 4-widthstep, 4-panstep, 5-tootight, 5-toowide, 6-leaderedge all 0; the acceptance sheet
+      identical (items 2 and 9 ACC on city-circuit, band min/median 100/100 and 70.7/100). So on these
+      two races the fix changes no verdict: the band is genuinely in shot through the window. ★ Both
+      runs needed a scratch change to the harness, because run as shipped it records no frames at all
+      — its own PART ONE row. `viewerProbe.js` is in the engine hull by `engine-reach`, so `verify`
+      will run the world fingerprint for it; the probe only reads a frame and returns nothing to the
+      race, and it is off unless `?viewerprobe=1` and the test-aids switch are both on. The row as it
+      stood: **`viewerProbe.js:414` passes world pixels where a normalised value belongs** (the file's
+      own rule), so invariant 3 is too lenient. *(verify: the probe's invariant-3 call uses the
+      normalised band, re-measured)*
 
 - [x] **AUDIT-1 A4-02 · the two Dev Screen chapter walks have headroom — CLOSED 2026-10-12 (branch
       `chore/audit-1-decisions-repo`).** `devScreenChapters.guard.test.jsx` and
