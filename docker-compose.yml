@@ -90,7 +90,7 @@ services:
       #
       # THAT IS THE SEED-REDELIVERY FAILURE ONE LAYER DOWN: a delivery that silently never arrives,
       # while everything says it did. The seeds mount above exists because of the same shape.
-    # node --watch (Node 20 built-in) auto-restarts on src file changes.
+    # node --watch (built into Node) auto-restarts on src file changes.
     # Note: on Windows Docker Desktop, file-change events across the WSL2 boundary
     # can be slow; if auto-restart doesn't fire, use `docker compose restart server`.
     command: node --watch src/index.js

@@ -4,7 +4,7 @@
   "private": true,
   "license": "AGPL-3.0-or-later",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "description": "Monorepo root — owns the tracked git hooks (.githooks/, see docs/VERIFY-RULES.md R12), the guard scripts and npm run verify",
   "scripts": {

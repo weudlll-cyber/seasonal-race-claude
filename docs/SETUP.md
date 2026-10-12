@@ -14,7 +14,7 @@ version of this page — "without the backend you still get all 10 built-in trac
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (the `engines` floor in all three `package.json` files)
 - npm 10+
 - Docker (for the backend; running it with plain `node` works too — see §5)
 

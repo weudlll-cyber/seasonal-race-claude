@@ -1878,8 +1878,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       "HTTPS is not arranged", …). *(verify: each item either struck or backed by a PART ONE row)*
 - [ ] **AUDIT-1 A6-03 · about 200 MB of old measurement blobs in history.** Shrinking it rewrites every
       SHA. *(verify: a decision)*
-- [ ] **AUDIT-1 A7-02 · the source-install floor still says Node 20**, which ended 2026-04-30; the image
-      and CI run 24 since `c2530f29`. *(verify: `engines` reads `>=22` in all three manifests)*
 - [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
       better-sqlite3 13 — each a migration, none a security fix today. *(verify: a decision per
       package)*
@@ -1928,6 +1926,18 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A7-02 · the source-install floor is Node 22 — CLOSED 2026-10-12 (AUDIT-1 decisions,
+      branch `chore/audit-1-decisions-repo`).** `engines.node` reads `>=22` in `package.json`,
+      `client/package.json` and `server/package.json`; each lockfile's root entry moved with it and
+      nothing else in the lockfiles changed. `README.md`, `docs/SETUP.md`, `docs/DEPLOYMENT.md` and
+      `docs/DEPLOY-NOTES.md` say Node 22. ★ **It is held now, not only written:**
+      `scripts/runtime-node.test.mjs` asserts that all three manifests declare exactly `>=FLOOR`
+      (its existing `FLOOR = 22`), and it names the manifests in the form `dataReach` recognises, so
+      a manifest change selects the script suite (sabotaged once: `server/package.json` back to
+      `>=20` turned it red, restored green). The row as it stood: **the source-install floor still
+      says Node 20**, which ended 2026-04-30; the image and CI run 24 since `c2530f29`.
+      *(verify: `engines` reads `>=22` in all three manifests)*
 
 - [x] **AUDIT-1 A5T-06 · master is protected against force-push and deletion — CLOSED 2026-10-12
       (AUDIT-1 decisions).** A repository ruleset was created that day with `gh api`: id

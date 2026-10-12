@@ -35,6 +35,12 @@ none of it should be relied on until it is merged. Each entry names its branch.
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
   the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*
 
+### Changed
+
+- A source install (the plain-Node path) needs Node 22 or newer; it said 20, which no longer
+  receives security fixes. The Docker image already runs Node 24. *(branch
+  `chore/audit-1-decisions-repo`)*
+
 ### Security
 
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,

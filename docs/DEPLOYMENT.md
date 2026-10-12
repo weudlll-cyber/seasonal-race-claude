@@ -160,7 +160,7 @@ touched. These copies are separate from the whole-install backups below.
 A release is a tagged version of the repository. Its download is GitHub's source archive:
 `https://github.com/weudlll-cyber/seasonal-race-claude/archive/<tag>.tar.gz`. A commit hash works
 in place of `<tag>`. The archive contains the source and **no built client**, so step 3 builds one.
-It needs **Node 20 or newer** (`engines` says `>=20`), `npm`, `curl` and `openssl`.
+It needs **Node 22 or newer** (`engines` says `>=22`), `npm`, `curl` and `openssl`.
 
 ### Install
 

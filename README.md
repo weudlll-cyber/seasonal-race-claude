@@ -26,7 +26,7 @@ and race defaults.
 
 ## How to run it
 
-**You need Node.js 20 or newer and Docker.** The Node floor is declared in the `engines` field of
+**You need Node.js 22 or newer and Docker.** The Node floor is declared in the `engines` field of
 all three `package.json` files. On the Docker path Node runs only `npm run configure`; the image
 builds the app itself.
 
