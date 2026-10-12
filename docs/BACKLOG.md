@@ -1818,9 +1818,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
 - [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
       (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
-- [ ] **AUDIT-1 A5T-02 · root `sharp` has a high advisory** fixable only by 0.34 → 0.35 (a major);
-      it is used by two sprite-generation scripts and never shipped. *(verify: `npm audit --prefix .`
-      reports 0 high)*
 - [ ] **AUDIT-1 A5T-06 · master is unprotected** — no branch protection, no ruleset. Proposal: forbid
       force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
       is not `[]`)*
@@ -1935,6 +1932,17 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A5T-02 · root `sharp` lifted to 0.35 — CLOSED 2026-10-12 (AUDIT-1 decisions,
+      branch `chore/audit-1-decisions-repo`).** The root dev dependency moved from `^0.34.5` to
+      `^0.35.5` (installed 0.35.5); `npm audit --prefix .` now reports `found 0 vulnerabilities`.
+      Both scripts that import it still run: `scripts/audit-sprite-crops.mjs` read every shipped sheet
+      and printed its table, and `scripts/gen-snowmobile-sprite.mjs` (copied into a scratch tree,
+      since its source sheet `snowboard-ride.png` is no longer in the repository) resized a
+      synthetic 16-frame sample into the expected 3072×192 sheet. Nothing shipped changes: neither
+      script is in the image. The row as it stood: **root `sharp` has a high advisory** fixable only
+      by 0.34 → 0.35 (a major); it is used by two sprite-generation scripts and never shipped.
+      *(verify: `npm audit --prefix .` reports 0 high)*
 
 - [x] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — CLOSED 2026-10-06 (SERVER-DEFECTS-1):
       BOTH FIXED AND MERGED.** (1) An `async` route whose unexpected error used to escape now answers
