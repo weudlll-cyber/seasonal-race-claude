@@ -1827,22 +1827,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       2026-10-12: record it, do not fix it). *(verify: a decision — the supported widths; if
       narrow widths are in, no card is cut off at them)*
 
-### Found on 2026-10-12 while re-measuring A2-50
-
-- [ ] **The `viewer-invariants` gate records ZERO frames and still prints PASS.** Run as shipped
-      (`node scripts/viewer-invariants.mjs --gate`, in a fresh clone, isolated ports 4461/4462) it
-      printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, "no in-window frames
-      were recorded", both sheet rows NOT SCORABLE — and *"Every frame of every race swept satisfied
-      every invariant. PASS"*, exit 0. The cause, read from the code: the harness opens `/race`
-      directly, the race camera calls `beginViewerProbe` on mount, and at that moment the test-aids
-      answer has not arrived, so `testAidsOn()` is still false and the probe never runs — the switch
-      is OFF-until-answered by design (TEST-AIDS-1). Loading `/` first, waiting for the
-      `/api/settings/test-aids` answer and entering `/race` inside the same page recorded 6,128 and
-      5,190 frames (a scratch change, not committed). Two things are owed: the harness waits for the
-      answer, and **a run that records no frames FAILS** instead of passing. This gate runs inside
-      `npm run verify -- --premerge`. *(verify: `--gate` prints a non-zero frame count for both
-      races, and a run forced to record nothing exits non-zero)*
-
 ### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
 
 Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
@@ -1886,6 +1870,44 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
+      (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
+      printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, both sheet rows NOT
+      SCORABLE, and PASS, exit 0 — the harness opened `/race` directly, `beginViewerProbe` ran on
+      mount before the `/api/settings/test-aids` answer, `testAidsOn()` was still false, and the
+      probe never started. **Both owed things are done, through one shared helper,
+      `scripts/lib/measuredGate.mjs`:** (a) `enterWithTestAidsOn` loads `/`, waits for the switch's
+      answer and for the page to show it applied (the Quick Test button), then enters `/race` by
+      client-side navigation in the same document — WAIT rather than SET, because the client has no
+      outside door to the switch and adding one would ship a test door; (b) `unmeasured` /
+      `refuseUnmeasured` fail any race short of what the gate's own grading needs — the probe
+      running, 2 frames (invariant 4 is a step), 2 in-window frames (invariants 2, 3, 6 and the
+      sheet), the crossing (invariant 6's line half). **Measured on master + the fix** (city-circuit
+      and space-sprint, seed 9, shipped arm): **6,128 and 5,190 frames, 356 and 275 in-window, both
+      crossings recorded, 0 violations of every invariant, PASS, exit 0** (429 s); the sheet as
+      A2-50 recorded it (items 2 and 9 ACC on city-circuit). **Forced to record nothing**
+      (`--sabotage-unmeasured`, the old direct entry): `0 frames  NOT MEASURED` on both races and
+      `viewer-invariants: 2 race(s) in 393s — … 2 race(s) NOT MEASURED`, exit 1. The helper's test,
+      `scripts/lib/measuredGate.test.mjs`, went red (3 of 4) with the minimum comparison broken and
+      green restored. ★ **The same blind spot in `check-runin-frame`**, which printed "skipped" /
+      "not measured" for a case and still PASS: it now refuses through the same helper (sabotaged
+      with an unknown track name: `luger-hil (centre, never empty): 0 race frames, needs at least
+      1`, exit 1; restored: PASS, every case measured, 169.5 s). **The other gates checked:** the
+      only other browser scripts, `audit-offline-render.mjs` (refuses zero font responses) and
+      `scoreboard-bench.mjs` (a bench, not a gate), and the Browser gate's specs (they enter the race
+      through the Quick Test button, which exists only once the switch is answered ON, and each
+      asserts a non-zero sample count) are not blind. The fingerprints compare a hash against
+      `docs/fingerprints.json`, which a zero-sample run cannot match; `check-golden-races`' empty
+      fixture is caught by its own suite test (one closed and one open race). **`check-ending-frame`
+      was blind too** — its zero-frame refusal could never fire (the first pass samples elapsed 0)
+      and it never checked that any fill was recorded; it now asks the same helper for at least one
+      FINISHED frame and one `fillRect` call (measured: 22 frames, 374 fills, PASS; with the fill
+      minimum forced past 374: NOT MEASURED, exit 1). It is a race driver, so the helper joined
+      the race hull (227 → 228; `docs/SIM.md` and SHIP-CEREMONY's counts regenerated) and the
+      world fingerprint was compared unchanged. Left: `camera-fingerprint.mjs`'s zero-ending
+      refusals are skipped under `--cheap`/`--ending-off`; it is a fingerprint instrument and its
+      `--check` run still compares against the record.
 
 - [x] **AUDIT-1 D1 and D2 · THE CONTENT-SECURITY-POLICY AND THE ADMIN STATUS BOX — BUILT AND
       ACCEPTED 2026-10-12, merged with review/2026-10-12.** Both were built on 2026-10-09 (branches
