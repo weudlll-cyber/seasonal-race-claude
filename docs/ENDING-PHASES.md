@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ ac327ed4 2026-10-12 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 334f79a6 2026-10-12 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
 ★★ **RE-STAMPED 2026-10-12 (AUDIT-1 B), NOT RE-MEASURED — UNCHANGED BY CONSTRUCTION.** The owner decided that day to re-stamp rather than re-run. What moved in the closure is comments only: the audit's held-back comment corrections ([b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)), one German word in `raceGovernor.js`, and the `file:line` citations those edits shifted. Every changed JavaScript file has the identical token stream and the identical line breaks between tokens before and after (`scripts/lib/inertChange.mjs`'s predicate), so nothing this measurement executes changed. The row below is the 2026-10-06 run.
 
