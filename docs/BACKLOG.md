@@ -1808,7 +1808,7 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
       *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
 - [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
-      edits any team's records (`docs/API.md:304`). *(verify: a decision — scope them, or record it)*
+      edits any team's records (`docs/API.md:309`). *(verify: a decision — scope them, or record it)*
 - [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
       (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
 - [ ] **AUDIT-1 A5T-02 · root `sharp` has a high advisory** fixable only by 0.34 → 0.35 (a major);
@@ -1834,9 +1834,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk, and his
       live data folder is in OneDrive. *(verify: `node reports/release/AUDIT-1/tools/a10-store.mjs
       <clone>` prints `journal_mode: wal` and a save under a held read lock succeeds)*
-- [ ] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in.** With `users.json` damaged the
-      server starts and `/api/health` answers ok. The VPS update and rollback read health, so what it
-      reports is a decision. *(verify: `a10-corrupt.mjs` — health is not ok with a damaged store)*
 - [ ] **AUDIT-1 A10-07 · a damaged sessions file stops the server.** `SqliteError: file is not a
       database`, exit 1. Proposal: move it aside and start fresh (everyone signs in again).
       *(verify: `a10-corrupt.mjs` — "starts: yes" for the sessions scenario)*
@@ -1926,6 +1923,21 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `GET /api/health` (handler now in `server/src/health.js`) answers 503 `{status: "error",
+      timestamp, build, problems: [{store: "users", code, message}]}` when `users.json` cannot be
+      read; the message is a fixed sentence and no file path reaches the public route. The healthy
+      answer is unchanged key for key (200 `{status: "ok", timestamp, build}`), and a missing
+      `users.json` (a fresh install) is healthy. Test: `server/src/health.test.js` — sabotage (the
+      store read removed) turns the two damaged-store cases red: `expected 200 to be 503`.
+      `a10-corrupt.mjs` now counts a 503 answer as "started" (it read only `ok` before) and prints
+      for the users scenario: `starts: yes`, `health: 503 application/json {"status":"error",...`,
+      login 500. The row as it stood: **AUDIT-1 A10-05 · health says "ok" while nobody can sign
+      in.** With `users.json` damaged the server starts and `/api/health` answers ok. The VPS update
+      and rollback read health, so what it reports is a decision. *(verify: `a10-corrupt.mjs` —
+      health is not ok with a damaged store)*
 
 - [x] **AUDIT-1 A4-04 · the race-source migration has no test — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS):** built on `fix/audit-1-decisions-server`.

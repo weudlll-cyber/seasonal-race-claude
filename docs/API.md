@@ -26,7 +26,7 @@ The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed 
 **Middleware order** (`server/src/app.js:37-87`): helmet → `cors(corsOptions)` (`:40`) →
 `express.json({ limit: '1mb' })` (`:41`) → session (`:42`) → `csrfOriginGuard` (`:43`) → static
 client + SPA fallback (`:51-52`, both refuse `/api/*`) → `requireAuth` (`:54`) → `requireAdmin`
-(`:55`) → `GET /api/health` (`:61`) → the three rate limiters (`:65-69`) → the routers (`:70-79`)
+(`:55`) → `GET /api/health` (`:63`) → the three rate limiters (`:65-69`) → the routers (`:70-79`)
 → the API 404 (`:83`) → the error handler (`:87`).
 
 **Public paths** — exact method + path match, after the path is lower-cased and a trailing slash is stripped
@@ -114,16 +114,21 @@ hop when `NODE_ENV=production`, none otherwise — see [ENVIRONMENT.md](ENVIRONM
 
 ## Health (`/api/health`)
 
-The build-identity probe, defined inline in the app factory (`server/src/app.js:57-63`).
+The build-identity probe and, since AUDIT-1 A10-05 (2026-10-12), the account-store check. Mounted in the
+app factory (`server/src/app.js:63`); the handler is `server/src/health.js`.
 
 ### `GET /api/health`
 
 - **Who:** public (`server/src/auth/guards.js:15`).
 - **Request:** none.
 - **Response:** 200 `{status: "ok", timestamp: <ISO string>, build: {commit, branch, dirty?, reason?}}`
-  (`server/src/app.js:61-63`). The `build` shape is in `server/src/buildIdentity.js:45`. When nothing
+  (`server/src/health.js:54-56`). The keys and their order are unchanged by A10-05. The `build` shape is in `server/src/buildIdentity.js:45`. When nothing
   supplied the commit or branch, those read `'unknown'` and `reason` says why (`server/src/buildIdentity.js:52-54`, `:66-67`).
-- **Errors:** none of its own.
+- **Errors:** 503 `{status: "error", timestamp, build, problems: [{store: "users", code, message}]}` when
+  the account store (`users.json`) cannot be read — nobody could sign in. `code` is the error's code (for
+  example `USERS_STORE_CORRUPT`); `message` is a fixed sentence, so no file path reaches this public route
+  (`server/src/health.js:35-48`, `:58-63`). A missing `users.json` is a fresh install and healthy. A damaged race
+  store is not a health failure (only the race routes fail).
 
 ---
 

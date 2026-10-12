@@ -298,7 +298,7 @@ nothing deletes them. Copy them off the server before deleting them.
 
 | file | what happens (measured) | what to do |
 | --- | --- | --- |
-| `users.json` | starts, health says `ok`, **sign-in and every signed-in page fail** | restore from a backup (§2) |
+| `users.json` | starts; **health answers `503`, status `error`**, naming the account store (so `npm run status` and the container's health check fail); **sign-in and every signed-in page fail** | restore from a backup (§2) |
 | `races.sqlite` | starts; only the race history fails; tracks and everything else work | restore from a backup |
 | `sessions.sqlite` | **the server will not start** | sessions are disposable: stop the server, move the file aside (do not delete it), start again — everybody has to sign in again. *The server opens the session database in a way that creates a missing file (`server/src/auth/session.js`), but this recovery was not part of the audit's measurement; automating it is an open decision.* Or restore from a backup |
 | one track file | starts; that track is skipped with a warning, the others are served | restore from a backup, or re-save the track |

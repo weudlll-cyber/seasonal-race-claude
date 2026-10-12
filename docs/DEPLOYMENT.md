@@ -342,7 +342,7 @@ and **exits non-zero when any check fails**, so a scheduler can alert on the exi
 
 | check | passes when | change it with |
 | --- | --- | --- |
-| `api` | `GET /api/health` answers `200` with `status: ok` | `--url <address>`. Default: `127.0.0.1` (or `RA_BIND_ADDRESS`) on `PORT` |
+| `api` | `GET /api/health` answers `200` with `status: ok` (it answers `503` when the account store cannot be read) | `--url <address>`. Default: `127.0.0.1` (or `RA_BIND_ADDRESS`) on `PORT` |
 | `disk` | at least 1024 MB free where the data directory is | `--min-free-mb <n>` |
 | `writable` | a probe file can be written into the data directory and removed | — |
 | `backup` | the newest archive in `RA_BACKUP_DIR` is at most 26 hours old (daily, plus slack), and its `.sha256` checksum file is there and matches | `--backups <dir>`, `--max-backup-age-hours <n>` |
