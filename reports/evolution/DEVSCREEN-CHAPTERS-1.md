@@ -1098,7 +1098,8 @@ and the chapter guard holds the 346 rows.
 The owner asked for an admin-only, read-only box at the top of *Accounts and system* showing the
 build identity, the newest backup time (or "not visible from the app"), the overall status by the
 existing status logic, and whether a newer release tag exists on GitHub, checked by the server at
-most once a day and "unknown" on any failure. Built on branch `feat/admin-status-box`.
+most once a day and "unknown" on any failure. Built on branch `feat/admin-status-box`; accepted by the
+owner on 2026-10-12 and merged with review/2026-10-12.
 
 **It is a row, not a control.** Nothing on it can be pressed or changed — it is a box of four lines
 from `GET /api/admin/status`. It is in `design.json` (row 7.0 above, position 0 so the chapter's

@@ -782,8 +782,9 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★★ **THE AUTH QUESTION, NARROWED TO TWO FALSIFIABLE ITEMS.** "Admin auth hardened for
       public-facing use" was an open row with no bar, which is why it could not be settled. The
       decisions behind it are settled; what is measurable is exactly two things:
-      **(1) CSP is switched off** — `server/src/app.js:37` runs
-      `helmet({ contentSecurityPolicy: false })`; **(2) no written pre-exposure bar exists** anywhere
+      **(1) ~~CSP is switched off~~ — ANSWERED 2026-10-12:** the Content-Security-Policy is on
+      (`server/src/csp.js`, AUDIT-1 D1, accepted by the owner and merged with review/2026-10-12;
+      PART TWO); **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
       **His word plus a purchase, and then four build items.**
@@ -1816,6 +1817,16 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
+### Observed by the owner on 2026-10-12
+
+- [ ] **The Dev Screen cuts its group cards off on a narrow window — does it have to work on a tablet
+      or a phone?** Observed by the owner on 2026-10-12 while looking at review/2026-10-12: in a
+      narrow window the Dev Screen's group cards are cut off at the right, and there is no
+      horizontal scroll to reach the rest. The question is not yet decided: whether the Dev Screen
+      must work on tablet or phone widths at all. Nothing is built until it is (decided
+      2026-10-12: record it, do not fix it). *(verify: a decision — the supported widths; if
+      narrow widths are in, no card is cut off at them)*
+
 ### Found on 2026-10-12 while re-measuring A2-50
 
 - [ ] **The `viewer-invariants` gate records ZERO frames and still prints PASS.** Run as shipped
@@ -1866,8 +1877,23 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **AUDIT-1 D1 and D2 · THE CONTENT-SECURITY-POLICY AND THE ADMIN STATUS BOX — BUILT AND
+      ACCEPTED 2026-10-12, merged with review/2026-10-12.** Both were built on 2026-10-09 (branches
+      `feat/csp` and `feat/admin-status-box`, reports/release/AUDIT-1.md pieces D1 and D2) and
+      held for the owner's look. On 2026-10-12 the owner looked at review/2026-10-12 on the
+      production preview and accepted it, the CSP and the status box with it. **D1:** every page
+      the server serves carries a Content-Security-Policy (`server/src/csp.js`): scripts only from
+      the server itself plus the one hashed runtime-configuration script, no inline or `eval`
+      scripts, no framing by other sites; a plain-HTTP install on a local network keeps working;
+      the browser spec `client/e2e/csp-no-violations.spec.js` runs in the Browser gate. **D2:** an
+      admin-only status box at the top of the Dev Screen's "Accounts and system" chapter — the
+      build, the newest backup, the overall status, and whether a newer release exists on GitHub
+      (`GET /api/admin/status`, `server/src/routes/adminStatus.js`; the release check runs at most
+      once a day and says "unknown" when it fails). The Going online row's "CSP is switched off"
+      item is answered by D1.
+
 - [x] **AUDIT-1 A2 · THE DEV SCREEN INFO TEXTS SAY WHAT SHIPS — CLOSED 2026-10-12 (AUDIT-1
-      DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** Each text
+      DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.** Each text
       read against `defaults.js` and the code that consumes the value, and corrected without
       stating a config value (the rule `check-tooltip-values` enforces): **A2-34** the Gap Leader
       Brake card said "SHIPPED OFF" while `gapBrakeEnabled` ships true — it says "SHIPPED ON".
@@ -1888,7 +1914,7 @@ proposal arriving again in six months looking new.
       race-plan duration (A2-34, -40, -41, -42, -43)."*
 
 - [x] **AUDIT-1 A3-19 · THE THREE GERMAN ALERTS ARE ENGLISH — CLOSED 2026-10-12 (AUDIT-1 DECISIONS),
-      on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** Deleting a default
+      accepted by the owner on review/2026-10-12 the same day, and merged with it.** Deleting a default
       record now says *"A default brand cannot be deleted. Remove its default status first."* (and
       the same for a default group and a default track) in BrandingProfiles, PlayerGroupsManager
       and TrackManager. Their three test files assert the English text, and their German test
@@ -1898,7 +1924,7 @@ proposal arriving again in six months looking new.
       (BrandingProfiles, PlayerGroupsManager, TrackManager), frozen by the language allowlist."*
 
 - [x] **AUDIT-1 A8-03 · THE SETUP SCREEN FITS A 390 PX PHONE — CLOSED 2026-10-12 (AUDIT-1
-      DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** The cause:
+      DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.** The cause:
       the header's branding dropdown is a flex item, and a flex item never shrinks below its content
       by default — for a `<select>` that is its longest option ("Seasonal Entertainment"). Logo,
       dropdown and gear needed 361 px inside a header with 2rem padding on each side, and the gear
@@ -1908,7 +1934,7 @@ proposal arriving again in six months looking new.
       stood: *"A8-03 · the setup screen is 3 px wider than a 390 px phone."*
 
 - [x] **AUDIT-1 A8-01 and A8-02 · DEV SCREEN AND TRACK EDITOR ACCESSIBILITY — CLOSED 2026-10-12
-      (AUDIT-1 DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.**
+      (AUDIT-1 DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.**
       Contrast: the active View toggle's red is darkened 5% in that one rule (`#e63946` → `#db3643`,
       white text 4.2:1 → 4.5:1; the shared `--color-primary` is unchanged, because it colours every
       primary button); the Reset buttons lose their 0.7 fade and show the full muted grey (3.1:1 →
