@@ -68,6 +68,9 @@ vi.mock('./sections/SystemSettings.jsx', () => ({
 vi.mock('./sections/UserManagementSection.jsx', () => ({
   default: () => <div data-testid="section-usermanagement" />,
 }));
+vi.mock('./sections/AdminStatusSection.jsx', () => ({
+  default: () => <div data-testid="section-admin-status" />,
+}));
 vi.mock('./sections/CameraAdvancedSection.jsx', () => ({
   default: () => <div data-testid="section-camera-advanced" />,
 }));
@@ -324,6 +327,23 @@ describe('DevScreen role gating — User Management section (C4)', () => {
     renderDevScreen();
     openChapter(ACCOUNTS);
     expect(screen.queryByTestId('section-usermanagement')).toBeNull();
+  });
+});
+
+// AUDIT-1 D2: the read-only status box is the first part of the chapter, for an admin only.
+describe('DevScreen role gating — the admin status box', () => {
+  it('admin (All view) sees it first in "Accounts and system"', () => {
+    renderDevScreen();
+    openChapter(ACCOUNTS);
+    const parts = [...document.querySelectorAll('main [data-part]')];
+    expect(parts[0].querySelector('[data-testid="section-admin-status"]')).toBeTruthy();
+  });
+
+  it('operator does not see it', () => {
+    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
+    renderDevScreen();
+    openChapter(ACCOUNTS);
+    expect(screen.queryByTestId('section-admin-status')).toBeNull();
   });
 });
 

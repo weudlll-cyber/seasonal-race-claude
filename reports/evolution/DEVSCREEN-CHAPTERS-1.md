@@ -1,6 +1,7 @@
-# DEVSCREEN-CHAPTERS-1 — the Plan D design: 347 controls in seven chapters, each placed once, an info text each
+# DEVSCREEN-CHAPTERS-1 — the Plan D design: 348 rows (347 controls and one read-only box) in seven chapters, each placed once, an info text each
 
-*(348 as designed and merged. On 2026-10-06 the test-aids switch added one (TEST-AIDS-1) and two winners settings were removed (REMOVE-WINNERS-SETTING-1) — see the last two sections.)*
+*(348 as designed and merged. On 2026-10-06 the test-aids switch added one (TEST-AIDS-1) and two winners settings were removed (REMOVE-WINNERS-SETTING-1); on 2026-10-09 the read-only admin status box added a 348th row
+(AUDIT-1 D2) — see the last three sections.)*
 
 **Owns:** the design of the Dev Screen rebuilt as chapters — which chapter every control goes into,
 in which order, and the info text each one carries. **It is a design. Nothing in it is built**: no
@@ -169,9 +170,9 @@ intro text, written to sit at the top of the chapter on the rebuilt screen.
 | 4 | Tracks, racers, brands and groups | 68 | 62 (+6 for an admin) | records and per-type settings |
 | 5 | History and evaluation | 15 | 13 (+2 for an admin) | reads the record |
 | 6 | Diagnostics and verification | 18 | 0 | changes neither |
-| 7 | Accounts and system | 21 | 4 | changes neither |
+| 7 | Accounts and system | 22 | 4 | changes neither |
 | — | Sidebar (all chapters) | 3 | 2 (+1 for an admin) | the screen's frame |
-| | **Total** | **347** | **88** (+9 for an admin) | |
+| | **Total** | **348** | **88** (+9 for an admin) | |
 
 ### 1 · The race — 100
 
@@ -242,10 +243,11 @@ whether the overlays, the logs and every other test aid are shown at all.
 Advanced today, where they read as camera settings; Export Race Config is a card of its own. All of
 them serve someone checking the game, none someone running an event.
 
-### 7 · Accounts and system — 21
+### 7 · Accounts and system — 22
 
-*Intro:* Who may use the screen and what it keeps: your own password, the race directors of the
-server, and backups of everything this browser stores.
+*Intro:* Who may use the screen and what it keeps: for an admin, first a read-only status of the
+installation; then your own password, the race directors of the server, and backups of everything
+this browser stores. *(The status clause added 2026-10-09, AUDIT-1 D2.)*
 
 *Why one chapter.* Change Password, User Management and System are about access and storage, not
 racing.
@@ -283,7 +285,7 @@ specific fine mechanics. A reset button sits at the head of the values it resets
 | 4 · Things a race is made of | Player groups → Tracks → Racer types → Brands | The order Race Setup asks for them: who races, where, as what, under which look. Inside each: the editor link, New, per-entry actions, the form fields, Save, Cancel. |
 | 5 · History and evaluation | Race history → Period evaluation | General → specific: the full record before the summary built on it. Filters before the actions they feed. |
 | 6 · Diagnostics | On-screen diagnostics → Logs → Race configuration export | What you see on screen while racing before what is written out afterwards. |
-| 7 · Accounts and system | Your password → Race directors → Backup and reset | General → specific, with the destructive reset last. |
+| 7 · Accounts and system | Installation status → Your password → Race directors → Backup and reset | General → specific, with the destructive reset last. |
 
 ---
 
@@ -688,7 +690,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 6.16 | Race configuration export | `ConfigExportSection.jsx` | Export race config | `export-race-config` (testId) | advanced | Downloads world.json — the exact configuration the game reads when a race starts — so a simulator run can be checked against it, and copies it to the clipboard where it can. The hash beside it names that configuration. | REWRITTEN |
 | 6.17 | Race configuration export | `ConfigExportSection.jsx` | ↻ refresh | `refresh` (handler) | advanced | Recomputes the configuration hash and the list of changed settings after you have changed something. | REWRITTEN |
 
-### 7 · Accounts and system — 21 controls, and the sidebar's 3
+### 7 · Accounts and system — 22 rows, and the sidebar's 3
 
 Rows 7.1–7.3 are placed in **Sidebar (all chapters)** (the owner's decision of 2026-10-05); their
 numbers are kept so earlier references still find them.
@@ -698,6 +700,7 @@ numbers are kept so earlier references still find them.
 | 7.1 | Sidebar (all chapters) | `DevScreen.jsx` | View: All / Operator | `handleViewChange` (handler) | admin | Admin only. Operator shows only what is used on an event day; All adds every advanced setting. Your choice is remembered on this device. | REWRITTEN |
 | 7.2 | Sidebar (all chapters) | `DevScreen.jsx` | ← Back to Setup | `navigate('/setup')` (handler) | operator | Leaves the Dev Screen and returns to Race Setup. Settings are already saved. | NEW |
 | 7.3 | Sidebar (all chapters) | `DevScreen.jsx` | Log out | `logout` (handler) | operator | Signs you out of this browser. | NEW |
+| 7.0 | Installation status | `AdminStatusSection.jsx` | Installation status (read-only) | `admin-status-box` (testId) | advanced | Read-only, admins only; nothing here changes anything. Build: the commit and branch this server was built from, the same answer its health check gives, or unknown with the reason. Newest backup: when the newest backup in the backup directory was taken, or “not visible from the app” when this server cannot see where backups are kept. Status: the checks of npm run status that the server can run on itself — free disk space, a writable data folder and, when backups are visible, the newest backup’s age and checksum; OK only when every one of them passed. Newer release: whether GitHub has a release newer than this build, asked by the server at most once a day; “unknown” when it could not be asked, and no comparison when this build’s version is not known. | NEW |
 | 7.4 | Your password | `ChangePasswordSection.jsx` | Current password | `setCurrentPassword` (handler) | operator | Your existing password. Verified by the server; a wrong value returns the same error the login screen uses. | KEPT |
 | 7.5 | Your password | `ChangePasswordSection.jsx` | New password | `setNewPassword` (handler) | operator | The password you want. The rule the server applies is the same one that governs new accounts; no extra rule is invented here. | KEPT |
 | 7.6 | Your password | `ChangePasswordSection.jsx` | Repeat new password | `setConfirmPassword` (handler) | operator | Typo guard, checked in the browser only. The server has no concept of a confirmation; if these two do not match, the form refuses to submit. | KEPT |
@@ -1088,3 +1091,29 @@ and the chapter guard holds the 346 rows.
 
 **Where the two meet** (`review/2026-10-06`): the switch's +1 and these −2 — **347 controls**, operator view 88 (+9 for an admin); `count-controls.mjs` prints 347 and the chapter guard holds the 347 rows.
 
+---
+
+## AUDIT-1 D2 — row 348, the admin status box (2026-10-09)
+
+The owner asked for an admin-only, read-only box at the top of *Accounts and system* showing the
+build identity, the newest backup time (or "not visible from the app"), the overall status by the
+existing status logic, and whether a newer release tag exists on GitHub, checked by the server at
+most once a day and "unknown" on any failure. Built on branch `feat/admin-status-box`.
+
+**It is a row, not a control.** Nothing on it can be pressed or changed — it is a box of four lines
+from `GET /api/admin/status`. It is in `design.json` (row 7.0 above, position 0 so the chapter's
+other rows keep their numbers; sub-group *Installation status*, its own, first) because the owner
+asked for it to carry an info text and to be held by the chapter guard like every control, and the
+guard holds exactly the rows of the table. So the table and the guard hold **348 rows**, while
+`count-controls.mjs` — which counts things a person can change or trigger — still prints **347**.
+The difference is this one box, and it is deliberate.
+
+**Visibility.** Advanced tier, so only the All view (admins) shows it; the component also renders
+nothing for a non-admin, and the server refuses anyone but an admin (`ROUTE_POLICY`, the whole
+`/api/admin` namespace). The operator view is unchanged: 88 (+9 for an admin). The chapter's intro
+gained one clause naming the status.
+
+**Where its facts come from.** The build: `server/src/buildIdentity.js`, the same answer as
+`/api/health`. The backup and the status: `shared/statusChecks.mjs`, the checks `npm run status`
+runs (extracted from `scripts/status.mjs` so both import them), without the API check. The release:
+`server/src/releaseCheck.js`, only `v<major>.<minor>[.<patch>]` tags are releases.
