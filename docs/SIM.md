@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **227 files that can change the race** — the engine's own imports AND the imports of every
+the **228 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -333,6 +333,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/lib/ceremonySamples.mjs` | RENDER-SAMPLER-CEREMONY |
 | `scripts/lib/cheapMode.mjs` | VERIFY-COST-2 |
 | `scripts/lib/fingerprintCheck.mjs` | FP-COMPARE-2 |
+| `scripts/lib/measuredGate.mjs` | GATE-MEASURES-1 (fix/viewer-invariants-gate, 2026-10-12) |
 | `scripts/lib/pngFrame.mjs` | CAMERA-REPRO-1 — the smallest thing that can turn a camera frame into a picture. |
 | `scripts/lib/raceDriver.mjs` | ONE-DRIVER-1 |
 | `scripts/lib/racerFacts.mjs` | REGISTRY-LITERALS-1 |
@@ -358,7 +359,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 | `shared/playerNames.mjs` | PERIOD-EVALUATION-1 (the owner's decisions of 2026-10-04) |
 
-227 files, 24 of them UNKNOWN.
+228 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 
