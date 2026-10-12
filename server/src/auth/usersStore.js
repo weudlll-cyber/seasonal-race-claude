@@ -25,14 +25,35 @@ export function normalizeUsername(raw) {
   return String(raw).trim().normalize('NFC').toLowerCase();
 }
 
-// ── Password hashing ──────────────────────────────────────────────────────────
+// ── Password rule and hashing ─────────────────────────────────────────────────
 
-export async function hashPassword(plain) {
-  if (!plain || !String(plain).trim()) {
-    const err = new Error('Password must not be empty');
+/**
+ * The shortest NEW password, in characters (AUDIT-1 A5M-15, the owner's decision of 2026-10-12).
+ * THE ONE SERVER HOME: every new password reaches the store through `assertNewPassword` — first-
+ * admin setup, an admin creating a user or resetting a password, a user changing their own, and
+ * the recovery CLI. It is NEVER checked at sign-in, so a shorter password set before the rule keeps
+ * working until it is changed. THE SAME NUMBER LIVES IN ONE OTHER PLACE: the VPS installer's
+ * first-admin prompt, `deploy/install.sh` on the branch `feat/vps-install` (not in this tree) — a
+ * shell script cannot import it, so change both together. The client checks no length of its own.
+ */
+export const PASSWORD_MIN_LENGTH = 10;
+
+/** Throws `INVALID_PASSWORD` with a plain-English message unless `plain` may be a new password. */
+export function assertNewPassword(plain) {
+  let message = null;
+  if (!plain || !String(plain).trim()) message = 'Password must not be empty';
+  else if ([...String(plain)].length < PASSWORD_MIN_LENGTH) {
+    message = `Password must be at least ${PASSWORD_MIN_LENGTH} characters long`;
+  }
+  if (message) {
+    const err = new Error(message);
     err.code = 'INVALID_PASSWORD';
     throw err;
   }
+}
+
+export async function hashPassword(plain) {
+  assertNewPassword(plain);
   return bcrypt.hash(plain, BCRYPT_COST);
 }
 
@@ -215,11 +236,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
         err.code = 'INVALID_USERNAME';
         throw err;
       }
-      if (!password || !String(password).trim()) {
-        const err = new Error('Password must not be empty');
-        err.code = 'INVALID_PASSWORD';
-        throw err;
-      }
+      assertNewPassword(password);
       if (role !== 'operator' && role !== 'admin') {
         const err = new Error('Role must be "operator" or "admin"');
         err.code = 'INVALID_ROLE';

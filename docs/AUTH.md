@@ -50,7 +50,8 @@ returned by any endpoint, and never logged.
    length. The RESPONSE stays identical on purpose — an operator reading his own log may know which
    of the two it was; a caller may not.
 3. **Body validation.** Missing or blank `username`/`password` → `400 invalid username or password`.
-   The message deliberately does not say which field.
+   The message deliberately does not say which field. A password shorter than the new-password
+   rule (below) → `400 Password must be at least 10 characters long`, before the marker is taken.
 4. **Atomic claim.** The marker file is created with `O_EXCL`, so exactly one request wins even if
    two arrive together. A loser gets `409 setup already complete`.
 5. **User creation**, then the session is regenerated and the new admin is **logged in
@@ -154,7 +155,12 @@ both return `401 invalid credentials` — deliberately indistinguishable. On suc
 **regenerated** (so a pre-login session cannot be fixated), the user is written into the session, and
 the response is `{ username, role }`.
 
-**Passwords** are hashed with **bcrypt at cost 12**. Usernames are normalised before comparison. The
+**Passwords** are hashed with **bcrypt at cost 12**. **A new password must be at least 10 characters**
+(AUDIT-1 A5M-15, decided 2026-10-12) — at setup, when an admin creates a user or resets a password,
+when you change your own, and in the recovery CLI; the refusal names the rule. One constant,
+`PASSWORD_MIN_LENGTH` in `server/src/auth/usersStore.js`; the VPS installer asks for the same 10 in
+`deploy/install.sh` (branch `feat/vps-install`). **Sign-in never checks it**, so a shorter password
+set before the rule keeps working until it is changed. Usernames are normalised before comparison. The
 store is a JSON file written atomically and `chmod`ed to owner-only (`0o600`).
 
 **Where the session lives:** server-side, in a SQLite store (`sessions.sqlite` under the data root,

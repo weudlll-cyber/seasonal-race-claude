@@ -252,7 +252,7 @@ curl -X POST "$RA_PUBLIC_ORIGIN/api/auth/setup" \
   -H 'Content-Type: application/json' \
   -H "Origin: $RA_PUBLIC_ORIGIN" \
   -H "x-bootstrap-token: $RA_BOOTSTRAP_TOKEN" \
-  -d '{"username":"admin","password":"<choose a strong one>"}'
+  -d '{"username":"admin","password":"<a strong one, at least 10 characters>"}'
 ```
 
 ★ **The `Origin` header is required.** With `NODE_ENV=production` the CSRF guard refuses a

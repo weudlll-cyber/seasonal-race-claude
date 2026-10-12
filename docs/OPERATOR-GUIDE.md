@@ -187,7 +187,10 @@ In production the request also needs an `Origin` header naming the install's add
 Signed in as an admin: **Dev Screen → Accounts and system → Race directors.** Each account gets a role
 and a team. The last admin can be neither deleted nor demoted. **Each user changes their own
 password** in *Accounts and system → Your password*; doing so signs out that user's other sessions.
-An admin resetting someone else's password signs out all of that user's sessions.
+An admin resetting someone else's password signs out all of that user's sessions. **Every new
+password needs at least 10 characters** — at first-admin setup, on an account created or reset, on
+your own, and in the recovery tool; a shorter one is refused with a message saying so. Passwords
+set before this rule keep working until they are changed.
 
 ### A forgotten admin password
 

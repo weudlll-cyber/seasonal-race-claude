@@ -39,7 +39,7 @@ when the session's user no longer exists (`:155-159`), or when the session's `se
 from the user record's, i.e. the password was changed since sign-in (`:164-166`). On success it sets
 `req.authUser = {id, username, role, team, teamNormalized}` (`:192-198`); a user with no team still
 authenticates, with `team: null` (`:185-190`). The two roles are `operator` and `admin`
-(`server/src/auth/usersStore.js:223`); "signed-in" below means operator or admin.
+(`server/src/auth/usersStore.js:240`); "signed-in" below means operator or admin.
 
 **Admin only** — `requireAdmin` answers `403 {"error":"forbidden"}` when the path matches a
 `ROUTE_POLICY` entry with `role: 'admin'` and `req.authUser.role !== 'admin'`
@@ -147,20 +147,22 @@ the first admin (`server/src/auth/authRouter.js:6`).
 - **Request:** header `x-bootstrap-token`, compared in constant time with `RA_BOOTSTRAP_TOKEN`. A
   token in the body is not read (header read at `server/src/auth/authRouter.js:57`, constant-time compare at `:63`,
   helper at `:28-32`). Body `{username: string, password: string}`, both required and
-  non-blank (`server/src/auth/authRouter.js:79-82`). The role is always `admin` and the team is the
-  founding constant `FOUNDING_TEAM`; neither is read from the body (`server/src/auth/authRouter.js:124-131`).
+  non-blank (`server/src/auth/authRouter.js:79-82`), and the password must meet the new-password rule — at least `PASSWORD_MIN_LENGTH` (10) characters — checked before the marker is taken (`server/src/auth/authRouter.js:83-90`, the rule at `server/src/auth/usersStore.js:39-53`). The role is always `admin` and the team is the
+  founding constant `FOUNDING_TEAM`; neither is read from the body (`server/src/auth/authRouter.js:132-139`).
 - **Response:** 201 `{username, role, team}`, and the session is regenerated, which signs the caller
-  in (`server/src/auth/authRouter.js:144-158`). It is still 201 if that auto-login fails after the
-  commit (`:159-171`).
+  in (`server/src/auth/authRouter.js:152-166`). It is still 201 if that auto-login fails after the
+  commit (`:167-179`).
 - **Errors:**
   - 409 `setup already complete`: the marker exists (`server/src/auth/authRouter.js:52-54`), it was
-    created by a concurrent request (`:89`), or users exist without the marker (`:98-108`).
+    created by a concurrent request (`:97`), or users exist without the marker (`:106-116`).
   - 403 `setup not available`: `RA_BOOTSTRAP_TOKEN` is unset (`server/src/auth/authRouter.js:59-62`)
     or the token is wrong (`:63-76`). The two answers are deliberately identical.
+  - 400 `Password must be at least 10 characters long`: the password is shorter than the rule
+    (`server/src/auth/authRouter.js:86-90`).
   - 400 `invalid username or password`: the body is missing or blank (`server/src/auth/authRouter.js:79-82`),
-    or the store rejects the username, password or role (`:190-192`).
-  - 500 `setup failed`: the marker could not be opened (`server/src/auth/authRouter.js:90-91`), or
-    any other failure before the commit (`:193`).
+    or the store rejects the username, password or role (`:198-200`).
+  - 500 `setup failed`: the marker could not be opened (`server/src/auth/authRouter.js:98-99`), or
+    any other failure before the commit (`:201`).
   - 429 from the setup limiter (`server/src/auth/rateLimit.js:41-42`). CSRF 403.
 
 ### `POST /api/auth/login`
@@ -169,54 +171,55 @@ the first admin (`server/src/auth/authRouter.js:6`).
   (`server/src/app.js:65`, `server/src/auth/rateLimit.js:18-26`).
 - **Request:** body `{username, password}`. There is no explicit validation; a missing field simply
   fails to match. The username is looked up normalised (NFC, trimmed, lower-cased,
-  `server/src/auth/usersStore.js:23-25`) (`server/src/auth/authRouter.js:204-205`).
+  `server/src/auth/usersStore.js:23-25`) (`server/src/auth/authRouter.js:212-213`).
 - **Response:** 200 `{username, role, team}` (`team` may be `null`), after the session is
-  regenerated (`server/src/auth/authRouter.js:218-224`).
+  regenerated (`server/src/auth/authRouter.js:226-232`).
 - **Errors:**
-  - 401 `invalid credentials`: unknown user (`server/src/auth/authRouter.js:207-210`, which
-    deliberately spends the same time on a dummy hash) or wrong password (`:212-215`).
-  - 500 `login failed`: session regenerate or save failed (`server/src/auth/authRouter.js:219`, `:223`).
+  - 401 `invalid credentials`: unknown user (`server/src/auth/authRouter.js:215-218`, which
+    deliberately spends the same time on a dummy hash) or wrong password (`:220-223`).
+  - 500 `login failed`: session regenerate or save failed (`server/src/auth/authRouter.js:227`, `:231`).
   - 429 from the login limiter (`server/src/auth/rateLimit.js:25-26`). CSRF 403.
 
 ### `POST /api/auth/logout`
 
 - **Who:** any signed-in user (not public, so `server/src/auth/guards.js:151`). The handler repeats
-  the check inline (`server/src/auth/authRouter.js:232-234`), but the guard always answers first.
+  the check inline (`server/src/auth/authRouter.js:240-242`), but the guard always answers first.
 - **Request:** none.
 - **Response:** 200 `{ok: true}`. The session is destroyed and the cookie cleared, as is the legacy
-  `ra.sid` cookie (`server/src/auth/authRouter.js:235-245`).
+  `ra.sid` cookie (`server/src/auth/authRouter.js:243-253`).
 - **Errors:** 401 from the guard (`server/src/auth/guards.js:152`, `:158`, `:165`). 500
-  `logout failed` when destroying the session fails (`server/src/auth/authRouter.js:236-239`). CSRF 403.
+  `logout failed` when destroying the session fails (`server/src/auth/authRouter.js:244-247`). CSRF 403.
 
 ### `POST /api/auth/change-password`
 
 - **Who:** any signed-in user, and only for **their own** password. The target is
-  `req.authUser.id` and never the body (`server/src/auth/authRouter.js:249-269`). It is not in
+  `req.authUser.id` and never the body (`server/src/auth/authRouter.js:257-277`). It is not in
   `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:69`,
   `server/src/auth/rateLimit.js:74-83`).
-- **Request:** body `{currentPassword, newPassword}` (`server/src/auth/authRouter.js:265`).
-  `newPassword` must be non-blank, by the store's rule (`server/src/auth/usersStore.js:270-281`,
-  `:30-34`).
+- **Request:** body `{currentPassword, newPassword}` (`server/src/auth/authRouter.js:273`).
+  `newPassword` must be non-blank and at least `PASSWORD_MIN_LENGTH` (10) characters, by the store's rule
+  (`server/src/auth/usersStore.js:287-298`, `:39-53`). Never checked at sign-in, so an older shorter password
+  keeps working until it is changed.
 - **Response:** 200 `{ok: true}`. The epoch bump ends the user's **other** sessions; this session is
-  re-stamped so it survives (`server/src/auth/authRouter.js:286-301`).
+  re-stamped so it survives (`server/src/auth/authRouter.js:294-311`).
 - **Errors:**
   - 401 from the guard (`server/src/auth/guards.js:152`, `:158`, `:165`). The inline 401s at
-    `server/src/auth/authRouter.js:270` and `:272-275` are defensive.
-  - 401 `invalid credentials`: wrong current password (`server/src/auth/authRouter.js:278-284`).
-  - 400 `Password must not be empty`: `newPassword` is missing, empty or blank. The store raises
-    `EMPTY_UPDATE`/`INVALID_PASSWORD`, and the handler maps both to this message
-    (`server/src/auth/authRouter.js:291-293`).
-  - 500 `internal error` (`server/src/auth/authRouter.js:294-295`).
+    `server/src/auth/authRouter.js:278` and `:280-283` are defensive.
+  - 401 `invalid credentials`: wrong current password (`server/src/auth/authRouter.js:286-292`).
+  - 400 `Password must not be empty` or `Password must be at least 10 characters long`: `newPassword` is
+    missing, blank or too short. The store raises `INVALID_PASSWORD` with that message, or `EMPTY_UPDATE` for a
+    missing one (`server/src/auth/authRouter.js:299-303`).
+  - 500 `internal error` (`server/src/auth/authRouter.js:304-305`).
   - 429 from the change-password limiter (`server/src/auth/rateLimit.js:82-83`). CSRF 403.
 
 ### `GET /api/auth/me`
 
 - **Who:** any signed-in user (`server/src/auth/guards.js:151`). The handler repeats the check
-  inline (`server/src/auth/authRouter.js:307-315`).
+  inline (`server/src/auth/authRouter.js:317-325`).
 - **Request:** none.
-- **Response:** 200 `{username, role, team}`, where `team` may be `null` (`server/src/auth/authRouter.js:316-318`).
+- **Response:** 200 `{username, role, team}`, where `team` may be `null` (`server/src/auth/authRouter.js:326-328`).
 - **Errors:** 401 from the guard (`server/src/auth/guards.js:152`, `:158`, `:165`). The handler's own
-  401s (`server/src/auth/authRouter.js:308`, `:313`) are defensive.
+  401s (`server/src/auth/authRouter.js:318`, `:323`) are defensive.
 
 ---
 
@@ -226,8 +229,8 @@ Lists, creates, updates and deletes race directors (user accounts). The router i
 checks; it relies on the guard stack (`server/src/auth/usersRouter.js:6-8`).
 
 A user object returned below is the stored record minus `passwordHash` and `sessionEpoch`
-(`server/src/auth/usersStore.js:49-52`): `{id, username, usernameNormalized, role, team,
-teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/usersStore.js:242-262`).
+(`server/src/auth/usersStore.js:70-73`): `{id, username, usernameNormalized, role, team,
+teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/usersStore.js:259-279`).
 
 ### `GET /api/users`
 
@@ -236,20 +239,21 @@ teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/
 - **Response:** 200 `[user, …]` (`server/src/auth/usersRouter.js:21-24`).
 - **Errors:** 401 (`server/src/auth/guards.js:152`, `:158`, `:165`). 403 for an operator
   (`server/src/auth/guards.js:206-207`). A corrupt `users.json` throws `USERS_STORE_CORRUPT`
-  (`server/src/auth/usersStore.js:56-73`), which is not caught and so becomes Express's default 500
+  (`server/src/auth/usersStore.js:77-94`), which is not caught and so becomes Express's default 500
   HTML page. The same throw would already fail `requireAuth`'s lookup.
 
 ### `POST /api/users`
 
 - **Who:** admin only (`server/src/auth/guards.js:25-30`).
 - **Request:** body `{username, password, role, team, allowNewTeam?}` (`server/src/auth/usersRouter.js:31`).
-  - `username`: non-blank, and unique after normalisation (`server/src/auth/usersStore.js:213-217`, `:229-236`).
-  - `password`: non-blank (`server/src/auth/usersStore.js:218-222`).
-  - `role`: `"operator"` or `"admin"` (`server/src/auth/usersStore.js:223-227`).
+  - `username`: non-blank, and unique after normalisation (`server/src/auth/usersStore.js:234-238`, `:246-253`).
+  - `password`: non-blank and at least `PASSWORD_MIN_LENGTH` (10) characters (`server/src/auth/usersStore.js:239`, the
+    rule at `:39-53`); a refusal names the rule.
+  - `role`: `"operator"` or `"admin"` (`server/src/auth/usersStore.js:240-244`).
   - `team`: a non-blank string with no default (`server/src/auth/teams.js:98-100`,
-    `server/src/auth/usersStore.js:138-142`). It must match an existing team, compared normalised,
+    `server/src/auth/usersStore.js:159-163`). It must match an existing team, compared normalised,
     and the existing spelling is adopted. A new team is accepted only when `allowNewTeam === true`
-    (`server/src/auth/usersStore.js:144-161`, `server/src/auth/usersRouter.js:38`).
+    (`server/src/auth/usersStore.js:165-182`, `server/src/auth/usersRouter.js:38`).
 - **Response:** 201 user object (`server/src/auth/usersRouter.js:41`).
 - **Errors:**
   - 409 `username already taken` (`server/src/auth/usersRouter.js:43-45`).
@@ -264,15 +268,16 @@ teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/
 - **Who:** admin only (`server/src/auth/guards.js:25-30`).
 - **Request:** path `id` (the user's UUID). Body `{role?, password?, team?, allowNewTeam?}`
   (`server/src/auth/usersRouter.js:76`), with at least one of role, password or team present. An
-  empty-string `password` counts as absent (`server/src/auth/usersStore.js:272-282`). The role, team
-  and `allowNewTeam` rules are the same as for create (`server/src/auth/usersStore.js:294-320`).
-  Setting a password bumps `sessionEpoch`, which signs that user out everywhere
-  (`server/src/auth/usersStore.js:321-325`). An admin who changes their own password keeps the
+  empty-string `password` counts as absent (`server/src/auth/usersStore.js:289-299`). The role, team
+  and `allowNewTeam` rules are the same as for create (`server/src/auth/usersStore.js:311-337`).
+  A password must meet the same rule as on create (at least 10 characters,
+  `server/src/auth/usersStore.js:39-53`). Setting a password bumps `sessionEpoch`, which signs that user out everywhere
+  (`server/src/auth/usersStore.js:338-342`). An admin who changes their own password keeps the
   current session (`server/src/auth/usersRouter.js:77`, `:86-88`).
 - **Response:** 200 user object (`server/src/auth/usersRouter.js:90`).
 - **Errors:**
   - 404 `user not found` (`server/src/auth/usersRouter.js:92`).
-  - 409: demoting the last admin (`server/src/auth/usersRouter.js:93`, `server/src/auth/usersStore.js:300-309`).
+  - 409: demoting the last admin (`server/src/auth/usersRouter.js:93`, `server/src/auth/usersStore.js:317-326`).
   - 400 `{error, knownTeams}` for an unknown team (`server/src/auth/usersRouter.js:94-96`).
   - 400 for `INVALID_ROLE`, `INVALID_PASSWORD`, `INVALID_TEAM` or `EMPTY_UPDATE` (`server/src/auth/usersRouter.js:97-99`).
   - 500 (`server/src/auth/usersRouter.js:100-101`).
@@ -286,7 +291,7 @@ teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/
   200 with a body, not 204.
 - **Errors:**
   - 404 `user not found` (`server/src/auth/usersRouter.js:111`).
-  - 409: deleting the last admin (`server/src/auth/usersRouter.js:112`, `server/src/auth/usersStore.js:345-353`).
+  - 409: deleting the last admin (`server/src/auth/usersRouter.js:112`, `server/src/auth/usersStore.js:362-370`).
   - 500 (`server/src/auth/usersRouter.js:113-114`).
   - 401 and 403 from the guards. CSRF 403.
 

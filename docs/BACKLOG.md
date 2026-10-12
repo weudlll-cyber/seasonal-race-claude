@@ -1808,9 +1808,7 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
       *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
 - [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
-      edits any team's records (`docs/API.md:296`). *(verify: a decision — scope them, or record it)*
-- [ ] **AUDIT-1 A5M-15 · the only password rule is "not blank".** `usersStore.js:30`; the installer
-      asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
+      edits any team's records (`docs/API.md:304`). *(verify: a decision — scope them, or record it)*
 - [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
       (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
 - [ ] **AUDIT-1 A5T-02 · root `sharp` has a high advisory** fixable only by 0.34 → 0.35 (a major);
@@ -1930,6 +1928,22 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A5M-15 · the only password rule is "not blank" — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`. A
+      new password needs at least `PASSWORD_MIN_LENGTH` = 10 characters (counted as characters, not
+      UTF-16 units). One constant and one check, `assertNewPassword` in
+      `server/src/auth/usersStore.js`, which every new password passes through: first-admin setup
+      (checked before the marker is taken), `POST /api/users`, `PUT /api/users/:id`, `POST
+      /api/auth/change-password` and `scripts/recover-admin.mjs`. The refusal is 400 `Password must
+      be at least 10 characters long`. Sign-in never checks it, so older shorter passwords keep
+      working. The installer's 10 lives in `deploy/install.sh` on `feat/vps-install`, named beside
+      the constant. The client has no length check of its own, so nothing there was aligned; it
+      shows the server's message. Test: `server/src/auth/passwordMinLength.test.js` (all four
+      routes, and a pre-rule 3-character password still signing in); the short password literals of eight
+      test files were lengthened. The row as it stood: **AUDIT-1 A5M-15 · the only password rule is
+      "not blank".** `usersStore.js:30`; the installer asks for 10 characters. *(verify: `POST
+      /api/users` with a 3-character password refused 400)*
 
 - [x] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
@@ -2328,7 +2342,7 @@ proposal arriving again in six months looking new.
       `races.results`, `races.winners` and `rosters` (`races.sqlite`) — `server/src/routes/races.js`
       has POST and GET only, and nothing issues a DELETE; (2) the **admin-recovery audit log**,
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
-      `createdBy`** on the users they created (`usersStore.js:258`; `updateUser` never touches it).
+      `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
       (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**

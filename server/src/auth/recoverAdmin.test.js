@@ -77,7 +77,7 @@ describe('promoteOrCreate — existing operator user', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'bob',
-      password: 'old-pw',
+      password: 'old-pw-012',
       role: 'admin',
       createdBy: 'test',
     });
@@ -98,13 +98,13 @@ describe('promoteOrCreate — existing operator user', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'carol',
-      password: 'pw1',
+      password: 'pw1-012345',
       role: 'operator',
       createdBy: 'test',
     });
     const before = store.findAuthRecordByUsername('carol').sessionEpoch ?? 0;
 
-    await promoteOrCreate('carol', 'pw2', { store, auditLogPath: paths.auditPath });
+    await promoteOrCreate('carol', 'pw2-012345', { store, auditLogPath: paths.auditPath });
 
     const after = store.findAuthRecordByUsername('carol').sessionEpoch ?? 0;
     expect(after).toBeGreaterThan(before);
@@ -155,7 +155,7 @@ describe('rearmSetup — marker present, users exist', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'alice',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -179,7 +179,7 @@ describe('rearmSetup — marker present, users exist', () => {
       team: 'Seasonal Entertainment',
       allowNewTeam: true,
       username: 'alice',
-      password: 'pw',
+      password: 'pw-0123456',
       role: 'admin',
       createdBy: 'test',
     });
@@ -219,7 +219,7 @@ describe('rearmSetup — marker already absent', () => {
 
 describe('Audit log — promoteOrCreate', () => {
   it('writes an audit line containing action, username, outcome and timestamp', async () => {
-    await promoteOrCreate('alice', 'pw', { store, auditLogPath: paths.auditPath });
+    await promoteOrCreate('alice', 'pw-0123456', { store, auditLogPath: paths.auditPath });
 
     expect(existsSync(paths.auditPath)).toBe(true);
     const line = JSON.parse(readFileSync(paths.auditPath, 'utf8').trim());
@@ -268,13 +268,13 @@ describe('SETUP_MARKER_PATH (paths.js) — regression', () => {
 describe('promoteOrCreate — error cases', () => {
   it('throws MISSING_USERNAME when username is empty string', async () => {
     await expect(
-      promoteOrCreate('', 'pw', { store, auditLogPath: paths.auditPath })
+      promoteOrCreate('', 'pw-0123456', { store, auditLogPath: paths.auditPath })
     ).rejects.toMatchObject({ code: 'MISSING_USERNAME' });
   });
 
   it('throws MISSING_USERNAME when username is whitespace only', async () => {
     await expect(
-      promoteOrCreate('   ', 'pw', { store, auditLogPath: paths.auditPath })
+      promoteOrCreate('   ', 'pw-0123456', { store, auditLogPath: paths.auditPath })
     ).rejects.toMatchObject({ code: 'MISSING_USERNAME' });
   });
 });

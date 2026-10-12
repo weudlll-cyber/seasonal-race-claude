@@ -9,7 +9,7 @@
 import express from 'express';
 import { timingSafeEqual, createHash } from 'node:crypto';
 import { openSync, closeSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
-import defaultStore, { verifyPassword, toSafeUser } from './usersStore.js';
+import defaultStore, { verifyPassword, toSafeUser, assertNewPassword } from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
 import { resolveCookieSecure, getActiveCookieName } from './session.js';
 import { restampSession } from './restampSession.js';
@@ -79,6 +79,14 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     const { username, password } = req.body ?? {};
     if (!username || !String(username).trim() || !password || !String(password).trim()) {
       return res.status(400).json({ error: 'invalid username or password' });
+    }
+    // AUDIT-1 A5M-15: the new-password rule (usersStore.js), checked BEFORE the marker is taken so a
+    // refused password leaves setup untouched. The token has matched by now, so naming the rule
+    // tells the caller nothing the documentation does not.
+    try {
+      assertNewPassword(password);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
     }
 
     // 4. Atomic gate: O_EXCL — exactly one winner across concurrent requests
@@ -288,7 +296,9 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
         // sessionEpoch — which is what ends this user's OTHER sessions. No session code here.
         await store.updateUser(userId, { password: newPassword });
       } catch (err) {
-        if (err.code === 'INVALID_PASSWORD' || err.code === 'EMPTY_UPDATE') {
+        // INVALID_PASSWORD carries the store's plain-English rule (blank, or under the minimum length).
+        if (err.code === 'INVALID_PASSWORD') return res.status(400).json({ error: err.message });
+        if (err.code === 'EMPTY_UPDATE') {
           return res.status(400).json({ error: 'Password must not be empty' });
         }
         console.error('[auth] change-password failed:', err.code ?? err.message);
