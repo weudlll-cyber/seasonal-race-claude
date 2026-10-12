@@ -1810,23 +1810,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       Until then it points to GitHub's private vulnerability reporting, which is switched on.
       *(verify: SECURITY.md names a contact address at the project's domain)*
 
-### Visible changes — his eye
-
-- [ ] **AUDIT-1 A8-01 · Dev Screen accessibility:** colour contrast fails on the active tier toggle
-      and the reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2).
-      *(verify: `browser-audit.mjs <clone> <out> a8` reports 0 rules on `/dev`)*
-- [ ] **AUDIT-1 A8-02 · Track Editor:** two `<select>` elements without an accessible name.
-      *(verify: the same run reports 0 on `/track-editor`)*
-- [ ] **AUDIT-1 A8-03 · the setup screen is 3 px wider than a 390 px phone.** *(verify: the same run
-      reports no overflow at 390)*
-- [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
-      TrackManager), frozen by the language allowlist. *(verify: `check-language-closed` allowlist
-      counts for the three files are 0)*
-- [ ] **AUDIT-1 A2 · Dev Screen info texts that contradict the shipped settings** — "shipped OFF"
-      for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
-      -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
-      *(verify: each text read against `defaults.js`)*
-
 ### Records and decisions
 
 - [ ] **AUDIT-1 A7-03 · major upgrades — after v1.0.0, one package at a time** (decided 2026-10-12):
@@ -1883,6 +1866,61 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **AUDIT-1 A2 · THE DEV SCREEN INFO TEXTS SAY WHAT SHIPS — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** Each text
+      read against `defaults.js` and the code that consumes the value, and corrected without
+      stating a config value (the rule `check-tooltip-values` enforces): **A2-34** the Gap Leader
+      Brake card said "SHIPPED OFF" while `gapBrakeEnabled` ships true — it says "SHIPPED ON".
+      **A2-40** Phase-Split Bonuses called an area strength of 2.0 "full" and the shipped EARLY and
+      POST "full"; the engine divides the phase strength by Race Plan Bonus Strength, so the
+      shipped strengths give half — the note now explains the scale against that control and no
+      longer claims a shipped level. **A2-41** the Frame Timing subtitle, the smoothing control's
+      info text and its "very stable camera" read-out said the smoothing moves the camera; the
+      camera is fed the raw frame time and the smoothing reaches the track effects only — all
+      three now say so. **A2-42** the comeback card said the Race Plan needs an open track of at
+      least 60 s; the gate is the race's duration against Race Plan min duration, on every track —
+      the card now says that and points at the control. **A2-43** the Speed Brake subtitle
+      promised controls for how close, how directly behind and how strongly; the card has one, the
+      open-track warm-up, and now says so. Left: the matching comments inside `defaults.js` are in
+      the measured-stamp closure and are in the held-back patch (row "AUDIT-1 B · comment fixes
+      held back" above). The row as it stood: *"A2 · Dev Screen info texts that contradict the
+      shipped settings — "shipped OFF" for settings now ON, the camera-lerp help text, the
+      race-plan duration (A2-34, -40, -41, -42, -43)."*
+
+- [x] **AUDIT-1 A3-19 · THE THREE GERMAN ALERTS ARE ENGLISH — CLOSED 2026-10-12 (AUDIT-1 DECISIONS),
+      on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** Deleting a default
+      record now says *"A default brand cannot be deleted. Remove its default status first."* (and
+      the same for a default group and a default track) in BrandingProfiles, PlayerGroupsManager
+      and TrackManager. Their three test files assert the English text, and their German test
+      names and comments are English too. All six files left `check-language-closed`'s allowlist
+      (27 files with German → 21; the guard passes, and its test's frozen record keeps the paths,
+      which is that list's rule). The row as it stood: *"A3-19 · three German alerts users see
+      (BrandingProfiles, PlayerGroupsManager, TrackManager), frozen by the language allowlist."*
+
+- [x] **AUDIT-1 A8-03 · THE SETUP SCREEN FITS A 390 PX PHONE — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.** The cause:
+      the header's branding dropdown is a flex item, and a flex item never shrinks below its content
+      by default — for a `<select>` that is its longest option ("Seasonal Entertainment"). Logo,
+      dropdown and gear needed 361 px inside a header with 2rem padding on each side, and the gear
+      ended at 393 px. The fix: the dropdown may shrink (`minWidth: 0`); at 390 px it is 137 px wide
+      instead of 172 px and still shows "Branding: None" whole; at 768 px and on a desktop nothing
+      moves. The audit's tool now reports no overflow at 390, 768 or desktop width. The row as it
+      stood: *"A8-03 · the setup screen is 3 px wider than a 390 px phone."*
+
+- [x] **AUDIT-1 A8-01 and A8-02 · DEV SCREEN AND TRACK EDITOR ACCESSIBILITY — CLOSED 2026-10-12
+      (AUDIT-1 DECISIONS), on branch `fix/audit-1-decisions-visible`, awaiting the owner's look.**
+      Contrast: the active View toggle's red is darkened 5% in that one rule (`#e63946` → `#db3643`,
+      white text 4.2:1 → 4.5:1; the shared `--color-primary` is unchanged, because it colours every
+      primary button); the Reset buttons lose their 0.7 fade and show the full muted grey (3.1:1 →
+      4.9:1 on a card). Names: the ten number fields carry their visible label as `aria-label`, and
+      the editor's two dropdowns are "Track lights style" and "Load track". axe 4.10.2 now reports 0
+      rules on `/dev` (its first chapter, which is what the audit's tool sees) and on
+      `/track-editor`; pinned by `DevScreen.a11yNames.test.jsx` and the Track Lights test. **Not in
+      the audit's view and left as found:** the other six chapters still carry contrast and label
+      findings of the same kinds (the shared primary button among them). The rows as they stood:
+      *"A8-01 · Dev Screen accessibility: colour contrast fails on the active tier toggle and the
+      reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2)"* and *"A8-02 ·
+      Track Editor: two `<select>` elements without an accessible name."*
 - [x] **AUDIT-1 A2-50 · invariant 3 reads the finish band with the normalised lateral — CLOSED
       2026-10-12 (branch `chore/audit-1-decisions-repo`).** `client/src/modules/viewerProbe.js`
       invariant 3 now calls `getPosition(tAt, k / 40 - 0.5)`, as the file's own rule at `bandPct`

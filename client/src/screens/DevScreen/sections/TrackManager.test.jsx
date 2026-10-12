@@ -605,29 +605,27 @@ describe('TrackManager — handleEdit geometry source (toSummary regression)', (
   });
 });
 
-// ── L126: Default-Lösch-Guard ─────────────────────────────────────────────────
-// OHNE isDefault-Check: confirm + API werden aufgerufen → ROT
-// MIT isDefault-Check:  Fehlermeldung sofort, kein confirm, kein API-Call → GRÜN
+// ── L126: the default-delete guard ────────────────────────────────────────────
+// WITHOUT the isDefault check: confirm + API are called → RED
+// WITH the isDefault check:    error at once, no confirm, no API call → GREEN
 
-describe('TrackManager — handleDelete: Default-Strecke wird sofort abgelehnt', () => {
+describe('TrackManager — handleDelete: a default track is refused at once', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('zeigt sofort Fehlermeldung, ruft weder confirm noch deleteTrackFromServer auf', () => {
+  it('shows the error at once and calls neither confirm nor deleteTrackFromServer', () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     renderTrackManager({ serverTracks: [DEFAULT_TRACK] }); // DEFAULT_TRACK.isDefault = true
 
     fireEvent.click(screen.getByTitle('Delete from server'));
 
-    expect(
-      screen.getByText(/Eine Default-Strecke kann nicht gelöscht werden/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/A default track cannot be deleted/i)).toBeInTheDocument();
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(deleteTrackFromServer).not.toHaveBeenCalled();
   });
 
-  it('normaler (nicht-default) Eintrag zeigt confirm und ruft API auf', async () => {
+  it('a normal (non-default) entry shows confirm and calls the API', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(useServerTracksControl).mockReturnValue({
       tracks: [SERVER_TRACK], // SERVER_TRACK.isDefault = false

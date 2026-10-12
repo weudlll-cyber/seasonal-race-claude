@@ -13,6 +13,8 @@
 import { Ctl } from './ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
+// Full muted colour, no fade: at the former opacity 0.7 the text was 3.1:1 against the card, short
+// of WCAG AA's 4.5:1 (AUDIT-1 A8-01).
 const RESET_BTN_STYLE = {
   background: 'none',
   border: 'none',
@@ -20,7 +22,6 @@ const RESET_BTN_STYLE = {
   fontSize: '0.72rem',
   cursor: 'pointer',
   padding: '0.1rem 0.2rem',
-  opacity: 0.7,
 };
 
 // The Reset of a card or group — with its control id and info icon when it has one.

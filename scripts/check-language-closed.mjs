@@ -137,7 +137,10 @@ function germanSignal(line) {
 //                   that have already been acted on.
 //   PRE-EXISTING  — German this guard FOUND rather than permitted. Each is a real violation of the
 //                   language rule, allowed here only so the guard can ship green, and each is its
-//                   own block. These are the entries that should shrink over time.
+//                   own block. These are the entries that should shrink over time. Six left on
+//                   2026-10-12 (AUDIT-1 A3-19): the three German alerts users saw in the Dev Screen
+//                   (BrandingProfiles, PlayerGroupsManager, TrackManager) and the three test files
+//                   that asserted them, all now English.
 // EVERY COUNT BELOW WAS TAKEN FROM `--inventory` ON THIS TREE, not estimated. The first draft was
 // written from a hand count and was wrong in fourteen of twenty-five entries in BOTH directions,
 // which the guard caught immediately — which is the argument for a count rather than a bare
@@ -160,12 +163,6 @@ export const ALLOWLIST = [
   { file: ".claude/skills/dev-start/SKILL.md", hits: 20, why: "PRE-EXISTING — an entirely German skill document", since: "2026-08-15" },
   { file: "scripts/sim/observers/report.mjs", hits: 6, why: "PRE-EXISTING — the German-language sim report observer; named by the night spec as its own block", since: "2026-08-15" },
   { file: "client/scripts/sweep-bufferPct-driver.mjs", hits: 8, why: "PRE-EXISTING — German summary strings in a one-off sweep driver", since: "2026-08-15" },
-  { file: "client/src/screens/DevScreen/sections/BrandingProfiles.jsx", hits: 1, why: "PRE-EXISTING — a German USER-FACING alert; the worst of these and the first that should go", since: "2026-08-15" },
-  { file: "client/src/screens/DevScreen/sections/BrandingProfiles.test.jsx", hits: 7, why: "PRE-EXISTING — German test names asserting the German alert above", since: "2026-08-15" },
-  { file: "client/src/screens/DevScreen/sections/PlayerGroupsManager.jsx", hits: 1, why: "PRE-EXISTING — a German USER-FACING alert", since: "2026-08-15" },
-  { file: "client/src/screens/DevScreen/sections/PlayerGroupsManager.test.jsx", hits: 7, why: "PRE-EXISTING — German test names asserting the German alert above", since: "2026-08-15" },
-  { file: "client/src/screens/DevScreen/sections/TrackManager.jsx", hits: 1, why: "PRE-EXISTING — a German USER-FACING alert", since: "2026-08-15" },
-  { file: "client/src/screens/DevScreen/sections/TrackManager.test.jsx", hits: 7, why: "PRE-EXISTING — German test names asserting the German alert above", since: "2026-08-15" },
   { file: "client/e2e/vre-2-ux-verification.spec.js", hits: 1, why: "PRE-EXISTING — a German file description", since: "2026-08-15" },
   { file: "server/src/auth/session.js", hits: 2, why: "PRE-EXISTING — German review markers in comments", since: "2026-08-15" },
   { file: "server/src/auth/session.test.js", hits: 1, why: "PRE-EXISTING — a German review marker in a comment", since: "2026-08-15" },

@@ -137,6 +137,7 @@ function RaceDefaults({ part }) {
               <input
                 type="number"
                 className={s.input}
+                aria-label="Max Players — Closed Tracks"
                 min={1}
                 max={100}
                 step={1}
@@ -160,6 +161,7 @@ function RaceDefaults({ part }) {
               <input
                 type="number"
                 className={s.input}
+                aria-label="Max Players — Open Tracks"
                 min={1}
                 max={100}
                 step={1}

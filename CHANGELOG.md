@@ -51,6 +51,11 @@ is.
 
 - A source install (the plain-Node path) needs Node 22 or newer; it said 20, which no longer
   receives security fixes. The Docker image already runs Node 24. *(on `master`, 2026-10-12)*
+- The Dev Screen is easier to read and to use with a screen reader: the active view toggle and the
+  reset buttons have enough contrast, and every number field in the first chapter and both Track
+  Editor dropdowns carry their label. The setup screen fits a 390 px phone; the three "cannot delete
+  a default" messages are in English; five Dev Screen help texts now match what ships.
+  *(branch `fix/audit-1-decisions-visible`)*
 
 ### Security
 
