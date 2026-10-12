@@ -34,6 +34,9 @@ none of it should be relied on until it is merged. Each entry names its branch.
 - `/api/health` answers `503`, status `error`, when the account store (`users.json`) cannot be read, so
   a server nobody can sign in to no longer reports itself healthy; the healthy answer is unchanged
   (audit finding A10-05). *(branch `fix/audit-1-decisions-server`)*
+- A damaged session file no longer stops the server: it is renamed `sessions.sqlite.damaged-<time>`, a
+  fresh one is started, one log line says so, and everyone signs in again (audit finding A10-07).
+  *(branch `fix/audit-1-decisions-server`)*
 - An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
   the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*

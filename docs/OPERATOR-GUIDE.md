@@ -278,7 +278,6 @@ Read the first lines it prints; each start-up refusal names its cause.
 | `RA_BIND_ADDRESS` not an IP address | refuses to start, naming the variable | an IP address, or leave it out |
 | `RA_TRUST_PROXY` not a whole number | refuses to start, naming the variable | the number of proxies in front (`1` behind Caddy, `0` for none), or leave it out |
 | `RA_COOKIE_NAME_MODE=host` without a guaranteed secure cookie | refuses to start | leave the variable unset |
-| `sessions.sqlite` damaged | refuses to start: `SqliteError: file is not a database` | see *A damaged data file* below |
 | no client build present | **starts**, logs where it looked, and serves only the API | build the client (Node path, install step 3) |
 
 On the Docker path: `docker compose logs server`. On the VPS install (branch feat/vps-install, not yet
@@ -300,7 +299,7 @@ nothing deletes them. Copy them off the server before deleting them.
 | --- | --- | --- |
 | `users.json` | starts; **health answers `503`, status `error`**, naming the account store (so `npm run status` and the container's health check fail); **sign-in and every signed-in page fail** | restore from a backup (§2) |
 | `races.sqlite` | starts; only the race history fails; tracks and everything else work | restore from a backup |
-| `sessions.sqlite` | **the server will not start** | sessions are disposable: stop the server, move the file aside (do not delete it), start again — everybody has to sign in again. *The server opens the session database in a way that creates a missing file (`server/src/auth/session.js`), but this recovery was not part of the audit's measurement; automating it is an open decision.* Or restore from a backup |
+| `sessions.sqlite` | **starts anyway** (since AUDIT-1 A10-07): the damaged file is renamed `sessions.sqlite.damaged-<time>` beside it, a fresh one is started and one log line says so — **everybody has to sign in again**, nothing else is lost | nothing; delete the renamed file once you no longer want it |
 | one track file | starts; that track is skipped with a warning, the others are served | restore from a backup, or re-save the track |
 
 ★ **Before any restore, move the damaged data folder aside rather than deleting it.** A restore goes

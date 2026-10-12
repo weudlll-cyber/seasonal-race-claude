@@ -10,10 +10,11 @@ import session from 'express-session';
 import Database from 'better-sqlite3';
 import sqliteStoreFactory from 'better-sqlite3-session-store';
 import { randomUUID } from 'node:crypto';
+import { existsSync, renameSync } from 'node:fs';
 import { join } from 'path';
 import { DATA_ROOT } from '../dataPaths.js';
-// Imported as well as re-exported above: a bare `export {} from` does not bind the name locally,
-// and `:54` and `:95` below call it.
+// Imported as well as re-exported below: a bare `export {} from` does not bind the name locally,
+// and `getActiveCookieName` and `createSessionMiddleware` below call it.
 import { resolveCookieSecure } from './cookiePolicy.js';
 
 // PRÜFEN note: sqliteStoreFactory({ Store }) — the factory destructures session.Store from the
@@ -54,6 +55,45 @@ export function getActiveCookieName() {
   return resolveCookieName(secure);
 }
 
+/** The SQLite error codes that mean "this file is damaged", as opposed to locked or unreachable. */
+const DAMAGED_CODES = new Set(['SQLITE_NOTADB', 'SQLITE_CORRUPT']);
+
+/**
+ * Open the session database; a DAMAGED one is moved aside and a fresh one started.
+ *
+ * AUDIT-1 A10-07, the owner's decision of 2026-10-12. A damaged `sessions.sqlite` used to stop the
+ * server at start (`SqliteError: file is not a database`, exit 1). Sessions are disposable — the
+ * cost of a fresh file is that everyone signs in again — so the file is RENAMED, never deleted
+ * (`<name>.damaged-<UTC time>`, with any `-wal`/`-shm`/`-journal` still beside it), one line says so, and
+ * the server starts. Only damage does this: any other error (a lock, a permission) still stops the
+ * start, because moving a healthy file aside would sign everyone out for nothing.
+ *
+ * @param {string} dbPath  a file path, or ':memory:'
+ * @param {{ log?: (line: string) => void, now?: () => Date }} [opts]
+ * @returns {import('better-sqlite3').Database}
+ */
+export function openSessionDatabase(dbPath, { log = console.warn, now = () => new Date() } = {}) {
+  let db;
+  try {
+    db = new Database(dbPath);
+    // Reading the schema is the first read of the file's pages, so it is where damage shows.
+    db.prepare('SELECT count(*) FROM sqlite_master').get();
+    return db;
+  } catch (err) {
+    db?.close();
+    if (!DAMAGED_CODES.has(err.code) || dbPath === ':memory:') throw err;
+    const aside = `${dbPath}.damaged-${now().toISOString().replace(/[:.]/g, '-')}`;
+    for (const suffix of ['', '-wal', '-shm', '-journal']) {
+      if (existsSync(dbPath + suffix)) renameSync(dbPath + suffix, aside + suffix);
+    }
+    log(
+      `[auth] The session database was damaged (${err.code}) and has been moved aside to ${aside}; ` +
+        'a fresh one is in use, so everyone has to sign in again. Nothing else is affected.'
+    );
+    return new Database(dbPath);
+  }
+}
+
 export function createSessionMiddleware(opts = {}) {
   const isProduction = opts.isProduction ?? process.env.NODE_ENV === 'production';
   const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST;
@@ -80,7 +120,7 @@ export function createSessionMiddleware(opts = {}) {
 
   const enableSweep = opts.enableSweep ?? !isTest;
 
-  const db = new Database(dbPath);
+  const db = openSessionDatabase(dbPath);
   // PRÜFEN note: the library's `(options.expired.clear) || true` has a boolean short-circuit bug
   // that always evaluates to true, so { clear: false } does NOT disable the sweep timer. The
   // 15-minute interval is benign in tests because `vitest run` exits via process.exit() after the

@@ -1834,9 +1834,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk, and his
       live data folder is in OneDrive. *(verify: `node reports/release/AUDIT-1/tools/a10-store.mjs
       <clone>` prints `journal_mode: wal` and a save under a held read lock succeeds)*
-- [ ] **AUDIT-1 A10-07 · a damaged sessions file stops the server.** `SqliteError: file is not a
-      database`, exit 1. Proposal: move it aside and start fresh (everyone signs in again).
-      *(verify: `a10-corrupt.mjs` — "starts: yes" for the sessions scenario)*
 - [ ] **AUDIT-1 A12 · retention.** Player names are stored forever in `races.sqlite` (immutable rows,
       no delete route) and backup archives are never pruned. *(verify: a decision; then a retention
       rule with a test)*
@@ -1923,6 +1920,19 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A10-07 · a damaged sessions file stops the server — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `openSessionDatabase` (`server/src/auth/session.js`) reads the schema on open; on
+      `SQLITE_NOTADB` or `SQLITE_CORRUPT` it renames the file (and any `-wal`/`-shm`/`-journal`
+      still beside it) to `sessions.sqlite.damaged-<UTC time>`, never deletes it, starts a fresh one
+      and logs one line; everyone signs in again. Any other error (a lock, a permission) still stops
+      the start. Test: `server/src/auth/sessionRecovery.test.js` — sabotage (no code counted as
+      damage) turns two red with `SqliteError: file is not a database`. `a10-corrupt.mjs`, sessions
+      scenario: `starts: yes`, health 200 ok, login 200. The row as it stood: **AUDIT-1 A10-07 · a
+      damaged sessions file stops the server.** `SqliteError: file is not a database`, exit 1.
+      Proposal: move it aside and start fresh (everyone signs in again). *(verify: `a10-corrupt.mjs`
+      — "starts: yes" for the sessions scenario)*
 
 - [x] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.

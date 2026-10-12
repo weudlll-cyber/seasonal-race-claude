@@ -164,7 +164,11 @@ set before the rule keeps working until it is changed. Usernames are normalised 
 store is a JSON file written atomically and `chmod`ed to owner-only (`0o600`).
 
 **Where the session lives:** server-side, in a SQLite store (`sessions.sqlite` under the data root,
-in memory under test). The browser holds only the session cookie.
+in memory under test). The browser holds only the session cookie. **A damaged session file does not
+stop the server** (AUDIT-1 A10-07, decided 2026-10-12): it is renamed to
+`sessions.sqlite.damaged-<UTC time>`, a fresh one is started, one log line says so, and everyone signs
+in again (`openSessionDatabase`, `server/src/auth/session.js`). Only damage does this; a lock or a
+permission error still stops the start.
 
 **The cookie:** `httpOnly`, `sameSite: 'lax'`, `path: '/'`, `secure` per §2, and **`maxAge` 30 days**.
 Its name is `__Host-ra.sid` when Secure is guaranteed, otherwise `ra.sid`.
