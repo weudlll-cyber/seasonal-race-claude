@@ -1889,9 +1889,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A4-02 · two Dev Screen test files run ~9.5 s against a 10 s `beforeAll` limit** and
       time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
       run with a parallel `docker build`)*
-- [ ] **AUDIT-1 A4-03 · seven tests read source files relative to the working directory** and fail
-      unless run from `client/`. *(verify: `npx vitest run --root client` from the repository root
-      passes)*
 
 ### What the cleanup (piece B) could not land
 
@@ -1916,6 +1913,18 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A4-03 · the seven cwd-relative tests resolve from their own file — CLOSED 2026-10-12
+      (branch `chore/audit-1-decisions-repo`).** `buildIdentityReason`, `buildIdentitySource`,
+      `buildIdentityWorktree`, `chaseWiring`, `nameLimits`, `api` and `labelBoxGeometry` now build
+      every path from `import.meta.url` (`fileURLToPath(new URL(…))`, or `dirname` of it) instead of
+      `process.cwd()`. Two of them carried a comment saying `import.meta.url` is not a `file:` URL
+      under vitest; that is no longer true (seventeen other test files already resolve that way), and
+      the comments are replaced. Before: from the repository root, `vitest run --root client` on the
+      seven failed 6 of 7 files (5 tests red, 16 skipped, one worker timeout). After: 7 of 7 files,
+      53 of 53 tests green from the root, and the same from `client/`. The row as it stood: **seven
+      tests read source files relative to the working directory** and fail unless run from
+      `client/`. *(verify: `npx vitest run --root client` from the repository root passes)*
 
 - [x] **AUDIT-1 B · the comment fixes held back by the measured-stamp guard — APPLIED AND RE-STAMPED
       AS UNCHANGED, 2026-10-12 (decided that day: re-stamp, do not re-measure; branch

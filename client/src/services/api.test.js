@@ -108,11 +108,11 @@ describe('API_BASE_URL — where the address comes from', () => {
 
 describe('★ no deployment address is written into this module', () => {
   it('the only host literal in the source is the localhost fallback', async () => {
-    // Read from the working directory, not from `import.meta.url`: under Vite that is not a file
-    // URL. The client suite runs with cwd = `client/` (scripts/verify.mjs spawns it there).
+    // Read next to this file (AUDIT-1 A4-03), not from the working directory, so the test passes
+    // whether vitest starts in `client/` or at the repository root with `--root client`.
     const { readFileSync } = await import('node:fs');
-    const { join } = await import('node:path');
-    const src = readFileSync(join(process.cwd(), 'src/services/api.js'), 'utf8');
+    const { fileURLToPath } = await import('node:url');
+    const src = readFileSync(fileURLToPath(new URL('./api.js', import.meta.url)), 'utf8');
     // Comments are free to name example hosts while explaining the design — the JSDoc does, and
     // should. What must name only the fallback is the CODE, so line and block comments both go.
     const code = src
