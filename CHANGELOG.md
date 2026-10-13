@@ -15,6 +15,11 @@ is.
 
 ### Added
 
+- Pause and resume a running race: a Pause/Resume button under Cancel Race on the race screen, and
+  the Space key, in the countdown and during the race. While paused everything stands still — the
+  racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the
+  same race, with the same result as if it had never paused, and the paused time is not counted in
+  the race's time. Not available once the last racer is home. *(branch `feat/pause-resume`)*
 - One-command install on a single rented server: one `install.sh` asks for the domain, an e-mail
   address and the first admin, then installs Docker, a firewall that lets in only SSH, HTTP and
   HTTPS, and automatic security updates. *(branch `feat/vps-install`)*

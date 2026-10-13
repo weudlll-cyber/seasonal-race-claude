@@ -1267,12 +1267,9 @@ already-settled questions.
 
 ### Phase B (Wiring Gaps + UX Improvements)
 
-- **B-UX-Pause** — Pause + resume race
-  - During a running race, pause button → freeze rAF loop, resume → continue
-  - Explicitly NOT part of the camera phase (PR-G only implements Cancel Race with confirm dialog)
-  - Priority: after camera phase
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
+- ~~**B-UX-Pause** — Pause + resume race~~ — **BUILT 2026-10-13 on branch `feat/pause-resume`,
+  awaiting the owner's look.** Moved to PART TWO, *Pause and resume a running race*, with its
+  original description.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
   **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
@@ -1830,14 +1827,9 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 ### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
 
 Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
-a row here; the detail stays where it already lives in this part.
+a row here; the detail stays where it already lives in this part. *(Pause and resume, the first of
+the three, was built on 2026-10-13 and is in PART TWO.)*
 
-- [ ] **Pause and resume a running race (`B-UX-Pause`).** Unbuilt: there is no pause or resume path in
-      `client/src/screens/RaceScreen/` (searched 2026-10-12). Its description and priority are under
-      *Phase B* in this part. Proposal 2026-10-12 (OLD-ITEMS-1): leave open as a question for the
-      owner — whether he wants it at all has not been asked since 2026-05-03; about 1 to 1.5 days if
-      yes ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §1). *(verify: in the browser, pausing
-      freezes the race loop and resuming continues the same race)*
 - [ ] **The Phase V verification sittings — his eye.** Manual checks of shipped work that nobody has
       performed: loading a saved player list (`V-1`), a track with missing geometry being refused
       (`V-2`), backup → restore → reset end to end (`V-5`/`B-5`), the Dev Screen sections (`V-6`),
@@ -1871,6 +1863,28 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **Pause and resume a running race (`B-UX-Pause`) — BUILT 2026-10-13 on branch
+      `feat/pause-resume`, awaiting the owner's look.** The owner decided on 2026-10-13 that he
+      wants it: a Pause/Resume button beside Cancel Race and Fullscreen, and the Space key; while
+      paused everything stands still (racers, camera, effects, the race clock) under a large
+      semi-transparent "PAUSED"; available in the countdown and the race, not on the result screen;
+      the outcome exactly the same as without the pause; a product feature, not behind the test-aids
+      switch. **Built:** one paused flag and one clock, `client/src/screens/RaceScreen/raceClock.js` —
+      the frame loop reads its time from it and does nothing while paused, so every wall-clock site
+      on the race screen stops with it, and the screen's three timers are its pause-aware ones
+      (docs/ARCHITECTURE.md, *Pause and resume*). Available until the last racer crosses; the ending
+      after that has no pause. **Measured:** twelve races on all ten shipped tracks, each paused four
+      times (countdown, early, mid-race, near the finish) through the real screen with an injected
+      frame clock, give the same finish order, finish times, `elapsedTime` and stored history entry
+      as the same race unpaused; on one closed and one open track every frame drawn after a resume
+      is the frame the unpaused race drew (`pauseDeterminismClosed.test.jsx`, `pauseDeterminismOpen.test.jsx`,
+      `pauseResume.test.jsx`, on the harness `client/src/test/pauseRaceHarness.jsx`). A race that never pauses is
+      byte-identical to before. *Its original Phase B entry (2026-05-03): "During a running race,
+      pause button → freeze rAF loop, resume → continue. Explicitly NOT part of the camera phase.
+      Priority: after camera phase." — with the BACKLOG-VERDICTS-1 verdict of 2026-09-02, unbuilt,
+      and the OLD-ITEMS-1 proposal of 2026-10-12 to ask him, which he answered on 2026-10-13.*
+      *(verify: in the browser, Pause or Space during a race freezes the picture and the race clock;
+      Resume continues the same race, and its result equals the same seed unpaused)*
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
       printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, both sheet rows NOT

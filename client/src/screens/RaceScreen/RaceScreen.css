@@ -421,6 +421,31 @@
   color: #ddd;
 }
 
+/* ── PAUSE-RESUME-1: the paused picture ─────────────────────────────────── */
+/* Over the whole race picture, anchored in percentages like everything else inside the wrapper (the
+   one-coordinate rule above). It takes no clicks, so the wrapper's own handler still sees them. */
+.race-paused-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(32px, 9vw, 140px);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* While paused nothing on the screen moves, the background's slow pulse included. */
+.race-is-paused,
+.race-is-paused * {
+  animation-play-state: paused !important;
+}
+
 /* ── Error / loading ─────────────────────────────────────────────────────── */
 .race-error-screen,
 .race-loading-screen {

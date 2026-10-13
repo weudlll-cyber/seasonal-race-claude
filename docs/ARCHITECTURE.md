@@ -805,6 +805,33 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 
 **React StrictMode rAF guard (2026-05-28):** React StrictMode double-mounts effects in development (mount → cleanup → mount). Without a cleanup guard, two concurrent rAF loops can run until the ref is overwritten on the second mount. Fix: `cancelled` flag set to `true` in the `useEffect` cleanup; the rAF callback checks `cancelled` before calling `requestAnimationFrame` again. See also Lesson 58.
 
+### Pause and resume (PAUSE-RESUME-1, 2026-10-13)
+
+The owner decided on 2026-10-13 that a running race can be paused and resumed — a Pause/Resume
+button under Cancel Race on the race screen, and the Space key — with everything standing still while
+paused and the race's outcome exactly the same as without the pause. It is a product feature, not a
+test aid.
+
+**One flag, one clock.** `client/src/screens/RaceScreen/raceClock.js` holds THE paused flag and turns
+the browser's frame time into race-screen time: `frameTime(rawTs)` returns `rawTs − pausedTotal`, or
+`null` while paused. The rAF loop reads its `ts` from it and does nothing at all on a `null` frame —
+no physics step, no camera, no effects, no draw — so the last picture stays on the canvas. Every
+wall-clock site on the screen reads that `ts` and is pause-aware without being touched: the ceremony
+clock, the race start stamp (and everything that subtracts from it — the camera's `raceElapsed`, the
+drawn race timer, the result's `elapsedTime`), the camera's own clock, the battle slow-motion release,
+the final-lap stamp, the dust and the track lights. The three `setTimeout`s (the state-overlay line,
+the finish hand-over and the winner card) go through the clock's pause-aware `setTimeout`, and the
+ceremony skip reads `timeNow()`. A race that never pauses has `pausedTotal = 0` and sees exactly the
+timestamps it saw before.
+
+**The physics is untouched.** It steps only inside the loop, in fixed `FIXED_DT` steps, so a pause
+cannot change a finish order or a finish time; and because the paused time is taken out of the clock,
+`elapsedTime` (stored as the history's `duration`) does not include it either. The hidden-tab path
+(the 50 ms catch-up cap above) stops only the physics, so it is not the mechanism.
+
+**The boundary.** Available from the countdown until the last racer crosses (`PHASE.FINISHED`); the
+ending after that and the result screen have no pause.
+
 ## Camera System
 
 Canonical reference: **[CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md)**. The description that used to sit
