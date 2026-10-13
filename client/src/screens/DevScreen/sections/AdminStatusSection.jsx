@@ -101,19 +101,21 @@ function AdminStatusSection() {
       )}
       {!error && !rows && <p className={s.sectionDesc}>Reading the status…</p>}
       {rows && (
-        <table className={s.table} style={{ marginTop: '0.5rem' }}>
-          <tbody>
-            {rows.map(([label, value]) => (
-              <tr
-                key={label}
-                data-testid={`admin-status-${label.toLowerCase().replace(/ /g, '-')}`}
-              >
-                <th scope="row">{label}</th>
-                <td>{value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className={s.tableScroll} style={{ marginTop: '0.5rem' }}>
+          <table className={s.table}>
+            <tbody>
+              {rows.map(([label, value]) => (
+                <tr
+                  key={label}
+                  data-testid={`admin-status-${label.toLowerCase().replace(/ /g, '-')}`}
+                >
+                  <th scope="row">{label}</th>
+                  <td>{value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

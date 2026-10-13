@@ -256,34 +256,36 @@ export default function PeriodEvaluation() {
               No real race was finished in this period.
             </p>
           ) : (
-            <table className={s.table} data-testid="period-evaluation-table">
-              <thead>
-                <tr>
-                  <th style={NUM}>Place</th>
-                  <th>Name</th>
-                  <th style={NUM}>Races</th>
-                  <th style={NUM}>Wins</th>
-                  <th style={NUM}>2nd</th>
-                  <th style={NUM}>3rd</th>
-                  <th style={NUM}>Podiums</th>
-                  {withPoints && <th style={NUM}>Points</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((r, i) => (
-                  <tr key={r.name}>
-                    <td style={NUM}>{places[i]}</td>
-                    <td>{r.name}</td>
-                    <td style={NUM}>{r.races}</td>
-                    <td style={NUM}>{r.wins}</td>
-                    <td style={NUM}>{r.places?.[2] ?? 0}</td>
-                    <td style={NUM}>{r.places?.[3] ?? 0}</td>
-                    <td style={NUM}>{r.podiums}</td>
-                    {withPoints && <td style={NUM}>{r.points}</td>}
+            <div className={s.tableScroll}>
+              <table className={s.table} data-testid="period-evaluation-table">
+                <thead>
+                  <tr>
+                    <th style={NUM}>Place</th>
+                    <th>Name</th>
+                    <th style={NUM}>Races</th>
+                    <th style={NUM}>Wins</th>
+                    <th style={NUM}>2nd</th>
+                    <th style={NUM}>3rd</th>
+                    <th style={NUM}>Podiums</th>
+                    {withPoints && <th style={NUM}>Points</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {shown.map((r, i) => (
+                    <tr key={r.name}>
+                      <td style={NUM}>{places[i]}</td>
+                      <td>{r.name}</td>
+                      <td style={NUM}>{r.races}</td>
+                      <td style={NUM}>{r.wins}</td>
+                      <td style={NUM}>{r.places?.[2] ?? 0}</td>
+                      <td style={NUM}>{r.places?.[3] ?? 0}</td>
+                      <td style={NUM}>{r.podiums}</td>
+                      {withPoints && <td style={NUM}>{r.points}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

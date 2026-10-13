@@ -61,6 +61,11 @@ is.
   Editor dropdowns carry their label. The setup screen fits a 390 px phone; the three "cannot delete
   a default" messages are in English; five Dev Screen help texts now match what ships.
   *(on `master`, 2026-10-12)*
+- The Dev Screen works on a phone and a tablet. Below 900 px the sidebar becomes a top bar with a
+  Menu button holding the view switch, the chapters, Back to Setup and Log out; the chapter shows
+  in one column, wide tables scroll inside their own box, and buttons and fields are big enough for
+  a finger. Below 1280 px nothing in a chapter is cut off at the right any more — the Player groups
+  cards included. At 1280 px and wider the screen looks as before. *(branch `feat/devscreen-mobile`)*
 
 ### Security
 
