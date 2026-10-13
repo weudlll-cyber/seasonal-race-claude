@@ -1929,8 +1929,8 @@ proposal arriving again in six months looking new.
       [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2 *Backups*. Text only; no behaviour moved. Pinned by
       `SystemSettings.texts.test.jsx`. The `V-5` sitting in the Phase V row is unaffected — it is
       still owed. Source: [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md), the `V-5` finding.
-- [x] **Brand logo sized to the race picture — BUILT 2026-10-13 on branch fix/brand-logo-scale,
-      awaiting the owner's look.** Observed by the owner on 2026-10-13: in phone mode (Chrome device
+- [x] **Brand logo sized to the race picture — BUILT 2026-10-13 on branch fix/brand-logo-scale and
+      MERGED the same day (the owner asked that day for it to be finished and merged).** Observed by the owner on 2026-10-13: in phone mode (Chrome device
       mode, iPhone 12 Pro) the race screen's brand logo was far too large, about a third of the race
       picture. **The cause:** the corner logo (`BrandLogoOverlay.jsx`, a DOM `<img>` over the canvas,
       not a canvas draw) took the profile's `logoMaxHeight` in CSS pixels at every size, while the

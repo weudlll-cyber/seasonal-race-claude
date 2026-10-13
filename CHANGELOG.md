@@ -77,7 +77,7 @@ is.
   is exactly as large as before. The brand's logo size setting is still the logo's size on a
   desktop and now also its upper limit, and its info text in the Dev Screen says so. The logo on
   the result screen (hidden on a phone) and the large logo on the opening brand card (already
-  sized to the picture) were checked and are unchanged. *(branch `fix/brand-logo-scale`)*
+  sized to the picture) were checked and are unchanged. *(on `master`, 2026-10-13)*
 
 ### Security
 
