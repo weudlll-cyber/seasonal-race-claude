@@ -532,10 +532,10 @@ on demand — and runs the **curated fast set** (`test:e2e:prod:fast`, **13 spec
 against the
 PRODUCTION arm. It is not in `ci.yml`, not on `pull_request`, and not in `verify`, for precisely the
 reason this rule gives: a ten-minute browser suite gating every merge trains people to re-run red
-builds. **The fast set runs in about five to eight minutes on Windows (4.6–7.6 min across the
+builds. **The fast set runs in about five to ten minutes on Windows (4.6–9.2 min across the
 local runs of 2026-10-12/13), and it gates master rather than every branch.**
 
-★ **The full suite is still night work.** The gate covers 10 of its specs — every one that does not
+★ **The full suite is still night work.** The gate covers 13 of its specs — every one that does not
 wait for a real race; the rest are run
 deliberately, as this rule says, and [NIGHT-RUN.md](NIGHT-RUN.md) remains their one home.
 
