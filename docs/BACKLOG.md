@@ -1817,16 +1817,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
-### Observed by the owner on 2026-10-12
-
-- [ ] **The Dev Screen cuts its group cards off on a narrow window — does it have to work on a tablet
-      or a phone?** Observed by the owner on 2026-10-12 while looking at review/2026-10-12: in a
-      narrow window the Dev Screen's group cards are cut off at the right, and there is no
-      horizontal scroll to reach the rest. The question is not yet decided: whether the Dev Screen
-      must work on tablet or phone widths at all. Nothing is built until it is (decided
-      2026-10-12: record it, do not fix it). *(verify: a decision — the supported widths; if
-      narrow widths are in, no card is cut off at them)*
-
 ### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
 
 Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
@@ -1870,6 +1860,24 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **The Dev Screen cuts its group cards off on a narrow window — BUILT 2026-10-13 on branch
+      `feat/devscreen-mobile`, awaiting the owner's look.** Observed by the owner on 2026-10-12
+      while looking at review/2026-10-12: in a narrow window the Player groups cards were cut off at
+      the right, with no horizontal scroll to reach the rest. **Decided by the owner on 2026-10-13:
+      the Dev Screen must work on a smartphone, and therefore on a tablet.** The cause: list rows did
+      not wrap, and the chapter column (`overflow-y: auto`, so sideways `auto` too) scrolled sideways
+      with its scrollbar at the chapter's foot — measured on master, rows were cut off from a
+      1,056 px window down. **Built:** below 1280 px every flex row in a chapter wraps and tables
+      scroll inside their own box; below 900 px the sidebar is a sticky top bar whose Menu holds the
+      view switch, the chapters, Back to Setup and Log out, the chapter is one column, and buttons
+      and fields are at least 44 px high. At 1280 px and wider nothing changes (pixel compare of
+      every chapter, both views: 0, apart from three spots that also differ between two runs of
+      master). Held by `client/e2e/devscreen-narrow.spec.js` in the Browser gate (390 and 768 px,
+      All and Operator view, every design control reachable, each Player groups card on screen;
+      sabotaged red twice). Breakpoints, menu and measurements:
+      [DEVSCREEN-CHAPTERS-1](../reports/evolution/DEVSCREEN-CHAPTERS-1.md), "Phones and tablets".
+      *(verify: the owner's look on a phone or a narrow window)*
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
