@@ -1267,12 +1267,9 @@ already-settled questions.
 
 ### Phase B (Wiring Gaps + UX Improvements)
 
-- **B-UX-Pause** — Pause + resume race
-  - During a running race, pause button → freeze rAF loop, resume → continue
-  - Explicitly NOT part of the camera phase (PR-G only implements Cancel Race with confirm dialog)
-  - Priority: after camera phase
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
+- ~~**B-UX-Pause** — Pause + resume race~~ — **BUILT 2026-10-13 on branch `feat/pause-resume`,
+  accepted by the owner the same day and merged with review/2026-10-13.** Moved to PART TWO, *Pause and resume a running race*, with its
+  original description.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
   **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
@@ -1831,34 +1828,20 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
-### Observed by the owner on 2026-10-12
-
-- [ ] **The Dev Screen cuts its group cards off on a narrow window — does it have to work on a tablet
-      or a phone?** Observed by the owner on 2026-10-12 while looking at review/2026-10-12: in a
-      narrow window the Dev Screen's group cards are cut off at the right, and there is no
-      horizontal scroll to reach the rest. The question is not yet decided: whether the Dev Screen
-      must work on tablet or phone widths at all. Nothing is built until it is (decided
-      2026-10-12: record it, do not fix it). *(verify: a decision — the supported widths; if
-      narrow widths are in, no card is cut off at them)*
-
 ### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
 
 Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
-a row here; the detail stays where it already lives in this part.
+a row here; the detail stays where it already lives in this part. *(Pause and resume, the first of
+the three, was built on 2026-10-13 and is in PART TWO; `Q-19` was closed as fixed the same day, and
+the Phase V sittings narrowed to the one row below.)*
 
-- [ ] **Pause and resume a running race (`B-UX-Pause`).** Unbuilt: there is no pause or resume path in
-      `client/src/screens/RaceScreen/` (searched 2026-10-12). Its description and priority are under
-      *Phase B* in this part. Proposal 2026-10-12 (OLD-ITEMS-1): leave open as a question for the
-      owner — whether he wants it at all has not been asked since 2026-05-03; about 1 to 1.5 days if
-      yes ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §1). *(verify: in the browser, pausing
-      freezes the race loop and resuming continues the same race)*
 - [ ] **Owner sitting: V-5 backup/restore/reset and V-9 fullscreen (about 15 minutes).** Decided
       2026-10-13: of the Phase V verification sittings only these two stay, as one short sitting with
       the owner after the block of 2026-10-13; `V-1`, `V-2`, `V-6`, `V-7` and `V-8` were closed that
       day as obsolete or covered (*Phase V* in this part, reasons in
       [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2). **V-5:** take a browser backup on the Dev
-      Screen, restore it, then reset, and check each does what its text says (the texts are corrected
-      on branch `fix/backup-reset-texts`, 2026-10-13); the server data — tracks, racers, player groups
+      Screen, restore it, then reset, and check each does what its text says (the texts were corrected
+      on 2026-10-13, accepted by the owner and merged); the server data — tracks, racers, player groups
       and brands — is backed up with `npm run backup` / `racearena backup`, not by the browser.
       **V-9:** fullscreen on the race screen goes in and out cleanly. *(verify: both recorded as
       performed with the owner, with the date and the result)*
@@ -1874,6 +1857,30 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **Pause and resume a running race (`B-UX-Pause`) — BUILT 2026-10-13 on branch
+      `feat/pause-resume`; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged with
+      it.** ★ **Scope decided 2026-10-13:** pause does NOT need to work in the ending after the last
+      racer crosses; the built scope — from the countdown until the last crossing — stays. The owner decided on 2026-10-13 that he
+      wants it: a Pause/Resume button beside Cancel Race and Fullscreen, and the Space key; while
+      paused everything stands still (racers, camera, effects, the race clock) under a large
+      semi-transparent "PAUSED"; available in the countdown and the race, not on the result screen;
+      the outcome exactly the same as without the pause; a product feature, not behind the test-aids
+      switch. **Built:** one paused flag and one clock, `client/src/screens/RaceScreen/raceClock.js` —
+      the frame loop reads its time from it and does nothing while paused, so every wall-clock site
+      on the race screen stops with it, and the screen's three timers are its pause-aware ones
+      (docs/ARCHITECTURE.md, *Pause and resume*). Available until the last racer crosses; the ending
+      after that has no pause. **Measured:** twelve races on all ten shipped tracks, each paused four
+      times (countdown, early, mid-race, near the finish) through the real screen with an injected
+      frame clock, give the same finish order, finish times, `elapsedTime` and stored history entry
+      as the same race unpaused; on one closed and one open track every frame drawn after a resume
+      is the frame the unpaused race drew (`pauseDeterminismClosed.test.jsx`, `pauseDeterminismOpen.test.jsx`,
+      `pauseResume.test.jsx`, on the harness `client/src/test/pauseRaceHarness.jsx`). A race that never pauses is
+      byte-identical to before. *Its original Phase B entry (2026-05-03): "During a running race,
+      pause button → freeze rAF loop, resume → continue. Explicitly NOT part of the camera phase.
+      Priority: after camera phase." — with the BACKLOG-VERDICTS-1 verdict of 2026-09-02, unbuilt,
+      and the OLD-ITEMS-1 proposal of 2026-10-12 to ask him, which he answered on 2026-10-13.*
+      *(verify: in the browser, Pause or Space during a race freezes the picture and the race clock;
+      Resume continues the same race, and its result equals the same seed unpaused)*
 - [x] **`Q-19` — the `TrackEditor.effects.test.jsx` flake — CLOSED 2026-10-13 AS FIXED, by the owner's
       decision on the history in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §3.** Both causes
       ever named were fixed in code — `vi.unstubAllGlobals()` in `trackLoader.test.js` (`00e09ba0`,
@@ -1891,6 +1898,37 @@ proposal arriving again in six months looking new.
       and corrupt JSON) are closed — reasons in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2.
       `V-5` and `V-9` stay open as one PART ONE row, *Owner sitting: V-5 backup/restore/reset and V-9
       fullscreen (about 15 minutes)*.
+- [x] **The Dev Screen cuts its group cards off on a narrow window — BUILT 2026-10-13 on branch
+      `feat/devscreen-mobile`; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged
+      with it.** Observed by the owner on 2026-10-12
+      while looking at review/2026-10-12: in a narrow window the Player groups cards were cut off at
+      the right, with no horizontal scroll to reach the rest. **Decided by the owner on 2026-10-13:
+      the Dev Screen must work on a smartphone, and therefore on a tablet.** The cause: list rows did
+      not wrap, and the chapter column (`overflow-y: auto`, so sideways `auto` too) scrolled sideways
+      with its scrollbar at the chapter's foot — measured on master, rows were cut off from a
+      1,056 px window down. **Built:** below 1280 px every flex row in a chapter wraps and tables
+      scroll inside their own box; below 900 px the sidebar is a sticky top bar whose Menu holds the
+      view switch, the chapters, Back to Setup and Log out, the chapter is one column, and buttons
+      and fields are at least 44 px high. At 1280 px and wider nothing changes (pixel compare of
+      every chapter, both views: 0, apart from three spots that also differ between two runs of
+      master). Held by `client/e2e/devscreen-narrow.spec.js` in the Browser gate (390 and 768 px,
+      All and Operator view, every design control reachable, each Player groups card on screen;
+      sabotaged red twice). Breakpoints, menu and measurements:
+      [DEVSCREEN-CHAPTERS-1](../reports/evolution/DEVSCREEN-CHAPTERS-1.md), "Phones and tablets".
+      *(verify: the owner's look on a phone or a narrow window — done 2026-10-13, accepted)*
+- [x] **Dev Screen backup and reset texts corrected — BUILT 2026-10-13 on branch
+      fix/backup-reset-texts; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged
+      with it.** The owner decided on 2026-10-13 that the
+      *Backup and reset* texts state what the browser backup and the reset really cover and point
+      to the server backup. The card description, the reset card, the reset confirmation, the reset
+      alert and the export, import and reset info texts now say that the export holds only the
+      settings this browser stores (`exportAllStorage`, `client/src/modules/storage/storage.js`),
+      that the reset wipes those and writes back the race defaults and an empty race history list,
+      and that tracks, racers, player groups and brands live on the server and are backed up with
+      `npm run backup` (source install) or `racearena backup` (VPS install), naming
+      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2 *Backups*. Text only; no behaviour moved. Pinned by
+      `SystemSettings.texts.test.jsx`. The `V-5` sitting in the Phase V row is unaffected — it is
+      still owed. Source: [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md), the `V-5` finding.
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`

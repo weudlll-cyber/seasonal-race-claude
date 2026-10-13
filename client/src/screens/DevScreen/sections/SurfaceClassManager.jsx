@@ -328,17 +328,9 @@ function SurfaceClassManager() {
   const configSchema = draft ? (GENERATORS[draft.generatorId]?.configSchema ?? []) : [];
 
   return (
-    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
-      {/* ── Left column: class list ── */}
-      <div
-        style={{
-          width: 210,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem',
-        }}
-      >
+    <div className={s.classSplit}>
+      {/* ── Left column: class list (above the editor on a phone or tablet) ── */}
+      <div className={s.classList}>
         <div
           className={s.card}
           style={{ padding: '0.75rem' }}
@@ -411,7 +403,7 @@ function SurfaceClassManager() {
       </div>
 
       {/* ── Right column: preview + editor ── */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className={s.classDetail}>
         {draft ? (
           <>
             {/* Live Preview */}

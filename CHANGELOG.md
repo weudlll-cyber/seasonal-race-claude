@@ -15,6 +15,11 @@ is.
 
 ### Added
 
+- Pause and resume a running race: a Pause/Resume button under Cancel Race on the race screen, and
+  the Space key, in the countdown and during the race. While paused everything stands still — the
+  racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the
+  same race, with the same result as if it had never paused, and the paused time is not counted in
+  the race's time. Not available once the last racer is home. *(on `master`, 2026-10-13)*
 - One-command install on a single rented server: one `install.sh` asks for the domain, an e-mail
   address and the first admin, then installs Docker, a firewall that lets in only SSH, HTTP and
   HTTPS, and automatic security updates. *(branch `feat/vps-install`)*
@@ -56,6 +61,17 @@ is.
   Editor dropdowns carry their label. The setup screen fits a 390 px phone; the three "cannot delete
   a default" messages are in English; five Dev Screen help texts now match what ships.
   *(on `master`, 2026-10-12)*
+- The Dev Screen works on a phone and a tablet. Below 900 px the sidebar becomes a top bar with a
+  Menu button holding the view switch, the chapters, Back to Setup and Log out; the chapter shows
+  in one column, wide tables scroll inside their own box, and buttons and fields are big enough for
+  a finger. Below 1280 px nothing in a chapter is cut off at the right any more — the Player groups
+  cards included. At 1280 px and wider the screen looks as before. *(on `master`, 2026-10-13)*
+- The Dev Screen's *Backup and reset* texts say what they really cover: the export, import and
+  reset act only on the settings stored in that browser; tracks, racers, player groups and brands
+  live on the server and are backed up with `npm run backup` (or `racearena backup` on the VPS
+  install), as the operator guide's *Backups* section describes. They used to claim the browser
+  file held tracks, racers, groups and branding, and that a reset restored built-in tracks and
+  racers. Text only. *(on `master`, 2026-10-13)*
 
 ### Security
 

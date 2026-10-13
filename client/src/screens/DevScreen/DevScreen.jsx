@@ -12,6 +12,11 @@
 //   parts like any other and sit where the design places them; this file renders them itself
 //   (`own`). The view switch (admins only), Back to Setup and Log out stay in the sidebar, reachable
 //   from every chapter (the owner's decision of 2026-10-05).
+//
+// DEVSCREEN-MOBILE-1 (decided 2026-10-13: the screen must work on a phone and a tablet): below the
+//   narrow breakpoint the sidebar is a top bar, and its menu holds the same view switch, chapters,
+//   Back to Setup and Log out. Every rule for it is in DevScreen.module.css; at 1280 px and wider
+//   nothing changes.
 // ============================================================
 
 import { useState } from 'react';
@@ -70,6 +75,18 @@ function DevScreen() {
 
   const [activeId, setActiveId] = useState(CHAPTERS[0].id);
   const [view, setView] = useState(() => storageGet(KEYS.DEV_PANEL_VIEW) ?? 'all');
+  // DEVSCREEN-MOBILE-1: below the narrow breakpoint (DevScreen.module.css) the sidebar is a top bar
+  // whose menu opens with this; on a wider screen the toggle is hidden and the menu always shows.
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function openChapter(id) {
+    setActiveId(id);
+    // Chosen from the open phone/tablet menu: close it and start the chapter at its top.
+    if (menuOpen) {
+      setMenuOpen(false);
+      window.scrollTo(0, 0);
+    }
+  }
 
   function handleViewChange(newView) {
     setView(newView);
@@ -85,60 +102,71 @@ function DevScreen() {
 
   return (
     <div className={s.screen}>
-      {/* Sidebar — the view switch, the chapters, and the way out, in every chapter */}
+      {/* Sidebar — the view switch, the chapters, and the way out, in every chapter. On a phone or
+          tablet it is a top bar, and all of it sits in the menu the toggle opens. */}
       <nav className={s.sidebar}>
         <div className={s.sidebarHeader}>
           <div>
             <div className={s.sidebarTitle}>⚙️ Dev Panel</div>
             <div className={s.sidebarSubtitle}>Configuration</div>
           </div>
+          <button
+            className={s.menuToggle}
+            aria-expanded={menuOpen}
+            aria-controls="dev-screen-menu"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? '✕ Close' : '☰ Menu'}
+          </button>
         </div>
 
-        {/* View switch — admins only */}
-        {isAdmin && (
-          <div className={s.tierToggle}>
-            <Ctl id="DevScreen:handleViewChange" style={{ gap: '0.5rem' }}>
-              <span className={s.tierToggleLabel}>View:</span>
-              <span className={s.tierToggleBtns}>
-                <button
-                  className={`${s.tierToggleBtn} ${view === 'all' ? s.tierToggleBtnActive : ''}`}
-                  onClick={() => handleViewChange('all')}
-                >
-                  All
-                </button>
-                <button
-                  className={`${s.tierToggleBtn} ${view === 'operator' ? s.tierToggleBtnActive : ''}`}
-                  onClick={() => handleViewChange('operator')}
-                >
-                  Operator
-                </button>
-              </span>
-            </Ctl>
-          </div>
-        )}
+        <div id="dev-screen-menu" className={`${s.menu} ${menuOpen ? s.menuOpen : ''}`}>
+          {/* View switch — admins only */}
+          {isAdmin && (
+            <div className={s.tierToggle}>
+              <Ctl id="DevScreen:handleViewChange" style={{ gap: '0.5rem' }}>
+                <span className={s.tierToggleLabel}>View:</span>
+                <span className={s.tierToggleBtns}>
+                  <button
+                    className={`${s.tierToggleBtn} ${view === 'all' ? s.tierToggleBtnActive : ''}`}
+                    onClick={() => handleViewChange('all')}
+                  >
+                    All
+                  </button>
+                  <button
+                    className={`${s.tierToggleBtn} ${view === 'operator' ? s.tierToggleBtnActive : ''}`}
+                    onClick={() => handleViewChange('operator')}
+                  >
+                    Operator
+                  </button>
+                </span>
+              </Ctl>
+            </div>
+          )}
 
-        {visibleChapters.map((chapter) => (
-          <button
-            key={chapter.id}
-            className={`${s.navItem} ${activeChapter.id === chapter.id ? s.navItemActive : ''}`}
-            onClick={() => setActiveId(chapter.id)}
-          >
-            <span className={s.navIcon}>{chapter.icon}</span>
-            {chapter.title}
-          </button>
-        ))}
+          {visibleChapters.map((chapter) => (
+            <button
+              key={chapter.id}
+              className={`${s.navItem} ${activeChapter.id === chapter.id ? s.navItemActive : ''}`}
+              onClick={() => openChapter(chapter.id)}
+            >
+              <span className={s.navIcon}>{chapter.icon}</span>
+              {chapter.title}
+            </button>
+          ))}
 
-        {/* The way out, directly under the chapters — never pushed down past a long chapter */}
-        <Ctl id="DevScreen:navigate('/setup')">
-          <button className={s.backBtn} onClick={() => navigate('/setup')}>
-            ← Back to Setup
-          </button>
-        </Ctl>
-        <Ctl id="DevScreen:logout">
-          <button className={s.backBtn} onClick={() => logout()}>
-            Log out
-          </button>
-        </Ctl>
+          {/* The way out, directly under the chapters — never pushed down past a long chapter */}
+          <Ctl id="DevScreen:navigate('/setup')">
+            <button className={s.backBtn} onClick={() => navigate('/setup')}>
+              ← Back to Setup
+            </button>
+          </Ctl>
+          <Ctl id="DevScreen:logout">
+            <button className={s.backBtn} onClick={() => logout()}>
+              Log out
+            </button>
+          </Ctl>
+        </div>
       </nav>
 
       {/* Content — the active chapter: intro, then its sub-groups in order */}

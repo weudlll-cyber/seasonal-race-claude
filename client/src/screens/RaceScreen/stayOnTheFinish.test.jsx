@@ -164,9 +164,10 @@ describe('STAY-ON-THE-FINISH-1 — the screen really makes these decisions', () 
     const src = SRC();
 
     // The gate, and that the navigation is inside it. A transcription that drifts from the source is
-    // worse than no test, so the shape is checked where it lives.
+    // worse than no test, so the shape is checked where it lives. PAUSE-RESUME-1: the timer is the
+    // race clock's pause-aware one now; the gate in front of it is unchanged.
     expect(src, 'the hand-over timer is no longer behind autoAdvanceRef').toMatch(
-      /if \(autoAdvanceRef\.current\) \{[\s\S]{0,400}?finishNavTimerRef\.current = setTimeout\(/
+      /if \(autoAdvanceRef\.current\) \{[\s\S]{0,400}?finishNavTimerRef\.current = raceClock\.setTimeout\(/
     );
     expect(src, "the hand-over no longer navigates to '/results'").toContain(
       "fadeNavRef.current('/results')"

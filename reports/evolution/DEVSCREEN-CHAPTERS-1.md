@@ -718,10 +718,10 @@ numbers are kept so earlier references still find them.
 | 7.18 | Race directors | `UserManagementSection.jsx` | Team | `setNewTeam` (handler) | advanced | The team the new account joins. The picker only lists teams that already exist — pick 'New team…' to found one, which is the only way to type a name. Guards against a typo silently splitting a team in two. | KEPT |
 | 7.19 | Race directors | `UserManagementSection.jsx` | New team name | `setNewTeamName` (handler) | advanced | The name of the team you are founding. Only shown when you picked 'New team…'; the server tags this create request as an explicit new-team act so a typo cannot slip past. | KEPT |
 | 7.20 | Race directors | `UserManagementSection.jsx` | Add User | `handleCreate` (handler) | advanced | Creates the account on the server. | NEW |
-| 7.21 | Backup and reset | `SystemSettings.jsx` | ⬇ Export Settings JSON | `handleExport` (handler) | advanced | Downloads every setting this browser stores — tuning, camera, history and local overrides — as one file you can import later. | REWRITTEN |
-| 7.22 | Backup and reset | `SystemSettings.jsx` | ⬆ Import Settings JSON | `importRef.current?.click` (handler) | advanced | Restores settings from an exported file. Settings the file does not contain are left as they are. | REWRITTEN |
+| 7.21 | Backup and reset | `SystemSettings.jsx` | ⬇ Export Settings JSON | `handleExport` (handler) | advanced | Downloads the settings this browser stores — tuning, camera, race defaults, the race history list and racer-type settings — as one file you can import later. It is not a data backup: tracks, racers, player groups and brands live on the server and are backed up there with npm run backup (source install) or racearena backup (VPS install). | REWRITTEN |
+| 7.22 | Backup and reset | `SystemSettings.jsx` | ⬆ Import Settings JSON | `importRef.current?.click` (handler) | advanced | Restores settings from an exported file. Settings the file does not contain are left as they are. It does not bring back tracks, racers, player groups or brands — those come back only from a server backup. | REWRITTEN |
 | 7.23 | Backup and reset | `SystemSettings.jsx` | 🔬 Export Diagnostic Snapshot | `handleDiagnosticExport` (handler) | advanced | Downloads the browser’s complete stored state, to attach to a bug report so the problem can be reproduced elsewhere. | REWRITTEN |
-| 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, brands and player groups live on the server and are not deleted; only local overrides of them are cleared. | REWRITTEN |
+| 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared. | REWRITTEN |
 
 ---
 
@@ -831,7 +831,9 @@ Nothing below was changed; each is a wording or count matter the build will meet
 - **The System card's description says a reset restores the built-in tracks and racers**
   (`client/src/screens/DevScreen/sections/SystemSettings.jsx:154`), while its tooltip says tracks,
   brands and groups live on the server and are not re-seeded. The design's text for the reset
-  follows the tooltip.
+  follows the tooltip. *Corrected 2026-10-13 on branch `fix/backup-reset-texts`: the card texts and
+  the reset confirmation now say what the browser holds and point to the server backup; rows 7.21,
+  7.22 and 7.24 above carry that branch's info texts.*
 - **Sound effects is reserved**, stored and read by nothing (recorded in the inventory). Its old text
   promised sounds; the new one says plainly that it has no effect yet.
 - **The tooltip guard's narrow shapes miss many stated values.** Existing texts such as "40 is a safe
@@ -1118,3 +1120,83 @@ gained one clause naming the status.
 `/api/health`. The backup and the status: `shared/statusChecks.mjs`, the checks `npm run status`
 runs (extracted from `scripts/status.mjs` so both import them), without the API check. The release:
 `server/src/releaseCheck.js`, only `v<major>.<minor>[.<patch>]` tags are releases.
+
+---
+
+## Phones and tablets — 2026-10-13 (DEVSCREEN-MOBILE-1)
+
+**The decision.** On 2026-10-12 the owner saw the Dev Screen's group cards cut off at the right in
+a narrow window, with no sideways scroll to reach the rest (chapter *Tracks, racers, brands and
+groups*, sub-group *Player groups*). On 2026-10-13 he decided that the Dev Screen must work on a
+smartphone, and therefore on a tablet. Built on branch `feat/devscreen-mobile`; accepted by the
+owner on 2026-10-13 and merged with review/2026-10-13.
+
+**Why the cards were cut off.** `.content` has `overflow-y: auto`, which makes its sideways overflow
+`auto` too: a list row wider than the column scrolled the whole chapter column sideways, and that
+scrollbar sat at the foot of the chapter, a whole chapter further down. List rows (`.row`) did not
+wrap. Measured on master with the 220 px sidebar: the race-director row needed a 1,056 px window,
+the brand row 928 px — rows were already cut off at 1,024 px, not only on a phone.
+
+**Two breakpoints, both below 1280 px** (all rules at the end of `DevScreen.module.css`):
+
+| below | what changes | why this number |
+| --- | --- | --- |
+| **1280 px** | every flex ROW in a chapter wraps (`.row`, `.colorRow`, and the sections' inline `display: flex` rows that are not columns); fields, pictures and canvases never exceed their column; `code` may break anywhere | 1280 px and wider must stay exactly as it was, so nothing applies there; below it the measured overflow above starts (1,056 px). Column boxes are left alone on purpose: a column told to wrap breaks into a second column wherever its height is bounded — the racer tuning dialog did exactly that while this was built |
+| **900 px** | the sidebar becomes a sticky top bar; one column; touch sizes | the sidebar plus the content padding take 220 + 64 = 284 px. The widest piece that cannot wrap is a camera slider row (label 14 rem + slider 8 rem + value 3.5 rem + info icon ≈ 450 px) in a card (+40 px); a two-column form grid needs about 300 px a field. Keeping the sidebar down to 900 px leaves a column of at least 616 px — two 300 px fields side by side. Below it the sidebar would squeeze the column under that, so the screen goes to one column. A tablet held upright (768 px) gets the top bar; one held across (1,024 px) keeps the sidebar |
+
+**The menu (below 900 px).** The top bar shows "⚙️ Dev Panel / Configuration" and a **☰ Menu**
+button (`aria-expanded`, `aria-controls="dev-screen-menu"`; it reads **✕ Close** while open). The
+menu opens under the bar and holds exactly what the sidebar holds, in the same order — the admin's
+*View: All / Operator* switch, the chapters, *← Back to Setup* and *Log out* — so all of it is
+reachable from every chapter, as decided on 2026-10-05. The bar stays at the top while a chapter
+scrolls; the menu scrolls by itself if it is taller than the screen. Choosing a chapter closes the
+menu and starts the chapter at its top. The markup is the sidebar's own: the items sit in one
+`#dev-screen-menu` box that is `display: contents` on a wide screen (it takes no part in the layout)
+and the toggle is `display: none` there — so the chapter guard, which reads `nav [data-control-id]`,
+sees the same three controls in the same place and is unchanged, and `design.json`'s placement is
+unchanged.
+
+**One column, tables, touch.** Below 900 px the content padding is 1 rem, cards 1 rem, every
+`.formGrid` one column, and the surface-class editor's list sits above the editor instead of beside
+it (`.classSplit` / `.classList` / `.classDetail`, the same values the inline styles had). The three
+`.table`s — race history, period evaluation, installation status — sit in a `.tableScroll` box that
+scrolls sideways by itself; a table that fits shows no scrollbar. Buttons, fields, option pills, the
+nav entries and the view switch are at least 44 px high, icon-only buttons and steppers 44 px
+square. The racer tuning dialog's sliders may shrink (`min-width: 0`), so their values stay inside
+the dialog at 390 px.
+
+**Desktop unchanged, measured.** Every chapter, All and Operator view, at 1280 and 1440 px, full-page
+screenshots of master's build and of this branch's build, compared pixel by pixel (threshold 0):
+**0 differing pixels** in every chapter except three places that also differ between two runs of
+master's own build — the *Installation status* clock time (Accounts and system), the animated
+surface-class *Live Preview* canvas (Look, labels and effects), and the view switch's colour
+transition (2 px). Screenshots stay outside the repository.
+
+**The browser check — `client/e2e/devscreen-narrow.spec.js`, in the Browser gate.** At 390 px
+(phone) and 768 px (tablet), in the All view and the Operator view: the menu holds the sidebar's
+controls; in every chapter the page does not scroll sideways, and every control of `design.json` for
+that chapter and view, brought into view, lies on the screen, is cut off by no clipping ancestor, and
+no box other than one around a table scrolls sideways. Forms are opened as a person would (the first
+group, track and brand in edit, an open track, the race director's reset form and "New team…", a new
+surface class through every generator, the racer tuning dialog). The design rows the e2e
+installation cannot show are listed in the spec with their reason (no race run yet, no custom racer
+type or surface class, no overrides, no brand logo); any other row not reached fails it. The Player
+groups cards are checked by name, before anything is scrolled: each card's right edge is on the
+screen. Sabotaged twice: the old fixed 220 px sidebar beside the content below 900 px — red at
+390 px in both views (413 and 32 unreachable controls, e.g. *"main … scrolls sideways (256 > 170)"*);
+rows not wrapping — red, *"Player groups card 1: right edge on the screen — Expected: <= 390,
+Received: 656.6"*, and at 768 px *"main … scrolls sideways (825 > 768)"* in Accounts and system.
+Restored: 6 of 6 green.
+
+**Accessibility (axe-core 4.10.2, WCAG 2.0/2.1 A and AA — the AUDIT-1 A8 tag set).** Run on
+`/dev` chapter by chapter, All and Operator view, at 390, 768 and 1280 px, on this branch and on
+master's build. *The race* — the chapter `/dev` opens on, which is what AUDIT-1 A8 measured — has
+**0 violations** at every width in both views, as on master. The other chapters carry violations
+that are **already on master at 1280 px, the same rules and the same counts** (label 23,
+nested-interactive 6 and select-name 1 in *Camera*; label 7 and colour contrast 2 in *Look*;
+colour contrast 19 in *Tracks, racers, brands and groups*; label 1, select-name 1 and colour
+contrast 1 in *History*; colour contrast 3 in *Accounts*). At 390 px this branch shows exactly
+the desktop counts, where master showed one colour-contrast finding fewer in three chapters —
+those elements were cut off the screen there, and axe does not judge text it cannot see. No rule
+is new. AUDIT-1 ran axe on the opening chapter only, so these were never recorded; they are
+**noticed and left** here (not this piece's scope) and named for the owner.
