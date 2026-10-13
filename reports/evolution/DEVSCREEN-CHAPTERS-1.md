@@ -642,7 +642,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 4.63 | Brands | `BrandingProfiles.jsx` | Sponsor Text | `sponsorText` (configKey) | operator | A short sponsor line shown in the race intro and on the result screen. Keep it short so it fits on one line. | REWRITTEN |
 | 4.64 | Brands | `BrandingProfiles.jsx` | Upload Logo | `fileRef.current?.click` (handler) | operator | Picks a logo image to show during races. A small image with a transparent background works best. | REWRITTEN |
 | 4.65 | Brands | `BrandingProfiles.jsx` | Remove logo (✕) | `handleRemoveLogo` (handler) | operator | Removes the logo from this brand. | NEW |
-| 4.66 | Brands | `BrandingProfiles.jsx` | Logo Size | `logoMaxHeight` (configKey) | operator | How tall the logo is drawn during races. | NEW |
+| 4.66 | Brands | `BrandingProfiles.jsx` | Logo Size | `logoMaxHeight` (configKey) | operator | How tall the logo is drawn during races on a desktop-size screen. On a smaller screen, such as a phone, it is drawn proportionally smaller. | NEW |
 | 4.67 | Brands | `BrandingProfiles.jsx` | Logo Opacity | `logoOpacity` (configKey) | operator | How see-through the logo is, from invisible to solid. | NEW |
 | 4.68 | Brands | `BrandingProfiles.jsx` | Create Profile / Save Changes | `handleSave` (handler) | operator | Stores the brand on the server. A headline and a name are required. | NEW |
 | 4.69 | Brands | `BrandingProfiles.jsx` | Cancel (brand form) | `handleCancel` (handler) | operator | Closes the form without saving. | NEW |

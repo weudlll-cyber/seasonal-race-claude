@@ -1929,6 +1929,37 @@ proposal arriving again in six months looking new.
       [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2 *Backups*. Text only; no behaviour moved. Pinned by
       `SystemSettings.texts.test.jsx`. The `V-5` sitting in the Phase V row is unaffected — it is
       still owed. Source: [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md), the `V-5` finding.
+- [x] **Brand logo sized to the race picture — BUILT 2026-10-13 on branch fix/brand-logo-scale and
+      MERGED the same day (the owner asked that day for it to be finished and merged).** Observed by the owner on 2026-10-13: in phone mode (Chrome device
+      mode, iPhone 12 Pro) the race screen's brand logo was far too large, about a third of the race
+      picture. **The cause:** the corner logo (`BrandLogoOverlay.jsx`, a DOM `<img>` over the canvas,
+      not a canvas draw) took the profile's `logoMaxHeight` in CSS pixels at every size, while the
+      picture shrinks with the window — measured in Chromium at a 390 px window, a 90 px logo on a
+      370x209 picture, 43% of its height. **Built:** the logo's height is a proportion of the
+      picture's shorter side, capped at `logoMaxHeight`, so it is today's size on every desktop
+      picture and proportionally smaller below; the rule and its number live in
+      `client/src/screens/RaceScreen/brandLogoSize.js`, the picture is measured from the overlay's
+      parent and followed with a `ResizeObserver`. The corner and margin were already percentages of
+      the picture (COORD-SYSTEM-1) and stay so. No new setting. **Measured:** pixel compare of the
+      race picture with only the logo shown, before and after, at 1920 and 1280 px windows: 0
+      differing pixels (at 1280 the same tree also produced a second, 4,255-pixel variant inside the
+      logo between two runs, so that noise is not the change); at 390 px the logo goes from 90x90 to
+      34.5x34.5 CSS px, 43% to 17% of the picture's height. Held by `BrandLogoOverlay.test.jsx`
+      (sabotaged red) and an upper-bound assertion in `overlayGeometry.test.js`. All four
+      fingerprints reproduce their record. **The other two brand logos were checked and need no
+      change** (measured in Chromium, 2026-10-13): the result screen's top-left logo is hidden by
+      `ResultScreen.css`'s narrow-viewport media query, so at a 390x844 window there is no logo
+      (none at 768x1024 either); where it shows (820x1180, 844x390, 1024x768, 1280x720, 1920x1080)
+      it is 210x210 CSS px on a results card that is 583 px tall at every one of those sizes, so its
+      share of the card is the desktop share. The opening brand card's logo is sized in percentages
+      of the race picture: 86.9 px on a 370x209 picture at 390x844 (41.6%), 244.8 px on a
+      1038x585 picture at 1280x720 (41.9%) — already proportional. The Dev Screen's *Logo Size*
+      info text now says the size applies on a desktop-size screen and the logo is drawn
+      proportionally smaller on a smaller one (`controlInfo.js`, with its DEVSCREEN-CHAPTERS-1 row).
+      **Noticed, not built:** on a phone held sideways (844x390) the whole results card (583 px
+      tall) does not fit the window and its title is clipped above the top edge — a layout question
+      for the result screen as a whole, not a logo-size one. *(verify: the owner's look in phone
+      mode and on a desktop window)*
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`

@@ -544,7 +544,8 @@ export const CONTROL_INFO = {
   'BrandingProfiles:fileRef.current?.click':
     'Picks a logo image to show during races. A small image with a transparent background works best.',
   'BrandingProfiles:handleRemoveLogo': 'Removes the logo from this brand.',
-  'BrandingProfiles:logoMaxHeight': 'How tall the logo is drawn during races.',
+  'BrandingProfiles:logoMaxHeight':
+    'How tall the logo is drawn during races on a desktop-size screen. On a smaller screen, such as a phone, it is drawn proportionally smaller.',
   'BrandingProfiles:logoOpacity': 'How see-through the logo is, from invisible to solid.',
   'BrandingProfiles:handleSave':
     'Stores the brand on the server. A headline and a name are required.',

@@ -3440,7 +3440,7 @@
     "id": "logoMaxHeight",
     "idKind": "configKey",
     "tier": "operator",
-    "infoText": "How tall the logo is drawn during races.",
+    "infoText": "How tall the logo is drawn during races on a desktop-size screen. On a smaller screen, such as a phone, it is drawn proportionally smaller.",
     "textStatus": "NEW"
   },
   {
