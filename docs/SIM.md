@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **228 files that can change the race** — the engine's own imports AND the imports of every
+the **229 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -288,6 +288,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/nameTagLayout.js` | WHICH name tags are drawn this frame, decided in SCREEN space (CAMERA-TAGS-1). |
 | `screens/RaceScreen/perfLog.js` | Per-frame timing ring buffer for stutter diagnosis. |
 | `screens/RaceScreen/raceCamera.js` | The camera a browser race is filmed with, built and SEEDED once at race start: the CameraDirector with the race's world and corridor width, its random seed derived from the race… |
+| `screens/RaceScreen/raceClock.js` | The race screen's pause-aware clock. |
 | `screens/RaceScreen/raceLoopDiagnostics.js` | The READ-ONLY diagnostics RaceScreen's frame loop writes for its dev HUDs and its browser-test probes: the GovernorDiagHUD snapshot, the hold probe, the Race-Plan per-step reado… |
 | `screens/RaceScreen/racePhase.js` | RENDER-FINGERPRINT-1 |
 | `screens/RaceScreen/raceResults.js` | The hand-over from the race screen to the result screen: the finish order and the `raceResults` payload RaceScreen writes to sessionStorage on the frame the last racer crosses. |
@@ -359,7 +360,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 | `shared/playerNames.mjs` | PERIOD-EVALUATION-1 (the owner's decisions of 2026-10-04) |
 
-228 files, 24 of them UNKNOWN.
+229 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 
