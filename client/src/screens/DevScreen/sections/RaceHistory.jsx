@@ -8,7 +8,7 @@
 //              button that runs it again.
 //
 // ── ★ WHY THIS SCREEN AND NOT A NEW ONE (RACE-HISTORY-4) ────────────────────────────────────────
-// The history already lived here, and this section is `tier: 'operator'` (DevScreen.jsx:95) behind
+// The history already lived here, and this section is `tier: 'operator'` (devScreenChapters.js:212) behind
 // a `/dev` route with no `requiredRole` — so every race director already reaches it, which is the
 // owner's requirement. There was no admin-only problem to solve and therefore no reason to build a
 // second history somewhere else. It is EXTENDED in place, and the tree has exactly one race list.
@@ -477,79 +477,81 @@ function RaceHistory() {
               : 'No races recorded yet. Races will appear here after they finish.'}
           </p>
         ) : (
-          <table className={s.table} data-testid="race-history-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Track</th>
-                <th>Duration</th>
-                <th>Players</th>
-                <th>Winners</th>
-                <th>Key</th>
-                <th> </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const track = trackFor(row);
-                const label = STATE_LABEL[row.state] ?? STATE_LABEL.local;
-                return (
-                  <tr key={row.rowId} data-testid={`history-row-${row.state}`}>
-                    <td>{new Date(row.date).toLocaleString()}</td>
-                    <td>
-                      {track ? `${track.icon} ${track.name}` : (row.trackId ?? row.geometryId)}
-                    </td>
-                    <td>{row.duration != null ? `${row.duration}s` : '—'}</td>
-                    <td>{row.playerCount}</td>
-                    <td>{row.winners.join(', ')}</td>
-                    <td>
-                      {row.shortKey ? (
-                        <code data-testid="short-key" style={{ letterSpacing: '1px' }}>
-                          {row.shortKey}
-                        </code>
-                      ) : (
-                        // ★ NO KEY, AND IT SAYS WHY. A race that has not reached the server has no
-                        // key to show, and showing a blank cell would let it read as stored.
-                        <span
-                          data-testid="row-state"
-                          title={row.syncError ?? undefined}
-                          style={{ color: label.color, fontSize: '0.72rem' }}
-                        >
-                          {label.text}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <Ctl id="RaceHistory:run-again">
-                        <button
-                          className={`${s.btn} ${s.btnGhost}`}
-                          data-testid="run-again"
-                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
-                          // A race with no recorded inputs — an entry from before RACE-SAVE-3 — cannot
-                          // be repeated, and the button says so rather than starting something else.
-                          disabled={!row.inputs}
-                          title={
-                            row.inputs
-                              ? 'Runs this race again exactly as it ran, whatever this machine is set to now.'
-                              : 'This race was recorded before its settings were kept, so it cannot be repeated exactly.'
-                          }
-                          onClick={() => handleRepeat(row)}
-                        >
-                          Run again
-                        </button>
-                      </Ctl>
-                      {isAdmin && row.state === 'stored' && row.shortKey && (
-                        <VerifyCell
-                          state={verifications[row.shortKey]}
-                          onVerify={() => handleVerify(row.shortKey)}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className={s.tableScroll}>
+            <table className={s.table} data-testid="race-history-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Track</th>
+                  <th>Duration</th>
+                  <th>Players</th>
+                  <th>Winners</th>
+                  <th>Key</th>
+                  <th> </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const track = trackFor(row);
+                  const label = STATE_LABEL[row.state] ?? STATE_LABEL.local;
+                  return (
+                    <tr key={row.rowId} data-testid={`history-row-${row.state}`}>
+                      <td>{new Date(row.date).toLocaleString()}</td>
+                      <td>
+                        {track ? `${track.icon} ${track.name}` : (row.trackId ?? row.geometryId)}
+                      </td>
+                      <td>{row.duration != null ? `${row.duration}s` : '—'}</td>
+                      <td>{row.playerCount}</td>
+                      <td>{row.winners.join(', ')}</td>
+                      <td>
+                        {row.shortKey ? (
+                          <code data-testid="short-key" style={{ letterSpacing: '1px' }}>
+                            {row.shortKey}
+                          </code>
+                        ) : (
+                          // ★ NO KEY, AND IT SAYS WHY. A race that has not reached the server has no
+                          // key to show, and showing a blank cell would let it read as stored.
+                          <span
+                            data-testid="row-state"
+                            title={row.syncError ?? undefined}
+                            style={{ color: label.color, fontSize: '0.72rem' }}
+                          >
+                            {label.text}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <Ctl id="RaceHistory:run-again">
+                          <button
+                            className={`${s.btn} ${s.btnGhost}`}
+                            data-testid="run-again"
+                            style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+                            // A race with no recorded inputs — an entry from before RACE-SAVE-3 — cannot
+                            // be repeated, and the button says so rather than starting something else.
+                            disabled={!row.inputs}
+                            title={
+                              row.inputs
+                                ? 'Runs this race again exactly as it ran, whatever this machine is set to now.'
+                                : 'This race was recorded before its settings were kept, so it cannot be repeated exactly.'
+                            }
+                            onClick={() => handleRepeat(row)}
+                          >
+                            Run again
+                          </button>
+                        </Ctl>
+                        {isAdmin && row.state === 'stored' && row.shortKey && (
+                          <VerifyCell
+                            state={verifications[row.shortKey]}
+                            onVerify={() => handleVerify(row.shortKey)}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {/* ★ Paginated from the first version, even with three rows. */}
