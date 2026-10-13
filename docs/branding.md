@@ -40,7 +40,7 @@ form is full CRUD. Every saved profile has the following fields
 | `sponsorText`    | string       | Sponsor credit text. Displayed as a grey footer strip on the ResultScreen ([`ResultScreen/index.jsx:351`](../client/src/screens/ResultScreen/index.jsx#L351)).                                                                                                                                                                                                                       |
 | `logo`           | string       | Base64 data URL of an image. Shown as corner logo overlay during races (bottom-right) and as a top-left absolute overlay on the ResultScreen.                                                                                                                                                                                                                                        |
 | `isDefault`      | boolean      | UI star indicator only — **does NOT drive activation** (see below).                                                                                                                                                                                                                                                                                                                  |
-| `logoMaxHeight`  | number (px)  | Max height of the in-race corner logo. Range 40–160. Default `90`. It is the logo's height on a desktop-size race picture and its CAP: a smaller picture (a phone) draws the logo proportionally smaller — the rule is [`brandLogoSize.js`](../client/src/screens/RaceScreen/brandLogoSize.js) (BRAND-LOGO-SCALE-1). Not used on ResultScreen (which uses a fixed 210px max). |
+| `logoMaxHeight`  | number (px)  | Max height of the in-race corner logo. Range 40–160. Default `90`. It is the logo's height on a desktop-size race picture and its CAP: a smaller picture (a phone) draws the logo proportionally smaller — the rule is [`brandLogoSize.js`](../client/src/screens/RaceScreen/brandLogoSize.js) (BRAND-LOGO-SCALE-1). The Dev Screen's *Logo Size* info text says so: the size applies on a desktop-size screen and the logo is drawn proportionally smaller on a smaller one. Not used on ResultScreen (which uses a fixed 210px max). |
 | `logoOpacity`    | number (0–1) | Opacity of the logo in both in-race overlay and ResultScreen. Default `0.9`.                                                                                                                                                                                                                                                                                                         |
 | `logoCorner`     | string       | In-race logo position. Supported values: `'bottom-right'` (default), `'top-right'`. The renderer selects from a lookup map with `'bottom-right'` as fallback ([`BrandLogoOverlay.jsx` → `CORNER_STYLES`](../client/src/screens/RaceScreen/BrandLogoOverlay.jsx#L21-L34)). Position is **data-driven, not hardcoded**. What is missing is a UI control in BrandingProfiles to set it; see §4. |
 
@@ -215,9 +215,17 @@ The ResultScreen is no longer a bare `<h1>`. As of `b9a2f03`:
   ([`index.jsx` → `raceSeed`](../client/src/screens/ResultScreen/index.jsx#L237-L262)).
 - **Logo top-left**: when the active profile has a logo, it is rendered as a `position: absolute`
   overlay in the top-left corner of the results card, outside the vertical flow
-  ([`ResultScreen/index.jsx:264–274`](../client/src/screens/ResultScreen/index.jsx#L264-L274),
+  ([`ResultScreen/index.jsx:291–301`](../client/src/screens/ResultScreen/index.jsx#L291-L301),
   [`ResultScreen.css:76–89`](../client/src/screens/ResultScreen/ResultScreen.css#L76-L89)).
-  Uses `logoOpacity` from the profile; fixed max of 210 px (not `logoMaxHeight`).
+  Uses `logoOpacity` from the profile; fixed max of 210 px (not `logoMaxHeight`). **It does not
+  follow `brandLogoSize.js`, and does not need to** (BRAND-LOGO-SCALE-1, checked 2026-10-13): the
+  narrow-viewport media query in `ResultScreen.css` hides it on a phone held upright and on a narrow
+  tablet, so at a 390 px window there is no logo to shrink; where it shows, the results card it
+  sits on is not scaled either, so the logo keeps the same share of the card it has on a desktop.
+- **Opening brand card** ([`CeremonyBrandCard.css`](../client/src/screens/RaceScreen/CeremonyBrandCard.css)):
+  the start ceremony's logo is sized in percentages of the race picture, so it is already
+  proportional at every size and needs no rule of its own — measured 2026-10-13 at a 390 px
+  window, the same share of the picture's height the stylesheet gives it on a desktop.
 - **Podium** (ranks 1–3): animated slots with racer icon, name, and finish time
   ([`index.jsx` → `Action`](../client/src/screens/ResultScreen/index.jsx#L276-L321)).
 - **Scrollable rank panel** (ranks 4+): fixed-height panel showing 5 rows before scrolling
