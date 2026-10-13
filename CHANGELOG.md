@@ -19,7 +19,7 @@ is.
   the Space key, in the countdown and during the race. While paused everything stands still — the
   racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the
   same race, with the same result as if it had never paused, and the paused time is not counted in
-  the race's time. Not available once the last racer is home. *(branch `feat/pause-resume`)*
+  the race's time. Not available once the last racer is home. *(on `master`, 2026-10-13)*
 - One-command install on a single rented server: one `install.sh` asks for the domain, an e-mail
   address and the first admin, then installs Docker, a firewall that lets in only SSH, HTTP and
   HTTPS, and automatic security updates. *(branch `feat/vps-install`)*
@@ -65,13 +65,13 @@ is.
   Menu button holding the view switch, the chapters, Back to Setup and Log out; the chapter shows
   in one column, wide tables scroll inside their own box, and buttons and fields are big enough for
   a finger. Below 1280 px nothing in a chapter is cut off at the right any more — the Player groups
-  cards included. At 1280 px and wider the screen looks as before. *(branch `feat/devscreen-mobile`)*
+  cards included. At 1280 px and wider the screen looks as before. *(on `master`, 2026-10-13)*
 - The Dev Screen's *Backup and reset* texts say what they really cover: the export, import and
   reset act only on the settings stored in that browser; tracks, racers, player groups and brands
   live on the server and are backed up with `npm run backup` (or `racearena backup` on the VPS
   install), as the operator guide's *Backups* section describes. They used to claim the browser
   file held tracks, racers, groups and branding, and that a reset restored built-in tracks and
-  racers. Text only. *(branch `fix/backup-reset-texts`)*
+  racers. Text only. *(on `master`, 2026-10-13)*
 - The brand logo in the corner of the race picture is sized to the picture: on a phone it is
   proportionally smaller instead of covering about a third of the race, and on a desktop window it
   is exactly as large as before. The brand's logo size setting is still the logo's size on a
