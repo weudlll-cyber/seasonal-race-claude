@@ -58,9 +58,10 @@ export const OVERLAY_ANCHORS = {
     rightFrac: 16 / 1280,
     bottomFrac: 16 / 720,
     // Intrinsic size — the logo defaults to `logoMaxHeight` = 90 CSS px, and this is measured, not
-    // asserted: the `<img>` shrinks a wide logo to fit that height. 90 CSS px is a size that lives
-    // outside the coordinate rule and drifts vs canvas pixels — a size question, not a position
-    // one, and the guard below only checks positioning.
+    // asserted: the `<img>` shrinks a wide logo to fit that height. 90 CSS px is the logo's CAP:
+    // since BRAND-LOGO-SCALE-1 a picture shorter than `FULL_SIZE_SHORT_SIDE_CSS_PX`
+    // (`brandLogoSize.js`) draws it smaller, so this box is an upper bound at every size and the guard below stays conservative.
+    // It is a size question, not a position one, and the guard only checks positioning.
     widthCssPxAt1x: 90,
     heightCssPxAt1x: 90,
   },

@@ -328,7 +328,9 @@ Branding profiles, stored on the server (`brands.js`). One profile is active per
 | Logo max height | `logoMaxHeight` | 90 | no | **MATCHES** |
 | Logo opacity | `logoOpacity` | 0.9 | no | **MATCHES** |
 
-Readers: `BrandLogoOverlay.jsx` and `overlayGeometry.js` for the logo trio, `CeremonyBrandCard.jsx`
+Readers: `BrandLogoOverlay.jsx` and `overlayGeometry.js` for the logo trio (the height through
+`brandLogoSize.js` since BRAND-LOGO-SCALE-1: `logoMaxHeight` is the cap, a small race picture draws the
+logo smaller), `CeremonyBrandCard.jsx`
 and the result screen for the text and colours, `SetupScreen.jsx` for the subtitle and sponsor text
 that travel with the race.
 

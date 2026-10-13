@@ -72,6 +72,10 @@ is.
   install), as the operator guide's *Backups* section describes. They used to claim the browser
   file held tracks, racers, groups and branding, and that a reset restored built-in tracks and
   racers. Text only. *(branch `fix/backup-reset-texts`)*
+- The brand logo in the corner of the race picture is sized to the picture: on a phone it is
+  proportionally smaller instead of covering about a third of the race, and on a desktop window it
+  is exactly as large as before. The brand's logo size setting is still the logo's size on a
+  desktop and now also its upper limit. *(branch `fix/brand-logo-scale`)*
 
 ### Security
 

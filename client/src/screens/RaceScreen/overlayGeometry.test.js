@@ -28,6 +28,7 @@ import {
   overlayRectCssPxShipped,
   rectsOverlap,
 } from './overlayGeometry.js';
+import { brandLogoMaxHeightPx } from './brandLogoSize.js';
 
 const SIZES = [
   { name: 'canvas 1:1', wrapperCssW: 1280, wrapperCssH: 720 },
@@ -122,6 +123,15 @@ describe('COORD-SYSTEM-1 — the overlap guard, and it can fail by sabotage', ()
   //      guard reads it at every size, because a percentage mistake goes wrong equally on all of
   //      them (that is the whole point of a percentage — and its cost when it is wrong).
   // If the guard cannot catch either, it is telling the eye nothing the eye did not already know.
+
+  // BRAND-LOGO-SCALE-1: the guard's logo box is the CAP. On a narrow picture the real logo is
+  // smaller than it, so "no overlap with the cap" covers the real logo too.
+  it('the brand logo box the guard uses is an upper bound: a phone picture draws it smaller', () => {
+    const bl = OVERLAY_ANCHORS.brandLogoBottomRight;
+    const phone = { wrapperCssW: 368, wrapperCssH: 207 };
+    const drawn = brandLogoMaxHeightPx(bl.heightCssPxAt1x, phone.wrapperCssW, phone.wrapperCssH);
+    expect(drawn).toBeLessThan(bl.heightCssPxAt1x);
+  });
 
   it('SABOTAGE: the original WinnerCard position overlaps the minimap on the owner size', () => {
     const size = SIZES[1];

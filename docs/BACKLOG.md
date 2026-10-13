@@ -1925,6 +1925,25 @@ proposal arriving again in six months looking new.
       [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2 *Backups*. Text only; no behaviour moved. Pinned by
       `SystemSettings.texts.test.jsx`. The `V-5` sitting in the Phase V row is unaffected — it is
       still owed. Source: [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md), the `V-5` finding.
+- [x] **Brand logo sized to the race picture — BUILT 2026-10-13 on branch fix/brand-logo-scale,
+      awaiting the owner's look.** Observed by the owner on 2026-10-13: in phone mode (Chrome device
+      mode, iPhone 12 Pro) the race screen's brand logo was far too large, about a third of the race
+      picture. **The cause:** the corner logo (`BrandLogoOverlay.jsx`, a DOM `<img>` over the canvas,
+      not a canvas draw) took the profile's `logoMaxHeight` in CSS pixels at every size, while the
+      picture shrinks with the window — measured in Chromium at a 390 px window, a 90 px logo on a
+      370x209 picture, 43% of its height. **Built:** the logo's height is a proportion of the
+      picture's shorter side, capped at `logoMaxHeight`, so it is today's size on every desktop
+      picture and proportionally smaller below; the rule and its number live in
+      `client/src/screens/RaceScreen/brandLogoSize.js`, the picture is measured from the overlay's
+      parent and followed with a `ResizeObserver`. The corner and margin were already percentages of
+      the picture (COORD-SYSTEM-1) and stay so. No new setting. **Measured:** pixel compare of the
+      race picture with only the logo shown, before and after, at 1920 and 1280 px windows: 0
+      differing pixels (at 1280 the same tree also produced a second, 4,255-pixel variant inside the
+      logo between two runs, so that noise is not the change); at 390 px the logo goes from 90x90 to
+      34.5x34.5 CSS px, 43% to 17% of the picture's height. Held by `BrandLogoOverlay.test.jsx`
+      (sabotaged red) and an upper-bound assertion in `overlayGeometry.test.js`. All four
+      fingerprints reproduce their record. *(verify: the owner's look in phone mode and on a desktop
+      window)*
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
