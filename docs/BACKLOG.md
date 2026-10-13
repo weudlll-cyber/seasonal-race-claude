@@ -1302,7 +1302,9 @@ already-settled questions.
 
 **Refactor chunks (high structural debt — addressed in upcoming phases):**
 
-- **Q-19 — `TrackEditor.effects.test.jsx` flaky** — ★★ **MEASURED 2026-09-24: 0 failures in 20 full
+- ~~**Q-19 — `TrackEditor.effects.test.jsx` flaky**~~ — ✅ **CLOSED 2026-10-13 AS FIXED, by the owner's
+  decision on the history in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §3** (PART TWO has the
+  closing entry). Before that: ★★ **MEASURED 2026-09-24: 0 failures in 20 full
   parallel suite runs. NARROWED, NOT CLOSED.**
   The measurement this item has been waiting on since 2026-08-23 has been taken: twenty full client
   suite runs against an unchanged tree, counting, no retries. **20 GREEN, and the suspect file did
@@ -1435,7 +1437,14 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "RangeSliderSection" -- client/src` still returns nothing.
 
-- **V-1** — PlayerSetup B-1 loading-saved-lists bug. **ITS BLOCKER IS GONE — B-1 SHIPPED** in the
+★ **2026-10-13 — the owner closed V-1, V-2, V-6, V-7 and V-8 as obsolete or covered, and kept V-5 and
+V-9 as one short sitting with him** (PART ONE row *Owner sitting: V-5 backup/restore/reset and V-9
+fullscreen*; the reasons for each id are in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2).
+Each entry below is marked with its fate; the text under it is the history.
+
+- ~~**V-1**~~ — ✅ **CLOSED 2026-10-13, obsolete:** the code it checks is gone — saved player lists
+  became server-side player groups (`999f45ed`, `aea89b22`), covered by `playerGroups.test.jsx`.
+  PlayerSetup B-1 loading-saved-lists bug. **ITS BLOCKER IS GONE — B-1 SHIPPED** in the
   B-Wave (PR #25, master `697e081`), recorded in *Completed Items* above. **So this is no longer
   "cannot start"; it is an unperformed verification of shipped work**, which is a different and much
   cheaper thing. Re-sorted 2026-08-23 (BACKLOG-SORT-42).
@@ -1443,7 +1452,8 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** it is a manual UI check of shipped work. Waiting on somebody performing it.
 
-- **V-2** — TrackSelector B-2 custom track behavior. **ITS BLOCKER IS GONE — B-2 IS CLOSED**
+- ~~**V-2**~~ — ✅ **CLOSED 2026-10-13, covered:** `SetupScreen.test.jsx` checks the refusal of a track
+  whose geometry is missing. TrackSelector B-2 custom track behavior. **ITS BLOCKER IS GONE — B-2 IS CLOSED**
   (`5bde5a94`, QUIET-FAILURES-1); see the struck entry above. **This is now an unperformed
   verification of shipped work:** select a track whose geometry is missing and confirm Start is
   refused with a reason rather than starting the wrong race mode. Re-sorted 2026-08-23
@@ -1461,19 +1471,23 @@ already-settled questions.
   setting; the podium is three places everywhere (`PODIUM_PLACES`, `shared/podium.mjs`). The verify
   above now finds nothing, which is the point.
 
-- **V-5** — System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
+- **V-5** — ★ **KEPT 2026-10-13 for the owner sitting** (PART ONE). System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
   downstream of B-5** above. *(Its "data loss risk" note still stands as the REASON B-5 is worth
   doing, which is why this line is kept rather than struck.)*
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** not independently open — it lives or dies with B-5 above.
 
-- **V-6** — Multiple dev panel sections — visual verification
+- ~~**V-6**~~ — ✅ **CLOSED 2026-10-13, obsolete:** the Dev Screen was rebuilt (DEVSCREEN-CHAPTERS-1), the
+  owner looked at it and accepted it on 2026-10-05, and `devScreenChapters.guard.test.jsx` holds every
+  control in place. Multiple dev panel sections — visual verification
 
-- **V-7** — Physics + collision behavior — smoke test
+- ~~**V-7**~~ — ✅ **CLOSED 2026-10-13, covered:** `goldenRealArm`, `repeatRace`, `raceStep`, the avoidance
+  tests and the fingerprint record. Physics + collision behavior — smoke test
 
-- **V-8** — localStorage persistence edge cases — stress test
+- ~~**V-8**~~ — ✅ **CLOSED 2026-10-13, obsolete as written:** it names no specific edge case;
+  `storage.test.js` covers quota and corrupt JSON. localStorage persistence edge cases — stress test
 
-- **V-9** — Fullscreen toggle — functionally unverified
+- **V-9** — ★ **KEPT 2026-10-13 for the owner sitting** (PART ONE). Fullscreen toggle — functionally unverified
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired at `RaceScreen/index.jsx:1763` and `:1765`, so what is unverified is the behaviour, not the existence.)*
 
@@ -1828,29 +1842,19 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
 a row here; the detail stays where it already lives in this part. *(Pause and resume, the first of
-the three, was built on 2026-10-13 and is in PART TWO.)*
+the three, was built on 2026-10-13 and is in PART TWO; `Q-19` was closed as fixed the same day, and
+the Phase V sittings narrowed to the one row below.)*
 
-- [ ] **The Phase V verification sittings — his eye.** Manual checks of shipped work that nobody has
-      performed: loading a saved player list (`V-1`), a track with missing geometry being refused
-      (`V-2`), backup → restore → reset end to end (`V-5`/`B-5`), the Dev Screen sections (`V-6`),
-      physics and collisions (`V-7`), storage edge cases (`V-8`), fullscreen (`V-9`). Each entry is
-      in this part under its id. Proposal 2026-10-12 (OLD-ITEMS-1): narrow it — close `V-1`, `V-6`
-      and `V-8` as obsolete and `V-2` and `V-7` as covered by tests, and keep `V-5` and `V-9` as one
-      15-minute sitting or one browser spec, `V-5` with the finding that the backup texts promise
-      tracks, racers, groups and branding that live on the server
-      ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2). *(verify: each id recorded as
-      performed, with the date and the result)*
-- [ ] **`Q-19` — the `TrackEditor.effects.test.jsx` flake, NARROWED and not closed.** 0 failures in 20
-      local full-suite runs (2026-09-24), and 0 in the 62 CI runs since then in which the client suite
-      ran (all 62 green; the 4 red CI runs of that period failed in the audit gate or the script
-      suite, not here) — 0 in 82. A one-in-five flake is refuted; a one-in-fifty one would still be
-      missed 19% of the time (0.98^82). Its own rule stands: close it on a much larger N, or when the
-      file goes. The entry is under *Phase Q* in this part. Proposal 2026-10-12 (OLD-ITEMS-1): close
-      as fixed — both causes ever named were fixed in code (`00e09ba0`, `ac8d50c5`), the last
-      recorded failure is 2026-05-16, and 20 more runs of the file alone were green (0 in 102,
-      0.98^102 ≈ 13%); by this row's own rule it is 48 runs from 150
-      ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §3). *(verify: a recorded N at which a
-      one-in-fifty flake would be missed less than 5% of the time — 150 runs — with 0 failures)*
+- [ ] **Owner sitting: V-5 backup/restore/reset and V-9 fullscreen (about 15 minutes).** Decided
+      2026-10-13: of the Phase V verification sittings only these two stay, as one short sitting with
+      the owner after the block of 2026-10-13; `V-1`, `V-2`, `V-6`, `V-7` and `V-8` were closed that
+      day as obsolete or covered (*Phase V* in this part, reasons in
+      [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2). **V-5:** take a browser backup on the Dev
+      Screen, restore it, then reset, and check each does what its text says (the texts are corrected
+      on branch `fix/backup-reset-texts`, 2026-10-13); the server data — tracks, racers, player groups
+      and brands — is backed up with `npm run backup` / `racearena backup`, not by the browser.
+      **V-9:** fullscreen on the race screen goes in and out cleanly. *(verify: both recorded as
+      performed with the owner, with the date and the result)*
 
 ---
 
@@ -1885,6 +1889,24 @@ proposal arriving again in six months looking new.
       and the OLD-ITEMS-1 proposal of 2026-10-12 to ask him, which he answered on 2026-10-13.*
       *(verify: in the browser, Pause or Space during a race freezes the picture and the race clock;
       Resume continues the same race, and its result equals the same seed unpaused)*
+- [x] **`Q-19` — the `TrackEditor.effects.test.jsx` flake — CLOSED 2026-10-13 AS FIXED, by the owner's
+      decision on the history in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §3.** Both causes
+      ever named were fixed in code — `vi.unstubAllGlobals()` in `trackLoader.test.js` (`00e09ba0`,
+      2026-05-02) and the FileReader spy race (`ac8d50c5`, 2026-06-08); the last recorded failure is
+      2026-05-16; 0 failures in 102 runs since (20 full-suite runs 2026-09-24, 62 CI runs, 20 runs of
+      the file alone 2026-10-12). The row's own 150-run rule is set aside by that decision, not met.
+      The row as it stood: *"`Q-19` — the `TrackEditor.effects.test.jsx` flake, NARROWED and not
+      closed — 0 in 82 … close it on a much larger N, or when the file goes."*
+
+- [x] **The Phase V verification sittings — NARROWED 2026-10-13 by the owner's decision.** `V-1`
+      (obsolete: saved lists became server-side player groups), `V-2` (covered:
+      `SetupScreen.test.jsx`), `V-6` (obsolete: the Dev Screen was rebuilt and accepted on
+      2026-10-05, held by its chapter guard), `V-7` (covered: the golden, repeat, step and avoidance
+      tests and the fingerprint record) and `V-8` (obsolete as written; `storage.test.js` covers quota
+      and corrupt JSON) are closed — reasons in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2.
+      `V-5` and `V-9` stay open as one PART ONE row, *Owner sitting: V-5 backup/restore/reset and V-9
+      fullscreen (about 15 minutes)*.
+
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
       printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, both sheet rows NOT
