@@ -1913,6 +1913,18 @@ proposal arriving again in six months looking new.
       sabotaged red twice). Breakpoints, menu and measurements:
       [DEVSCREEN-CHAPTERS-1](../reports/evolution/DEVSCREEN-CHAPTERS-1.md), "Phones and tablets".
       *(verify: the owner's look on a phone or a narrow window)*
+- [x] **Dev Screen backup and reset texts corrected — BUILT 2026-10-13 on branch
+      fix/backup-reset-texts, awaiting the owner's look.** The owner decided on 2026-10-13 that the
+      *Backup and reset* texts state what the browser backup and the reset really cover and point
+      to the server backup. The card description, the reset card, the reset confirmation, the reset
+      alert and the export, import and reset info texts now say that the export holds only the
+      settings this browser stores (`exportAllStorage`, `client/src/modules/storage/storage.js`),
+      that the reset wipes those and writes back the race defaults and an empty race history list,
+      and that tracks, racers, player groups and brands live on the server and are backed up with
+      `npm run backup` (source install) or `racearena backup` (VPS install), naming
+      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2 *Backups*. Text only; no behaviour moved. Pinned by
+      `SystemSettings.texts.test.jsx`. The `V-5` sitting in the Phase V row is unaffected — it is
+      still owed. Source: [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md), the `V-5` finding.
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`

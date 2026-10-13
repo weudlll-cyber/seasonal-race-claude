@@ -66,6 +66,12 @@ is.
   in one column, wide tables scroll inside their own box, and buttons and fields are big enough for
   a finger. Below 1280 px nothing in a chapter is cut off at the right any more — the Player groups
   cards included. At 1280 px and wider the screen looks as before. *(branch `feat/devscreen-mobile`)*
+- The Dev Screen's *Backup and reset* texts say what they really cover: the export, import and
+  reset act only on the settings stored in that browser; tracks, racers, player groups and brands
+  live on the server and are backed up with `npm run backup` (or `racearena backup` on the VPS
+  install), as the operator guide's *Backups* section describes. They used to claim the browser
+  file held tracks, racers, groups and branding, and that a reset restored built-in tracks and
+  racers. Text only. *(branch `fix/backup-reset-texts`)*
 
 ### Security
 

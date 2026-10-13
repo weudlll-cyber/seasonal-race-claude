@@ -718,10 +718,10 @@ numbers are kept so earlier references still find them.
 | 7.18 | Race directors | `UserManagementSection.jsx` | Team | `setNewTeam` (handler) | advanced | The team the new account joins. The picker only lists teams that already exist — pick 'New team…' to found one, which is the only way to type a name. Guards against a typo silently splitting a team in two. | KEPT |
 | 7.19 | Race directors | `UserManagementSection.jsx` | New team name | `setNewTeamName` (handler) | advanced | The name of the team you are founding. Only shown when you picked 'New team…'; the server tags this create request as an explicit new-team act so a typo cannot slip past. | KEPT |
 | 7.20 | Race directors | `UserManagementSection.jsx` | Add User | `handleCreate` (handler) | advanced | Creates the account on the server. | NEW |
-| 7.21 | Backup and reset | `SystemSettings.jsx` | ⬇ Export Settings JSON | `handleExport` (handler) | advanced | Downloads every setting this browser stores — tuning, camera, history and local overrides — as one file you can import later. | REWRITTEN |
-| 7.22 | Backup and reset | `SystemSettings.jsx` | ⬆ Import Settings JSON | `importRef.current?.click` (handler) | advanced | Restores settings from an exported file. Settings the file does not contain are left as they are. | REWRITTEN |
+| 7.21 | Backup and reset | `SystemSettings.jsx` | ⬇ Export Settings JSON | `handleExport` (handler) | advanced | Downloads the settings this browser stores — tuning, camera, race defaults, the race history list and racer-type settings — as one file you can import later. It is not a data backup: tracks, racers, player groups and brands live on the server and are backed up there with npm run backup (source install) or racearena backup (VPS install). | REWRITTEN |
+| 7.22 | Backup and reset | `SystemSettings.jsx` | ⬆ Import Settings JSON | `importRef.current?.click` (handler) | advanced | Restores settings from an exported file. Settings the file does not contain are left as they are. It does not bring back tracks, racers, player groups or brands — those come back only from a server backup. | REWRITTEN |
 | 7.23 | Backup and reset | `SystemSettings.jsx` | 🔬 Export Diagnostic Snapshot | `handleDiagnosticExport` (handler) | advanced | Downloads the browser’s complete stored state, to attach to a bug report so the problem can be reproduced elsewhere. | REWRITTEN |
-| 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, brands and player groups live on the server and are not deleted; only local overrides of them are cleared. | REWRITTEN |
+| 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared. | REWRITTEN |
 
 ---
 
@@ -831,7 +831,9 @@ Nothing below was changed; each is a wording or count matter the build will meet
 - **The System card's description says a reset restores the built-in tracks and racers**
   (`client/src/screens/DevScreen/sections/SystemSettings.jsx:154`), while its tooltip says tracks,
   brands and groups live on the server and are not re-seeded. The design's text for the reset
-  follows the tooltip.
+  follows the tooltip. *Corrected 2026-10-13 on branch `fix/backup-reset-texts`: the card texts and
+  the reset confirmation now say what the browser holds and point to the server backup; rows 7.21,
+  7.22 and 7.24 above carry that branch's info texts.*
 - **Sound effects is reserved**, stored and read by nothing (recorded in the inventory). Its old text
   promised sounds; the new one says plainly that it has no effect yet.
 - **The tooltip guard's narrow shapes miss many stated values.** Existing texts such as "40 is a safe

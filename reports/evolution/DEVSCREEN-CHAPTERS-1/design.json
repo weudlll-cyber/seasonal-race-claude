@@ -4136,7 +4136,7 @@
     "id": "handleExport",
     "idKind": "handler",
     "tier": "advanced",
-    "infoText": "Downloads every setting this browser stores — tuning, camera, history and local overrides — as one file you can import later.",
+    "infoText": "Downloads the settings this browser stores — tuning, camera, race defaults, the race history list and racer-type settings — as one file you can import later. It is not a data backup: tracks, racers, player groups and brands live on the server and are backed up there with npm run backup (source install) or racearena backup (VPS install).",
     "textStatus": "REWRITTEN"
   },
   {
@@ -4148,7 +4148,7 @@
     "id": "importRef.current?.click",
     "idKind": "handler",
     "tier": "advanced",
-    "infoText": "Restores settings from an exported file. Settings the file does not contain are left as they are.",
+    "infoText": "Restores settings from an exported file. Settings the file does not contain are left as they are. It does not bring back tracks, racers, player groups or brands — those come back only from a server backup.",
     "textStatus": "REWRITTEN"
   },
   {
@@ -4172,7 +4172,7 @@
     "id": "handleReset",
     "idKind": "handler",
     "tier": "advanced",
-    "infoText": "Wipes every setting this browser stores and starts again from shipped values. Tracks, brands and player groups live on the server and are not deleted; only local overrides of them are cleared.",
+    "infoText": "Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared.",
     "textStatus": "REWRITTEN"
   }
 ]
