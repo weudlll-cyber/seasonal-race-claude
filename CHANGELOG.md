@@ -56,6 +56,12 @@ is.
   Editor dropdowns carry their label. The setup screen fits a 390 px phone; the three "cannot delete
   a default" messages are in English; five Dev Screen help texts now match what ships.
   *(on `master`, 2026-10-12)*
+- The Dev Screen's *Backup and reset* texts say what they really cover: the export, import and
+  reset act only on the settings stored in that browser; tracks, racers, player groups and brands
+  live on the server and are backed up with `npm run backup` (or `racearena backup` on the VPS
+  install), as the operator guide's *Backups* section describes. They used to claim the browser
+  file held tracks, racers, groups and branding, and that a reset restored built-in tracks and
+  racers. Text only. *(branch `fix/backup-reset-texts`)*
 
 ### Security
 

@@ -647,11 +647,11 @@ export const CONTROL_INFO = {
     "The name of the team you are founding. Only shown when you picked 'New team…'; the server tags this create request as an explicit new-team act so a typo cannot slip past.",
   'UserManagementSection:handleCreate': 'Creates the account on the server.',
   'SystemSettings:handleExport':
-    'Downloads every setting this browser stores — tuning, camera, history and local overrides — as one file you can import later.',
+    'Downloads the settings this browser stores — tuning, camera, race defaults, the race history list and racer-type settings — as one file you can import later. It is not a data backup: tracks, racers, player groups and brands live on the server and are backed up there with npm run backup (source install) or racearena backup (VPS install).',
   'SystemSettings:importRef.current?.click':
-    'Restores settings from an exported file. Settings the file does not contain are left as they are.',
+    'Restores settings from an exported file. Settings the file does not contain are left as they are. It does not bring back tracks, racers, player groups or brands — those come back only from a server backup.',
   'SystemSettings:handleDiagnosticExport':
     'Downloads the browser’s complete stored state, to attach to a bug report so the problem can be reproduced elsewhere.',
   'SystemSettings:handleReset':
-    'Wipes every setting this browser stores and starts again from shipped values. Tracks, brands and player groups live on the server and are not deleted; only local overrides of them are cleared.',
+    'Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared.',
 };

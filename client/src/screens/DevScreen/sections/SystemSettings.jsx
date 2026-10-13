@@ -3,8 +3,8 @@
 // Path:        client/src/screens/DevScreen/sections/SystemSettings.jsx
 // Project:     RaceArena
 // Created:     2026-04-19
-// Description: System-level controls — export/import full JSON backup, reset
-//              to factory defaults, and app version info
+// Description: Export/import/reset of the settings THIS BROWSER stores, and app version info.
+//              Not a data backup: the server's data is backed up by `npm run backup`.
 // ============================================================
 
 import { useRef } from 'react';
@@ -77,7 +77,7 @@ function SystemSettings() {
   function handleReset() {
     if (
       !window.confirm(
-        'Reset ALL settings to factory defaults? This deletes all custom tracks, racers, groups, and branding. This cannot be undone.'
+        'Reset all settings stored in this browser to factory defaults? This deletes this browser’s tuning, camera settings, race defaults, race history list and racer-type settings. Tracks, racers, player groups and brands live on the server and are not deleted. This cannot be undone.'
       )
     )
       return;
@@ -91,7 +91,7 @@ function SystemSettings() {
     // A local reset must not re-activate the old localStorage source.
     // BRANDING intentionally omitted — brands live on the server after D4.
     storageSet(KEYS.RACE_HISTORY, DEFAULT_RACE_HISTORY);
-    window.alert('All settings reset to defaults. The page will reload.');
+    window.alert('All settings stored in this browser reset to defaults. The page will reload.');
     window.location.reload();
   }
 
@@ -101,8 +101,14 @@ function SystemSettings() {
       <div className={s.card}>
         <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Backup &amp; Restore</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Export all settings (tracks, racers, groups, branding, history) to a JSON file, or restore
-          from a previous backup.
+          Export the settings this browser stores — tuning, camera, race defaults, the race history
+          list and racer-type settings — to a JSON file, or import one back. This file does not back
+          up tracks, racers, player groups or brands: they live on the server, and importing the
+          file does not bring them back. Back them up on the server with{' '}
+          <code style={{ fontSize: '0.75rem' }}>npm run backup</code> (source install) or{' '}
+          <code style={{ fontSize: '0.75rem' }}>racearena backup</code> (VPS install); the operator
+          guide, docs/OPERATOR-GUIDE.md, section “Daily operation”, part “Backups”, covers every
+          install path.
         </p>
         <div className={s.btnRow}>
           <Ctl id="SystemSettings:handleExport">
@@ -149,8 +155,12 @@ function SystemSettings() {
       <div className={s.card}>
         <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Factory Reset</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Wipes all saved settings and restores the 5 built-in tracks, 5 built-in racers, and all
-          default values. Use with caution.
+          Wipes the settings this browser stores and starts again from the shipped values: the race
+          defaults are written back and the race history list starts empty. Tracks, racers, player
+          groups and brands live on the server — the reset neither deletes nor restores them; back
+          them up with <code style={{ fontSize: '0.75rem' }}>npm run backup</code> or{' '}
+          <code style={{ fontSize: '0.75rem' }}>racearena backup</code>. Track shapes this browser
+          keeps are left alone. Use with caution.
         </p>
         <Ctl id="SystemSettings:handleReset">
           <button className={`${s.btn} ${s.btnDanger}`} onClick={handleReset}>
