@@ -830,7 +830,8 @@ cannot change a finish order or a finish time; and because the paused time is ta
 (the 50 ms catch-up cap above) stops only the physics, so it is not the mechanism.
 
 **The boundary.** Available from the countdown until the last racer crosses (`PHASE.FINISHED`); the
-ending after that and the result screen have no pause.
+ending after that and the result screen have no pause. The owner decided on 2026-10-13, when he
+accepted it, that this scope stays: pause does not need to work in the ending.
 
 ## Camera System
 

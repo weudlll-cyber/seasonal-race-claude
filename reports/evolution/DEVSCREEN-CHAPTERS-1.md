@@ -1128,7 +1128,8 @@ runs (extracted from `scripts/status.mjs` so both import them), without the API 
 **The decision.** On 2026-10-12 the owner saw the Dev Screen's group cards cut off at the right in
 a narrow window, with no sideways scroll to reach the rest (chapter *Tracks, racers, brands and
 groups*, sub-group *Player groups*). On 2026-10-13 he decided that the Dev Screen must work on a
-smartphone, and therefore on a tablet. Built on branch `feat/devscreen-mobile`, awaiting his look.
+smartphone, and therefore on a tablet. Built on branch `feat/devscreen-mobile`; accepted by the
+owner on 2026-10-13 and merged with review/2026-10-13.
 
 **Why the cards were cut off.** `.content` has `overflow-y: auto`, which makes its sideways overflow
 `auto` too: a list row wider than the column scrolled the whole chapter column sideways, and that

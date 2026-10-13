@@ -1268,7 +1268,7 @@ already-settled questions.
 ### Phase B (Wiring Gaps + UX Improvements)
 
 - ~~**B-UX-Pause** — Pause + resume race~~ — **BUILT 2026-10-13 on branch `feat/pause-resume`,
-  awaiting the owner's look.** Moved to PART TWO, *Pause and resume a running race*, with its
+  accepted by the owner the same day and merged with review/2026-10-13.** Moved to PART TWO, *Pause and resume a running race*, with its
   original description.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
@@ -1840,8 +1840,8 @@ the Phase V sittings narrowed to the one row below.)*
       the owner after the block of 2026-10-13; `V-1`, `V-2`, `V-6`, `V-7` and `V-8` were closed that
       day as obsolete or covered (*Phase V* in this part, reasons in
       [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2). **V-5:** take a browser backup on the Dev
-      Screen, restore it, then reset, and check each does what its text says (the texts are corrected
-      on branch `fix/backup-reset-texts`, 2026-10-13); the server data — tracks, racers, player groups
+      Screen, restore it, then reset, and check each does what its text says (the texts were corrected
+      on 2026-10-13, accepted by the owner and merged); the server data — tracks, racers, player groups
       and brands — is backed up with `npm run backup` / `racearena backup`, not by the browser.
       **V-9:** fullscreen on the race screen goes in and out cleanly. *(verify: both recorded as
       performed with the owner, with the date and the result)*
@@ -1858,7 +1858,9 @@ rule outlives the item.
 proposal arriving again in six months looking new.
 
 - [x] **Pause and resume a running race (`B-UX-Pause`) — BUILT 2026-10-13 on branch
-      `feat/pause-resume`, awaiting the owner's look.** The owner decided on 2026-10-13 that he
+      `feat/pause-resume`; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged with
+      it.** ★ **Scope decided 2026-10-13:** pause does NOT need to work in the ending after the last
+      racer crosses; the built scope — from the countdown until the last crossing — stays. The owner decided on 2026-10-13 that he
       wants it: a Pause/Resume button beside Cancel Race and Fullscreen, and the Space key; while
       paused everything stands still (racers, camera, effects, the race clock) under a large
       semi-transparent "PAUSED"; available in the countdown and the race, not on the result screen;
@@ -1897,7 +1899,8 @@ proposal arriving again in six months looking new.
       `V-5` and `V-9` stay open as one PART ONE row, *Owner sitting: V-5 backup/restore/reset and V-9
       fullscreen (about 15 minutes)*.
 - [x] **The Dev Screen cuts its group cards off on a narrow window — BUILT 2026-10-13 on branch
-      `feat/devscreen-mobile`, awaiting the owner's look.** Observed by the owner on 2026-10-12
+      `feat/devscreen-mobile`; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged
+      with it.** Observed by the owner on 2026-10-12
       while looking at review/2026-10-12: in a narrow window the Player groups cards were cut off at
       the right, with no horizontal scroll to reach the rest. **Decided by the owner on 2026-10-13:
       the Dev Screen must work on a smartphone, and therefore on a tablet.** The cause: list rows did
@@ -1912,9 +1915,10 @@ proposal arriving again in six months looking new.
       All and Operator view, every design control reachable, each Player groups card on screen;
       sabotaged red twice). Breakpoints, menu and measurements:
       [DEVSCREEN-CHAPTERS-1](../reports/evolution/DEVSCREEN-CHAPTERS-1.md), "Phones and tablets".
-      *(verify: the owner's look on a phone or a narrow window)*
+      *(verify: the owner's look on a phone or a narrow window — done 2026-10-13, accepted)*
 - [x] **Dev Screen backup and reset texts corrected — BUILT 2026-10-13 on branch
-      fix/backup-reset-texts, awaiting the owner's look.** The owner decided on 2026-10-13 that the
+      fix/backup-reset-texts; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged
+      with it.** The owner decided on 2026-10-13 that the
       *Backup and reset* texts state what the browser backup and the reset really cover and point
       to the server backup. The card description, the reset card, the reset confirmation, the reset
       alert and the export, import and reset info texts now say that the export holds only the
