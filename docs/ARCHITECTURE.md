@@ -833,6 +833,26 @@ cannot change a finish order or a finish time; and because the paused time is ta
 ending after that and the result screen have no pause. The owner decided on 2026-10-13, when he
 accepted it, that this scope stays: pause does not need to work in the ending.
 
+### The app's fullscreen (FULLSCREEN-USEFUL-1, built 2026-10-17 on `feat/fullscreen-useful`)
+
+The race screen's fullscreen button (`toggleFullscreen`) puts the screen element into the browser's
+fullscreen. Until 2026-10-17 that changed only the padding, so the picture — a fixed 16:9 canvas sized
+by width, beside the 210 px standings column — gained only height it could not use. The owner decided
+on 2026-10-17 to try a different fullscreen, and it is built (unmerged, his eye owed — the
+FULLSCREEN-USEFUL-1 row in BACKLOG.md PART ONE):
+
+- **The picture** is the largest 16:9 box that fits inside the 6 px fullscreen padding, centred both
+  ways, black around it. Only the wrapper's CSS width changes; the canvas store and the
+  one-coordinate rule are untouched, so everything inside the wrapper scales with it.
+- **The standings column** leaves the layout, waits off the right edge at full height, and slides in
+  over the picture when the pointer reaches a thin strip along the right edge; it closes a short delay
+  after the pointer leaves it. By touch, a tap on the strip opens it and a tap outside closes it.
+- It is driven by the `race-layout--fullscreen` / `race-layout--hud-open` classes from the component's
+  `isFullscreen` state, not by `:fullscreen` alone; outside the app's fullscreen nothing changes, and
+  leaving fullscreen by any door closes the drawer. The browser's own fullscreen (F11) is not the
+  app's fullscreen and keeps the normal layout. The strip width, slide time and close delay are
+  constants in `RaceScreen/index.jsx` (`FS_HUD_*`), not settings; the CSS is `RaceScreen.css`.
+
 ## Camera System
 
 Canonical reference: **[CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md)**. The description that used to sit

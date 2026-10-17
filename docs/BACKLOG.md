@@ -434,7 +434,7 @@ in the reports named; this is the map, not a second home.
 
 | what | where it stands, at source |
 | --- | --- |
-| **Cancel Race** — the open half of PR-G | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** ★ **This row was half wrong and the correction is the finding:** there is no `cancelRace` symbol (0 hits, all spellings), but a control that ends the race and returns to Setup ALREADY existed in the race HUD. What it did not do was leave FULLSCREEN, and it is the only screen that can. The fullscreen half is wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`, re-verified 2026-09-05 *(on 2026-10-17 at `:1486` and `:1488`, inside `toggleFullscreen`)*. |
+| **Cancel Race** — the open half of PR-G | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** ★ **This row was half wrong and the correction is the finding:** there is no `cancelRace` symbol (0 hits, all spellings), but a control that ends the race and returns to Setup ALREADY existed in the race HUD. What it did not do was leave FULLSCREEN, and it is the only screen that can. The fullscreen half is wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`, re-verified 2026-09-05 *(on 2026-10-17 at `:1486` and `:1488`, inside `toggleFullscreen`; since FULLSCREEN-USEFUL-1, 2026-10-17, at `:1563` and `:1565`)*. |
 | **TLH-3** — offline fallback + status banner | **BANNER BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** `defaultTracks.js` still does not exist and was not created. ★ **The FALLBACK was already in the tree** — the track list falls back to `getCachedServerTracks()`, the geometry comes from localStorage, results come from sessionStorage, and the built-in racer types are static exports. What was missing was the TELLING: every failure was announced to the CONSOLE. So only the banner was built, per the brief's own rule against inventing work to fill a piece. |
 | **A short race identifier to replace the seed** | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed, AND ONE DECISION IS HIS.** All three addresses re-verified: `SetupScreen.jsx:533` fixes the plan; `RaceScreen/index.jsx:476` and `:483` gathered config from the HOST'S storage, which is why one seed on two machines was two races. The identifier encodes all nine engine inputs EXACTLY — the config as a diff against the shipped defaults, which is lossless because those defaults are in the build, with a build stamp that REFUSES a foreign build rather than reproducing it wrongly. ★ **IT IS NOT TYPABLE, and that is his call, not a defect to fix by making it lossy:** measured at **210 characters for 4 racers, 450 for 20, 743 for 40** on shipped defaults. |
 | **The comeback BEATS reaching the camera** | **MEASURED 2026-09-05 — D33's "measure first" is DONE and the decision is now his.** `comebackDetector.js:64-75` still keeps `role === 'comebacker'` and drops the `beats` array, and the beats were deliberately NOT passed through. Over N=40 the plan wrote 74 comebackers and the camera showed 11: it never names the wrong racer (0 of 11) and is early EVERY time (11 of 11, median 9.90 s before the resolve beat). The beats die in the DIRECTOR'S weighted contest, not in the detector. [COMEBACK-BEATS-1](../reports/night/COMEBACK-BEATS-1.md). |
@@ -1024,7 +1024,7 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765` *(as of 2026-09-02; on 2026-10-17 they are at `:1486` and `:1488`, inside `toggleFullscreen`)*; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765` *(as of 2026-09-02; on 2026-10-17 they are at `:1486` and `:1488`, inside `toggleFullscreen`, and since FULLSCREEN-USEFUL-1 the same day at `:1563` and `:1565`)*; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
 
 ---
 
@@ -1492,7 +1492,7 @@ Each entry below is marked with its fate; the text under it is the history.
 - ~~**V-9**~~ — ✅ **CLOSED 2026-10-17 by the owner sitting** (PART TWO, *Owner sitting: V-5 and V-9*):
   pause works in fullscreen, and Cancel Race leaves the app's own fullscreen. Fullscreen toggle — functionally unverified
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired — in `toggleFullscreen`, `RaceScreen/index.jsx:1484`, at `:1486` and `:1488`, re-cited 2026-10-17; the verdict named `:1763` and `:1765`, which moved — so what is unverified is the behaviour, not the existence.)* ★ **All four are closed:** V-6 on 2026-10-13, V-9 by the owner sitting of 2026-10-17.
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired — in `toggleFullscreen`, `RaceScreen/index.jsx:1561`, at `:1563` and `:1565`, re-cited 2026-10-17 after FULLSCREEN-USEFUL-1 (`:1484`, `:1486`, `:1488` before it); the verdict named `:1763` and `:1765`, which moved — so what is unverified is the behaviour, not the existence.)* ★ **All four are closed:** V-6 on 2026-10-13, V-9 by the owner sitting of 2026-10-17.
 
 ### Phase T (Tooltip Retrofit)
 
@@ -1831,6 +1831,33 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
+### Built 2026-10-17, his eye owed
+
+- [ ] **FULLSCREEN-USEFUL-1 — a fullscreen the race picture can use. BUILT on branch
+      `feat/fullscreen-useful`, UNMERGED — his eye owed.** The facts of 2026-10-17: in the race
+      screen's own fullscreen the race picture was exactly as large as outside it. The picture is a
+      fixed 16:9 canvas sized by WIDTH (`RaceScreen.css`, `.race-canvas` width 100% / height auto), the
+      grid kept the 210 px standings column (`.race-layout`, `1fr 210px`) and the screen is
+      top-aligned (`.screen--race`, `align-items: flex-start`); fullscreen changed only the padding
+      (`.screen--race:fullscreen`). So fullscreen gained only height, which the picture cannot use; on
+      the owner's window that left a dark band of roughly a quarter of the height below the picture.
+      The owner decided on 2026-10-17 to try this: in fullscreen the standings column is hidden off the
+      right edge and slides in when the mouse reaches the right edge.
+      **Built, only while the app's fullscreen is active** (the `isFullscreen` state of
+      `RaceScreen/index.jsx`, set by its `fullscreenchange` listener, puts `race-layout--fullscreen` on
+      the layout): the picture is the largest 16:9 box inside the 6 px fullscreen padding, centred,
+      black around it; the standings column is fixed to the right edge at full height, off-screen, and
+      slides in over the picture (`race-layout--hud-open`) when the pointer enters a 16 px strip along
+      the right edge, stays while the pointer is over it, and slides out 800 ms after the pointer
+      leaves it (slide 200 ms) — by touch, a tap on the strip opens it and a tap outside closes it.
+      Leaving fullscreen by any door closes it. Outside the app's fullscreen, and in F11, nothing
+      changes (0 differing pixels at 1280x720 and 1920x1080, frozen page). Measured in headless
+      Chromium in real fullscreen: at 1920x1080 the picture goes from 1678x945 CSS px (125 px empty
+      below) to 1897x1068; at 1909x1168 from 1667x939 (219 px empty below) to 1897x1068, 50 px black
+      above and below. Held by `fullscreenDrawer.test.jsx` (component) and
+      `client/e2e/race-fullscreen.spec.js` (Browser gate).
+      *(verify: the owner looks at the race in the app's fullscreen and accepts or rejects it)*
+
 ---
 
 # PART TWO — CLOSED
@@ -1850,7 +1877,7 @@ proposal arriving again in six months looking new.
       the done message (`SystemSettings.jsx`, `handleReset` at `:77`); after the reload, tracks and
       racers were present and a race ran. **V-9:** pause works in fullscreen. Cancel Race while in the
       app's own fullscreen (the race screen's fullscreen button, `toggleFullscreen`,
-      `RaceScreen/index.jsx:1484`) leaves fullscreen (`cancelRace`'s `exitFullscreen`). In the
+      `RaceScreen/index.jsx:1561` since FULLSCREEN-USEFUL-1, `:1484` at the sitting) leaves fullscreen (`cancelRace`'s `exitFullscreen`). In the
       browser's own fullscreen (F11) it stays in fullscreen — a page cannot leave browser fullscreen, so
       this is expected and not a defect. The *Phase V* entries `V-5` and `V-9` in this part are marked
       closed by this sitting. The row as it stood: *"Owner sitting: V-5 backup/restore/reset and V-9

@@ -6,6 +6,9 @@
 // Description: Live race canvas with scrolling camera (open tracks),
 //              TV camera director (closed tracks), multi-lap support,
 //              fullscreen toggle, and fade-to-black navigation.
+//              FULLSCREEN-USEFUL-1 (2026-10-17): in the app's fullscreen the picture is the
+//              largest 16:9 box that fits and the standings column becomes a drawer off the
+//              right edge (see "FULLSCREEN-USEFUL-1" below and RaceScreen.css).
 //
 // ★ WHAT THIS FILE OWNS SINCE P4-RACESCREEN-SPLIT-1 (2026-10-02). The React component — its state,
 //   refs and effects, the race-init effect that wires one race together, the rAF loop (phase
@@ -148,6 +151,21 @@ const CANVAS_H = 720;
 // when rAF alternates between 16ms and 33ms frames.
 const FIXED_DT = 16;
 
+// ── FULLSCREEN-USEFUL-1 (built 2026-10-17): the standings drawer in the app's fullscreen ─────────
+// In the app's own fullscreen the picture takes the largest 16:9 box the screen allows and the
+// standings column (`.race-hud`) leaves the layout: it waits off the right edge and slides in OVER
+// the picture when the pointer reaches that edge. These three numbers are UI chrome, not race
+// settings, so they are constants here and not Dev Screen keys.
+//   FS_HUD_STRIP_PX       the invisible hot strip along the right edge that opens the column.
+//                         Wide enough to hit with a flung mouse, narrow enough not to cover the
+//                         picture's last column of pixels noticeably.
+//   FS_HUD_SLIDE_MS       the slide in / out; handed to the CSS as `--fs-hud-slide`.
+//   FS_HUD_CLOSE_DELAY_MS how long the column stays after the pointer leaves it, so a pointer that
+//                         slips off the edge for a moment does not make it flap.
+const FS_HUD_STRIP_PX = 16;
+const FS_HUD_SLIDE_MS = 200;
+const FS_HUD_CLOSE_DELAY_MS = 800;
+
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
   const fadeNavRef = useRef(fadeNavigate);
@@ -244,6 +262,15 @@ export default function RaceScreen() {
     []
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // FULLSCREEN-USEFUL-1: whether the standings drawer is out. Only ever read through `hudDrawerOpen`
+  // below, which also requires fullscreen, so a stale `true` can never show outside it.
+  const [hudOpen, setHudOpen] = useState(false);
+  const hudRef = useRef(null);
+  const hudStripRef = useRef(null);
+  // The close delay is a plain timeout, NOT the race clock: `raceClock` is race time and stops while
+  // the race is paused, and the drawer must still close on a paused race — this is UI chrome on the
+  // wall clock, like the button hover transitions.
+  const hudCloseTimerRef = useRef(null);
   // PAUSE-RESUME-1: the race screen's clock, one per mount — `raceClock.paused` is THE paused flag.
   // `paused` below only mirrors it for the render (the button's label and the overlay); both are
   // set by `togglePause` and nowhere else.
@@ -385,12 +412,62 @@ export default function RaceScreen() {
     }
   }, [phase]);
 
-  // ── Fullscreen listener ──────────────────────────────────────────────────
-  useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  // ── FULLSCREEN-USEFUL-1: the standings drawer ────────────────────────────
+  // Open on the hot strip, stay open while the pointer is over the column, close a short delay after
+  // it leaves. Touch has no hover, so a tap on the strip opens it and a tap outside the column closes
+  // it (the effect after the fullscreen listener); a touch's own `pointerleave` is ignored.
+  const cancelHudClose = useCallback(() => {
+    clearTimeout(hudCloseTimerRef.current);
+    hudCloseTimerRef.current = null;
   }, []);
+  const openHud = useCallback(() => {
+    cancelHudClose();
+    setHudOpen(true);
+  }, [cancelHudClose]);
+  const closeHudNow = useCallback(() => {
+    cancelHudClose();
+    setHudOpen(false);
+  }, [cancelHudClose]);
+  const onHudPointerLeave = (e) => {
+    if (!isFullscreen || e.pointerType === 'touch') return;
+    cancelHudClose();
+    hudCloseTimerRef.current = setTimeout(() => {
+      hudCloseTimerRef.current = null;
+      setHudOpen(false);
+    }, FS_HUD_CLOSE_DELAY_MS);
+  };
+  const hudDrawerOpen = isFullscreen && hudOpen;
+
+  // ── Fullscreen listener ──────────────────────────────────────────────────
+  // FULLSCREEN-USEFUL-1: leaving fullscreen by ANY door (the button, Esc, Cancel Race, the race end)
+  // arrives here, and it closes the drawer and drops its timer in the same breath — so the next
+  // fullscreen starts with the column hidden and never half-open. The cleanup does the same for an
+  // unmount.
+  useEffect(() => {
+    const onFsChange = () => {
+      const on = !!document.fullscreenElement;
+      setIsFullscreen(on);
+      if (!on) closeHudNow();
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      cancelHudClose();
+    };
+  }, [closeHudNow, cancelHudClose]);
+
+  // FULLSCREEN-USEFUL-1: a tap (or click) anywhere outside the open column closes it at once. Only
+  // listened for while the drawer is out; the strip is excluded so the tap that opened it does not
+  // close it again.
+  useEffect(() => {
+    if (!hudDrawerOpen) return undefined;
+    const onDown = (e) => {
+      if (hudRef.current?.contains(e.target) || hudStripRef.current?.contains(e.target)) return;
+      closeHudNow();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [hudDrawerOpen, closeHudNow]);
 
   // ── PAUSE-RESUME-1: pause and resume ─────────────────────────────────────
   //
@@ -1505,7 +1582,8 @@ export default function RaceScreen() {
   //     camera markers and the effect instances — all released by the animation effect's own
   //     cleanup on unmount (the race-loop effect's `return () => {…}`), which navigating away runs. Nothing to do here, and doing
   //     it here as well would be a second owner for state that already has one.
-  //   * the `fullscreenchange` listener — removed by its own effect cleanup.
+  //   * the `fullscreenchange` listener — removed by its own effect cleanup, which also drops the
+  //     standings drawer's close timer (FULLSCREEN-USEFUL-1); leaving fullscreen closes the drawer.
   //   * ★ FULLSCREEN ITSELF — nobody unwound this, and it is the whole reason this function exists.
   //     `toggleFullscreen` above puts the document into fullscreen on `screenRef`; leaving the
   //     screen does not take it out, so the operator landed back on Setup with the browser still
@@ -1631,7 +1709,16 @@ export default function RaceScreen() {
 
   return (
     <div ref={screenRef} className={`screen screen--race${paused ? ' race-is-paused' : ''}`}>
-      <div className="race-layout">
+      {/* FULLSCREEN-USEFUL-1: the fullscreen layout is driven by these CLASSES, set from
+          `isFullscreen`, not by the `:fullscreen` pseudo-class alone — so it is testable, and so
+          outside the app's fullscreen the element is exactly what it was (no class, no style). */}
+      <div
+        className={`race-layout${isFullscreen ? ' race-layout--fullscreen' : ''}${
+          hudDrawerOpen ? ' race-layout--hud-open' : ''
+        }`}
+        data-testid="race-layout"
+        style={isFullscreen ? { '--fs-hud-slide': `${FS_HUD_SLIDE_MS}ms` } : undefined}
+      >
         <div
           className="race-canvas-wrapper"
           onMouseDown={onCanvasMouseDown}
@@ -1718,7 +1805,26 @@ export default function RaceScreen() {
           )}
         </div>
 
-        <aside className="race-hud">
+        {/* FULLSCREEN-USEFUL-1: the invisible hot strip along the right edge. Rendered only in the
+            app's fullscreen; a pointer entering it, or a tap on it, brings the column out. */}
+        {isFullscreen && (
+          <div
+            ref={hudStripRef}
+            className="race-fs-hud-strip"
+            data-testid="race-fs-hud-strip"
+            style={{ width: FS_HUD_STRIP_PX }}
+            onPointerEnter={openHud}
+            onPointerDown={openHud}
+          />
+        )}
+
+        <aside
+          ref={hudRef}
+          className="race-hud"
+          data-testid="race-hud"
+          onPointerEnter={isFullscreen ? cancelHudClose : undefined}
+          onPointerLeave={isFullscreen ? onHudPointerLeave : undefined}
+        >
           {/* The SAME control and the same one effect throughout; only its name follows what it is
               doing. While the race is running it cancels one, and saying "← Setup" was the reason
               the fullscreen leak went unnoticed — it read as navigation. Once every racer is home
