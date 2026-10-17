@@ -58,8 +58,7 @@ is.
   picture is as large as the screen allows, centred, with black around it, and the standings column
   is hidden off the right edge — move the mouse to the right edge to slide it in over the picture
   (on a touch screen, tap the right edge; tap elsewhere to close it). Outside that fullscreen, and in
-  the browser's own fullscreen (F11), the race screen is unchanged. *(branch
-  `feat/fullscreen-useful`)*
+  the browser's own fullscreen (F11), the race screen is unchanged. *(on `master`, 2026-10-18)*
 - A source install (the plain-Node path) needs Node 22 or newer; it said 20, which no longer
   receives security fixes. The Docker image already runs Node 24. *(on `master`, 2026-10-12)*
 - The Dev Screen is easier to read and to use with a screen reader: the active view toggle and the

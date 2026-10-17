@@ -1728,7 +1728,7 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 
 - Strecken-Wähler (track-picker diagnose tool) Phase 2 — optional extension of the completed Phase 1 (closed-track selection with per-track caps from finish math); scope undefined, non-mandatory
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (all five):** the scope of each is undecided, which is the section's own name. Waiting on somebody deciding the scope. *(Phase 5, i18n, multi-tenant and mobile tuning are duplicated as planned work in Phases 5–7 above; that overlap is recorded, not resolved here.)*
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (all five):** the scope of each is undecided, which is the section's own name. Waiting on somebody deciding the scope. *(Phase 5, i18n, multi-tenant and mobile tuning are duplicated as planned work in Phases 5–7 above; that overlap is recorded, not resolved here.)* *(i18n: decided 2026-10-18 — the owner decided that the whole game stays English-only, so there is nothing to plan; see the closed i18n entry in PART TWO.)*
 
 ---
 
@@ -1831,10 +1831,19 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
-### Built 2026-10-17, his eye owed
+---
 
-- [ ] **FULLSCREEN-USEFUL-1 — a fullscreen the race picture can use. BUILT on branch
-      `feat/fullscreen-useful`, UNMERGED — his eye owed.** The facts of 2026-10-17: in the race
+# PART TWO — CLOSED
+
+**Nothing here is deleted** — that is the owner's decision of 2026-08-23 (D4 below). Every item
+names what closed it and when, and any reasoning that states a general rule is kept, because the
+rule outlives the item.
+
+**Why keep it at all:** a struck claim with its cause is the only thing that stops the same
+proposal arriving again in six months looking new.
+
+- [x] **FULLSCREEN-USEFUL-1 — a fullscreen the race picture can use — ACCEPTED 2026-10-18 AND MERGED.**
+      The owner looked at branch `feat/fullscreen-useful` (`b869a50e`) on 2026-10-18 and accepted it. The facts of 2026-10-17: in the race
       screen's own fullscreen the race picture was exactly as large as outside it. The picture is a
       fixed 16:9 canvas sized by WIDTH (`RaceScreen.css`, `.race-canvas` width 100% / height auto), the
       grid kept the 210 px standings column (`.race-layout`, `1fr 210px`) and the screen is
@@ -1856,18 +1865,7 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       below) to 1897x1068; at 1909x1168 from 1667x939 (219 px empty below) to 1897x1068, 50 px black
       above and below. Held by `fullscreenDrawer.test.jsx` (component) and
       `client/e2e/race-fullscreen.spec.js` (Browser gate).
-      *(verify: the owner looks at the race in the app's fullscreen and accepts or rejects it)*
-
----
-
-# PART TWO — CLOSED
-
-**Nothing here is deleted** — that is the owner's decision of 2026-08-23 (D4 below). Every item
-names what closed it and when, and any reasoning that states a general rule is kept, because the
-rule outlives the item.
-
-**Why keep it at all:** a struck claim with its cause is the only thing that stops the same
-proposal arriving again in six months looking new.
+      *(verify: the owner looks at the race in the app's fullscreen and accepts or rejects it — accepted 2026-10-18)*
 
 - [x] **Owner sitting: V-5 backup/restore/reset and V-9 fullscreen — HELD AND CLOSED 2026-10-17.**
       The owner performed both on the production preview (4173) at `78f1860e`. **V-5:** "Export
@@ -4168,7 +4166,8 @@ closes made a factual claim, what that claim really was when it was checked at t
       an engineering task's.** The row also asks to rebuild something this project deliberately
       removed. **A duplicate in the Parking Lot was deleted in the same commit.**
       ★ Nothing here says a second language is unwanted. It says the row cannot be worked as
-      written.
+      written. ★ **DECIDED 2026-10-18:** the owner decided on 2026-10-18 that the whole game stays
+      English-only; there is no second UI language to plan.
 
 - [x] ★ **INVITE FLOW — CLOSED: adding a person to a roster already works; only SELF-SERVICE is
       missing, and it needs something no package here has.** Closed 2026-09-25 (TRUTH-UP-1), verified at the tree before moving.

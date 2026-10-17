@@ -833,7 +833,7 @@ cannot change a finish order or a finish time; and because the paused time is ta
 ending after that and the result screen have no pause. The owner decided on 2026-10-13, when he
 accepted it, that this scope stays: pause does not need to work in the ending.
 
-### The app's fullscreen (FULLSCREEN-USEFUL-1, built 2026-10-17 on `feat/fullscreen-useful`)
+### The app's fullscreen (FULLSCREEN-USEFUL-1, built 2026-10-17, accepted by the owner and merged 2026-10-18)
 
 The race screen's fullscreen button (`toggleFullscreen`) puts the screen element into the browser's
 fullscreen. Until 2026-10-17 that changed only the padding, so the picture — a fixed 16:9 canvas sized
