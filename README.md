@@ -141,7 +141,8 @@ node scripts/backup.mjs --restore <archive> --into <dir>
 ```
 
 **Installing, updating, rolling back and scheduling backups and the status check are
-[DEPLOYMENT.md](docs/DEPLOYMENT.md)'s** — one procedure, followed literally on 2026-10-01.
+[DEPLOYMENT.md](docs/DEPLOYMENT.md)'s** — the release-download procedure, followed literally on
+2026-10-01, and the Docker update and rollback, run as a whole on 2026-10-18.
 
 **The round trip is verified**, not assumed: export → wipe → restore returns every field, name,
 result, winner and world configuration. ★ **What that proves and does not:** it proves the archive
