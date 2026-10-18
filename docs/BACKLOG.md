@@ -806,6 +806,24 @@ are in PART TWO with what closed them; these are the ones still standing.
       [DEPLOYMENT.md](DEPLOYMENT.md), which carries a tested Caddy example (PROXY-PROBE-1). B4 is closed
       on that decision. **The domain, the proxy and HTTPS are still open, and so is this row.**
 
+- [ ] **OFFLINE-1 — when the venue's connection drops, three things a viewer or operator notices
+      (opened 2026-10-18).** Measured on the production build with throwaway data
+      ([reports/release/OFFLINE-1.md](../reports/release/OFFLINE-1.md)): **no result was lost and no
+      race stopped** in eight runs (setup, countdown, mid-race, last crossing; the connection blocked
+      and the server killed), and every race was stored once after recovery without a reload — the
+      local-first rule (`client/src/modules/raceHistory.js:9-14`) holds. What is open, report only,
+      nothing built:
+      **F1** a race started while the server is unreachable is drawn without its track background,
+      and `client/src/modules/track-effects/bgImageCache.js` keeps the failed load for the life of
+      the page, so later races on that track stay without it until a reload.
+      **F2** after the server is back, the red banner and the pending race wait for the app's next
+      request (no polling, by design); the result screen goes on saying the server is not answering.
+      **F3** during an outage nothing is shown until the race ends; the banner first appears on the
+      result screen.
+      Which of these, if any, should change is the owner's call.
+      *(verify: decided per finding; for F1, a race started offline then another after recovery on
+      the same page, with the background on the second)*
+
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
 several organizers on one server. **On 2026-10-01 the owner also decided that the tenancy boundary
