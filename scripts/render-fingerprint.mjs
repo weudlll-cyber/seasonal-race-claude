@@ -592,9 +592,10 @@ function trackHash(geo, wantOps) {
         // This read `false` unconditionally, so every render hash ever taken was measured with the
         // race plan's OUTCOME window permanently SHUT — a camera the product never runs, and
         // therefore frames the product never draws. The browser derives it at
-        // `RaceScreen/index.jsx:1271` as
+        // `RaceScreen/raceLoopDiagnostics.js:147` (`recordRacePlanStepDiag`, called from
+        // `RaceScreen/index.jsx:1240`) as
         // `racePlanController.getPhase(physicsTs, st.raceProgress) === 'OUTCOME'` and reads it back
-        // into the director's `raceState` at `:1492`. The camera instrument was corrected this way
+        // into the director's `raceState` at `index.jsx:1310`. The camera instrument was corrected this way
         // by HARNESS-OUTCOME-1 and minted by MINT-CAMERA-1; this is the same repair on the second
         // instrument, made with the same call and the same two arguments so the two cannot disagree.
         isOutcomePhase:

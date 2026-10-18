@@ -86,7 +86,7 @@ export function createPerfLog() {
       other: 0, // total - measured (GC, scheduler, GPU flush)
       nRacers: 0,
       // Framerate-dependence diagnostics (read-only mirrors of the physics accumulator state):
-      physSteps: 0, // FIXED_DT catch-up steps executed this frame (index.jsx ~857, capped at 2)
+      physSteps: 0, // FIXED_DT catch-up steps executed this frame (index.jsx ~1047, capped at 2)
       physAdvancedMs: 0, // physics-time advanced this frame = physSteps × FIXED_DT (ms)
       physAccum: 0, // st.physicsAccum after the catch-up loop (backlog, ms)
       capHit: 0, // 1 if the step cap was reached AND accum ≥ FIXED_DT remained (fell further behind)
