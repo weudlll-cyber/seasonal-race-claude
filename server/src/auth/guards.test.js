@@ -29,6 +29,20 @@ describe('isPublicPath', () => {
   it('GET /api/tracks → false', () => expect(isPublicPath('GET', '/api/tracks')).toBe(false));
 });
 
+// 2026-10-18: HEAD inherits GET on the allow-list too — an uptime checker sending HEAD to
+// /api/health got 401 while GET got 200.
+describe('isPublicPath — HEAD is judged as GET', () => {
+  it('HEAD /api/health → true', () => expect(isPublicPath('HEAD', '/api/health')).toBe(true));
+  it('head /api/health (any case) → true', () =>
+    expect(isPublicPath('head', '/api/health')).toBe(true));
+  it('HEAD /api/auth/setup-needed → true (every GET entry)', () =>
+    expect(isPublicPath('HEAD', '/api/auth/setup-needed')).toBe(true));
+  it('HEAD /api/auth/login → false (a POST entry admits no HEAD)', () =>
+    expect(isPublicPath('HEAD', '/api/auth/login')).toBe(false));
+  it('HEAD /api/tracks → false (not on the list)', () =>
+    expect(isPublicPath('HEAD', '/api/tracks')).toBe(false));
+});
+
 describe('requiredRole', () => {
   it('POST /api/surface-classes → admin', () =>
     expect(requiredRole('POST', '/api/surface-classes')).toBe('admin'));
@@ -90,7 +104,14 @@ const customPolicy = [{ methods: ['GET'], test: (p) => p === '/api/_admin', role
 function makeApp() {
   const app = express();
   app.use(express.json());
-  app.use(session({ name: 'ra.sid', secret: 'test', resave: false, saveUninitialized: false }));
+  app.use(
+    session({
+      name: 'ra.sid',
+      secret: 'test',
+      resave: false,
+      saveUninitialized: false,
+    })
+  );
 
   // Seed route — outside /api so it is never guarded.
   app.post('/_seed', (req, res) => {

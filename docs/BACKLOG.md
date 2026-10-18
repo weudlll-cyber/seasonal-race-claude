@@ -378,7 +378,7 @@ these carries a recommendation.**
    the real component past its placeholder, and three render-class sabotages of `index.jsx` all go
    red (see *`RaceScreen` is not testable — ✅ ANSWERED* in PART TWO). **BUT THE BACKGROUND SABOTAGE
    NAMED HERE IS STILL GREEN, re-measured on the night of 2026-09-04:** forcing `bgImagePath` to
-   `null` at `index.jsx:435` — which blanks every track background in the game — passes **31 files
+   `null` at `index.jsx:435` (now `:578`, `const bgImagePath`) — which blanks every track background in the game — passes **31 files
    and 405 tests** in that directory, the new mount test among them.
    **★ AND IT CANNOT BE CAUGHT THERE.** The mount test stubs the 2D context, so nothing it does is
    drawn; it proves the screen RENDERS, never WHAT it renders. A test that asserted draw calls would
@@ -1842,46 +1842,18 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
-## Found while writing the operator guide's monitoring section (2026-10-18)
+## Found during the day chain of 2026-10-18
 
-- [ ] **`HEAD /api/health` answers `401`; only `GET` is public.** The public allow-list matches the
-      method exactly (`server/src/auth/guards.js:14-19`, compared at `:152-158`), while the same
-      file states that HEAD must inherit GET's policy (`:114-119`) — which holds for `ROUTE_POLICY`
-      and not for `PUBLIC_PATHS`. Checked 2026-10-18 by running the real `createRequireAuth` with a
-      request of each method: `GET 200`, `HEAD 401`. An uptime checker that sends `HEAD` (some do
-      unless told otherwise) reports a healthy server as failing. Documented for operators in
-      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2, *Watching it from outside* ("configure the check as a
-      `GET` request"). Not changed: it touches the auth guard, and whether HEAD joins the allow-list
-      is a decision. *(verify: either `HEAD /api/health` answers 200 with a test pinning it, or the
-      guide's GET instruction is the accepted answer and this row closes on that)*
-
-## Found during the night chain of 2026-10-18
-
-- [ ] **Two Dev Screen tests still fail at vitest's 5 s per-test limit under load.** A4-02 (PART TWO)
-      gave the two chapter walks' `beforeAll` hooks 60 s; the per-test limit stayed at vitest's 5 s.
-      On 2026-10-18, with parallel builds on the machine: `DevScreen.a11yNames.test.jsx` › "names the
-      ten fields by their visible labels …" timed out at 5000 ms in a premerge client suite that took
-      755 s (normally ~310 s), and `devScreenChapters.savedSettings.test.jsx` › "two parts of one
-      stored block keep each other edits" timed out (5052 ms and 5074 ms) in client-suite runs; each
-      passed when re-run on a quiet machine. The second one's passing runs took between 1.4 s and
-      4.8 s, so it sits close to the budget even unloaded. Neither change on the branches involved touched those
-      files. Both are load-sensitive budgets, not defects in the code under test. Not changed tonight
-      (the rule against raising timeouts blindly applies; whether to give these tests headroom, as
-      A4-02 did for the hooks, is a small decision). *(verify: both files pass inside a premerge
-      client suite run with a parallel build, or the per-test budget is raised with a comment saying
-      why and broken once to prove it fires)*
-
-- [ ] **The Browser gate's `socket hang up` on `GET /api/tracks` came back.** On master `1bbc3d33`
-      (a docs-only merge, 2026-10-18), Browser gate run 39093148036: 1 failed, 117 passed — the
-      failure was `client/e2e/d11-ux-verification.spec.js` V8 "race with 5 racers and behavior enabled
-      produces no errors", `apiRequestContext.get: socket hang up` at `client/e2e/appReady.js:80` (the
-      geometry-key read inside `ensureTrackGeometriesCached`). The same spec failed with the same error on
-      2026-10-01 and was recorded then as an intermittent, cause not proven (PART TWO, *The Browser gate
-      was RED on master*). A docs-only commit cannot have caused it; the server dropped the connection
-      during the request. The failed job was re-run the same night. *(verify: the cause is named
-      from the server side of a failing run — e.g. the server log in the run's transcript at that
-      moment — or the read in `appReady.js` is shown to need a retry and gets one, broken once to prove
-      it)*
+- [ ] **`sessionInvalidation.test.js` times out at 5 s in premerge's server suite — twice on
+      2026-10-18.** PART TWO D9 (2026-08-23) made the bcrypt-heavy auth timeouts a WATCH that "closes
+      when it happens a third time and is diagnosed". On 2026-10-18 it happened twice, each time with
+      the server suite running ALONE inside premerge: on `feat/legal-pages` ("still ends every OTHER
+      session of that same user", "leaves an unrelated user untouched", after a client suite of
+      478 s) and on `fix/health-head` ("leaves an unrelated user untouched", "a role-only update does
+      not touch sessions", server suite 223 s; normally ~95–130 s). Each re-run passed it. Neither
+      branch touches the file or the session code. Not diagnosed; the 5 s limit is NOT raised (the
+      rule of the bcrypt fix). *(verify: the cause is named — what holds those tests past 5 s when
+      the suite runs alone — or the tests are shown to need a budget and get one, broken once)*
 
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
@@ -1913,6 +1885,57 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **The Browser gate's `socket hang up` on `GET /api/tracks` — CLOSED 2026-10-18 by a bounded
+      retry (branch `fix/appready-hangup`); the cause is still NOT proven.** Opened by the night chain of
+      2026-10-18: on master `1bbc3d33` (a docs-only merge) Browser gate run 39093148036 failed one spec,
+      `d11-ux-verification.spec.js` V8, with `apiRequestContext.get: socket hang up` at
+      `client/e2e/appReady.js`'s geometry-key read — the same spec and error as on 2026-10-01. **The server
+      side was looked for first** (the run's transcript and error context, attempt 1): no server line at
+      that moment, the server stayed up, and every later spec passed — nothing names a cause. A
+      candidate, not shown: a pooled keep-alive connection closed by the server (Node's default
+      `keepAliveTimeout`, 5 s; the server sets none) as the client reuses it. **What closed it:**
+      `client/e2e/requestRetry.js`, `getWithConnectionRetry` — up to 3 tries, 250 ms apart, ONLY when
+      the request rejected with a dropped-connection error (socket hang up, ECONNRESET, ECONNREFUSED,
+      EPIPE, ECONNABORTED), never on an HTTP status, which Playwright returns as a response and the
+      read still checks on its first answer; `appReady.js` uses it for that read.
+      `client/e2e/requestRetry.spec.js` (Browser gate fast set) drives it against a local server that
+      destroys the first connections: with no retry it fails with the gate's own error, with it the
+      next answer is returned; a 500 is one request; all dropped gives up after three. Broken once
+      (no retry): red with `apiRequestContext.get: socket hang up`.
+
+- [x] **Two Dev Screen tests failed at vitest's 5 s per-test limit under load — CLOSED 2026-10-18
+      (branch `fix/devscreen-test-timeouts`).** Opened by the night chain of 2026-10-18:
+      `DevScreen.a11yNames.test.jsx` › "names the ten fields by their visible labels …" and
+      `devScreenChapters.savedSettings.test.jsx` › "two parts of one stored block keep each other
+      edits" timed out at 5 s in client suites run beside other work and passed on a quiet machine;
+      both mount the whole Dev Screen, the work A4-02 had already given 60 s in the chapter walks'
+      `beforeAll` hooks. **What closed it:** the same 60 s, per test, for these two tests only —
+      `CHAPTER_WALK_TIMEOUT_MS` (the existing constant) on the second, `DEV_SCREEN_MOUNT_TIMEOUT_MS`
+      on the first — each with a comment saying why. The global limit is unchanged. Set to 1 ms for a
+      run, each test failed "timed out in 1ms", so the budget in force is the one written there.
+
+- [x] **`gracefulShutdown.test.js` waited a fixed 50 ms for its request — found and fixed 2026-10-18
+      (branch `fix/health-head`).** Its re-run premerge failed once on "a request that will not
+      finish: the exit is forced with 1 after the timeout": the signal was sent 50 ms after the
+      `fetch`, under load the request had not reached the server yet, the close found nothing in
+      flight and the exit read 0. The two tests that need a request in flight now send the signal once
+      the server has RECEIVED it (`slowArrived` in the harness), not after a pause. The test still
+      fails when the forced exit is broken (`exit(1)` → `exit(0)` in `gracefulShutdown.js`: red).
+      Test-only; the product code is unchanged.
+
+- [x] **`HEAD /api/health` answered `401`; only `GET` was public — CLOSED 2026-10-18 (branch
+      `fix/health-head`).** Found while writing the operator guide's monitoring section the same day:
+      the public allow-list matched the method exactly while `server/src/auth/guards.js` stated that
+      HEAD inherits GET's policy, which held for `ROUTE_POLICY` only — so `GET /api/health` answered
+      200 and `HEAD` 401, and an uptime checker sending HEAD saw a healthy server as down.
+      **What closed it:** one match for the allow-list, `matchesPublicPath`, judging HEAD as GET with
+      the existing `policyMethod` — used by `isPublicPath` and by `requireAuth`, which had each
+      carried a copy of the exact-method match. Every GET entry admits HEAD; POST entries admit
+      nothing else. Held by `guards.test.js` (HEAD on each entry kind) and
+      `authz.integration.test.js` (`GET 200`, `HEAD 200` with no body, `POST 401`), red with the
+      old exact match (`HEAD 401`). OPERATOR-GUIDE §2, AUTH.md and API.md updated; API.md's line
+      citations into `guards.js`, already about nine lines behind, re-pointed with the rest.
 
 - [x] **FULLSCREEN-USEFUL-1 — a fullscreen the race picture can use — ACCEPTED 2026-10-18 AND MERGED.**
       The owner looked at branch `feat/fullscreen-useful` (`b869a50e`) on 2026-10-18 and accepted it. The facts of 2026-10-17: in the race
@@ -2880,7 +2903,7 @@ proposal arriving again in six months looking new.
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
       `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
-      (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
+      (`guards.js:169-173`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**
       **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
 

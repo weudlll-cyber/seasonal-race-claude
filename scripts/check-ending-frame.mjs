@@ -344,7 +344,7 @@ while (st.finishedCount < N && ts < 600000) {
       finishedCount: st.finishedCount,
       winner: st.racers.find((r) => r.finishRank === 1) ?? null,
       finishT: st.finishT,
-      // OUTCOME-WINDOW-1: the PRODUCT's own expression (`RaceScreen/index.jsx:1533`), not a literal.
+      // OUTCOME-WINDOW-1: the PRODUCT's own expression (`RaceScreen/index.jsx:1310`), not a literal.
       // `false` nails the outcome window shut, and the comeback shot's gate at
       // `CameraDirector.js:883` reads it — so a literal here measures a camera the product never
       // runs. Measured on this instrument: it moves nothing, because no COMEBACK_ZOOM fires on this
