@@ -1870,6 +1870,25 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       1024x768, 820x1180 and 390x844, master build against this branch's, same payload, animations
       disabled. Held by `ResultScreen.landscape.test.jsx` (component) and
       `client/e2e/result-landscape.spec.js` (Browser gate).
+      ★ **Short windows, 2026-10-18.** On 4173 at `98aa5f3c` (Edge device mode, 800x350) the logo
+      and the podium medals were cut off at the top, the logo was large beside the podium and the
+      rankings ran off the bottom. Measured in headless Chromium with the seeded brand active, 20
+      racers: the 210 px logo overlapped the podium at 800x350, the medals stood above their slots
+      (fixed slot heights, content taller), and the whole card scrolled so the list and Back ran off
+      the bottom. **Built:** on a window of 500 px or less (`SHORT_WINDOW_MAX_PX`) a too-tall card is
+      also `results-container--compact`: a column that does not scroll, the Final Rankings list
+      taking the height left and scrolling, Back to Setup in the window; vertical spacing tightened
+      (screen and card padding, podium-slot padding and heights, the gap above the podium), the
+      title at the 22 px the phone layout uses, names, times and places unchanged; the logo scaled
+      by `brandLogoMaxHeightPx` (RaceScreen/brandLogoSize.js, reused: the window's shorter side,
+      full size at 540 px) — 136 px at 800x350, 152 px at 844x390. Title / logo / 1st medal top,
+      before -> after: 800x350 28/47/125 -> 16/35/82, 844x390 28/47/124 -> 16/35/81, 667x375 37/—/129
+      -> 25/—/92, 740x360 37/—/129 -> 25/—/92 (no logo at 768 px wide and below, unchanged); the
+      podium fully inside and the logo clear of it at all four, so the logo did not need hiding at
+      any height measured. A card that fits gets neither class: 0 differing pixels at 1920x1080,
+      1280x720, 1024x768 and 820x1180, and 6 at 390x844 — the same 6 between two runs of one build.
+      The Browser-gate check covers the four sizes and is red with the compact layout switched off
+      (logo over the podium, Back outside the window).
       *(verify: the owner looks at the result screen on a phone held sideways and accepts or rejects
       it)*
 

@@ -44,6 +44,103 @@
   overflow-y: auto;
 }
 
+/* RESULT-LANDSCAPE-1, SHORT WINDOWS (2026-10-18): a too-tall card on a window of 500 px or less
+   (`SHORT_WINDOW_MAX_PX` in index.jsx sets this class) is COMPACT. The title, the brand block, the
+   logo and the whole podium stay inside the window and only the Final Rankings list scrolls, inside
+   the card: the card is a column that does not scroll, and the list takes the height that is left.
+   Vertical spacing only is tightened — the podium slots are shorter and closer, so the medals sit
+   inside their slots — and the title takes the size the phone layout already uses. Names, times
+   and places keep their sizes. The logo's size is set in index.jsx (`brandLogoMaxHeightPx`). A card
+   that fits never gets this class, so nothing here touches it. */
+.screen--result:has(.results-container--compact) {
+  padding: 8px 20px;
+}
+
+.results-container--compact {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.results-container--compact .results-title {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.results-container--compact .brand-event-name {
+  line-height: 1.1;
+}
+
+.results-container--compact .brand-identity .race-info {
+  margin-top: 2px;
+}
+
+.results-container--compact .podium-section {
+  margin-top: 10px;
+}
+
+.results-container--compact .podium {
+  height: 116px;
+}
+
+.results-container--compact .podium-slot {
+  padding: 5px 10px;
+  gap: 2px;
+}
+
+.results-container--compact .podium-slot--1st {
+  height: 112px;
+}
+
+.results-container--compact .podium-slot--2nd {
+  height: 90px;
+}
+
+.results-container--compact .podium-slot--3rd {
+  height: 78px;
+}
+
+.results-container--compact .podium-medal {
+  margin-bottom: 0;
+}
+
+.results-container--compact .podium-racer {
+  gap: 1px;
+}
+
+.results-container--compact .podium-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.results-container--compact .rankings-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 4px;
+}
+
+.results-container--compact .rankings-table.rankings-scroll {
+  flex: 1 1 auto;
+  min-height: 36px;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.results-container--compact .results-actions {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+
+.results-container--compact .btn {
+  padding: 6px 24px;
+}
+
+.results-container--compact .result-sponsor {
+  margin-top: 4px;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
