@@ -156,7 +156,7 @@ test.describe("RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this
   // The stage test above passes on the build he tested, so `raceActionStage` is not where his race
   // diverged. A RACER TYPE is. The identifier records `effectiveRacerTypes` — speedMultiplier,
   // displaySize, bodyFillX/Y, surfaceClasses — and the race path reads the HOST's live racer type
-  // instead (`getRacerType` at `RaceScreen/index.jsx:591`; the type's fields are read in
+  // instead (`getRacerType` at `RaceScreen/index.jsx:594`; the type's fields are read in
   // `RaceScreen/raceWorldSetup.js:87-94`, which since the fix prefers the identifier's recorded
   // type), so a machine whose racer was retuned runs the
   // pasted identifier at ITS OWN speed. `speedMultiplier` is a first-order physics input, so that is

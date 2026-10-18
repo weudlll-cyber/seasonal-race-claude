@@ -12,7 +12,8 @@
 //
 //              IT DOES NOT POLL. `startPendingRaceSync` subscribes to `serverStatus.js`, which
 //              never makes a request of its own — see pendingRaces.js for why that is the whole
-//              design and not an optimisation.
+//              design and not an optimisation. The one probe in the app, while the server is not
+//              answering, is ServerRecoveryProbe.jsx beside it (OFFLINE-1 F2).
 // ============================================================
 
 import { useEffect } from 'react';

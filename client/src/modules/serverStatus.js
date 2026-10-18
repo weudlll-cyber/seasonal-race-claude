@@ -16,6 +16,12 @@
 // job, and a background job that runs while a race is running competes with the race for the main
 // thread. The one thing this must not do is cost the picture a frame to say the server is down.
 //
+// ★ THE ONE EXCEPTION, AND IT IS NOT HERE (OFFLINE-1 F2, the owner's decision of 2026-10-18): once
+// the value is `unreachable`, `serverRecoveryProbe.js` asks `GET /api/health` about every 10 s until
+// the server answers, so the banner clears and pending races go up without waiting for the app's next
+// request. It runs ONLY in that state — while the server answers, nothing polls — and it reports
+// through the same event as every other request, so this module still never makes one.
+//
 // ── WHAT COUNTS AS UNREACHABLE, AND WHAT DELIBERATELY DOES NOT ──────────────────────────────────
 //
 // UNREACHABLE means the request never got an answer: a transport failure, a CORS refusal, or the
@@ -44,6 +50,16 @@ function set(next) {
   if (next === status) return; // no spurious re-render on the steady state
   status = next;
   for (const fn of listeners) fn();
+  announce();
+}
+
+/**
+ * OFFLINE-1 F3: tell code INSIDE the engine hull — the race screen's standings note — by event, so
+ * it never imports this module (see "HOW THE VALUE GETS HERE" below for why that matters).
+ */
+function announce() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('racearena:server-status-changed', { detail: { status } }));
 }
 
 /** The server answered — with anything at all, including an error status. */
@@ -93,4 +109,7 @@ if (typeof window !== 'undefined') {
     if (e?.detail?.reachable) markServerReachable();
     else markServerUnreachable();
   });
+  // OFFLINE-1 F3: a hull-side listener that mounts mid-outage asks for the current value; the answer
+  // is the same `racearena:server-status-changed` event, dispatched synchronously.
+  window.addEventListener('racearena:server-status-query', announce);
 }

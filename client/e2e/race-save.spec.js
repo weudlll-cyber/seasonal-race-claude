@@ -88,8 +88,10 @@ test('a race finishes with the server gone, is kept, and goes up when it returns
   expect(entry.sync.state, 'a race the server never saw is pending').toBe('pending');
 
   // ── 5. ★ THE SERVER RETURNS ──────────────────────────────────────────────────────────────────
-  // Nothing polls. The flush happens because the NEXT request the application makes anyway
-  // succeeds, which marks the server reachable — here, the track load on the setup screen.
+  // The flush happens because the next request that gets an answer marks the server reachable —
+  // here the track load on the setup screen, or, if it comes first, the recovery probe that asks
+  // every ~10 s while the server is not answering (OFFLINE-1 F2; offline-recovery.spec.js proves
+  // the probe alone, without a navigation).
   await page.unroute('**/api/**');
   await page.goto('/setup');
 

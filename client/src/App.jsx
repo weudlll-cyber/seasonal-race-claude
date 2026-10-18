@@ -27,6 +27,7 @@ import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import TestAidsSyncOnAuth from './components/TestAidsSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
 import ServerStatusBanner from './components/ServerStatusBanner.jsx';
+import ServerRecoveryProbe from './components/ServerRecoveryProbe.jsx';
 import PendingRaceSync from './components/PendingRaceSync.jsx';
 import { useTestAidsState } from './modules/testAids.js';
 
@@ -74,6 +75,9 @@ function App() {
         <ServerStatusBanner />
         {/* RACE-SAVE-3: sends races that could not go up when they finished. Renders nothing. */}
         <PendingRaceSync />
+        {/* OFFLINE-1 F2: while the server is not answering, asks it every ~10 s whether it is back,
+            so the banner clears and pending races go up on their own. Renders nothing. */}
+        <ServerRecoveryProbe />
         <BrandingSyncOnAuth />
         <RacerSyncOnAuth />
         <TestAidsSyncOnAuth />

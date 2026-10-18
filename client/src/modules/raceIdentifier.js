@@ -7,8 +7,8 @@
 //
 // ── WHY A SEED IS NOT ENOUGH, at source ─────────────────────────────────────────────────────────
 //
-// `SetupScreen.jsx:678` fixes the plan seed into the race payload, and the race is a pure function
-// of what it is given. But `resolveRaceWorld` (called at `RaceScreen/index.jsx:623`) reads the
+// `SetupScreen.jsx:997` fixes the plan seed into the race payload, and the race is a pure function
+// of what it is given. But `resolveRaceWorld` (called at `RaceScreen/index.jsx:626`) reads the
 // action stage (`raceWorldSetup.js:129`) and gathers the whole config world (`raceWorldSetup.js:144`)
 // — both from THE HOST'S OWN STORAGE at the moment the race starts. So the same
 // seed on two machines is two races, and neither operator changed anything. This module carries
