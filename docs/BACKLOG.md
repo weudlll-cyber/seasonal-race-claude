@@ -1831,6 +1831,30 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
+### Built 2026-10-18, his eye owed
+
+- [ ] **RESULT-LANDSCAPE-1 — the result screen on a phone held sideways. BUILT on branch
+      `fix/result-landscape`, UNMERGED — kept until the owner accepts it.** The facts
+      (BRAND-LOGO-SCALE-1, PART TWO): at an 844x390 window the results card is taller than the
+      window, and because the screen centres it (`.screen--result`, `align-items: center`, overflow
+      hidden) its title sat above the top edge. The owner decided on 2026-10-18 to have it fixed.
+      **Built:** the screen measures whether the card is taller than the room it has
+      (`cardIsTooTall` in `ResultScreen/index.jsx`, re-measured by a `ResizeObserver` on the screen
+      and the card) and only then gives the card `results-container--short` (`ResultScreen.css`:
+      `max-height: 100%`, `overflow-y: auto`) — the card is held to the window, its title at the top,
+      and its content scrolls inside it. Nothing is rescaled. Only when needed, because a scroll box
+      clips: on a card that fits it would cut off the title's glow and the Back button's shadow
+      (measured: 2,992 differing pixels at 1280x720 when the rule applied always). **Measured** in
+      headless Chromium on the production build, a 20-racer result with no brand: at 844x390 the
+      title's top goes from y = -75 to y = 28, the card from 556 px tall (top at -83) to 350 px (top
+      at 20) scrolling 554 px of content; at 667x375 from -75.5 to 37, 560 px to 335 px scrolling
+      558 px. Where the card fits nothing changes: 0 differing pixels at 1920x1080, 1280x720,
+      1024x768, 820x1180 and 390x844, master build against this branch's, same payload, animations
+      disabled. Held by `ResultScreen.landscape.test.jsx` (component) and
+      `client/e2e/result-landscape.spec.js` (Browser gate).
+      *(verify: the owner looks at the result screen on a phone held sideways and accepts or rejects
+      it)*
+
 ---
 
 # PART TWO — CLOSED
@@ -1983,8 +2007,9 @@ proposal arriving again in six months looking new.
       proportionally smaller on a smaller one (`controlInfo.js`, with its DEVSCREEN-CHAPTERS-1 row).
       **Noticed, not built:** on a phone held sideways (844x390) the whole results card (583 px
       tall) does not fit the window and its title is clipped above the top edge — a layout question
-      for the result screen as a whole, not a logo-size one. *(verify: the owner's look in phone
-      mode and on a desktop window)*
+      for the result screen as a whole, not a logo-size one. *(Built 2026-10-18 as RESULT-LANDSCAPE-1,
+      PART ONE, after the owner decided that day to have it fixed.)* *(verify: the owner's look in
+      phone mode and on a desktop window)*
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
@@ -2551,7 +2576,7 @@ proposal arriving again in six months looking new.
       (needs a machine where `npm install` upgrades); the breakpoints (a question about phone use). None
       is a defect with one obvious fix that he would not see.
       ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
-      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
+      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:504` (768px),
       `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed
       1280×720 field (`camera/projection.js:37-38`). **Whether phone use is a goal is
       unestablished**; the breakpoints and the fixed field are both facts and nothing in the

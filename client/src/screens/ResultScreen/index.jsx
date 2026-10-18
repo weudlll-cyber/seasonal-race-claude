@@ -31,9 +31,15 @@
 //              does not exist — the RaceScreen would have to stamp the payload, and the race screen
 //              is out of scope here. The skip below is what makes that cheap: any click or key press
 //              ends the sequence at once.
+//
+//              ── A WINDOW TOO SHORT FOR THE CARD (RESULT-LANDSCAPE-1, 2026-10-18) ───────────────
+//              On a phone held sideways the card is taller than the window. Only then does the card
+//              get `results-container--short`: held to the window, title at the top, content
+//              scrolling inside. A card that fits never gets the class, so the rule above — the
+//              final DOM is the DOM from before the build-up — still holds wherever the card fits.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { recordFinishedRace, SYNC } from '../../modules/raceHistory.js';
 import { sendOne } from '../../modules/pendingRaces.js';
@@ -88,6 +94,25 @@ function tailClass(step) {
   return step >= STEP.TAIL ? '' : ' result-pending';
 }
 
+/**
+ * RESULT-LANDSCAPE-1: is the card taller than the room the screen gives it?
+ *
+ * The room is the screen's inner height (its height less its own padding). The card's natural
+ * height is its scroll height (content and padding, unclamped even while the card is held short)
+ * plus its border — `offsetHeight - clientHeight` — so the answer does not flip once the short
+ * layout is on. Measured, not guessed from a window size: the card's height depends on the field
+ * size, the brand block and the sponsor line.
+ */
+function cardIsTooTall(screen, card) {
+  const style = getComputedStyle(screen);
+  const room =
+    screen.clientHeight -
+    (parseFloat(style.paddingTop) || 0) -
+    (parseFloat(style.paddingBottom) || 0);
+  const natural = card.scrollHeight + (card.offsetHeight - card.clientHeight);
+  return natural > room;
+}
+
 function ResultScreen() {
   const navigate = useFadeNavigate();
   const [finishOrder, setFinishOrder] = useState([]);
@@ -115,6 +140,27 @@ function ResultScreen() {
 
   const timersRef = useRef([]);
   const containerRef = useRef(null);
+  const screenRef = useRef(null);
+
+  // ── A WINDOW TOO SHORT FOR THE CARD (RESULT-LANDSCAPE-1) ────────────────────────────────────────
+  // On a phone held sideways the card is taller than the window; centred, its title sat above the
+  // top edge. When — and only when — `cardIsTooTall` says so, the card gets `--short`: held to the
+  // screen's height and scrolling inside. A card that fits never gets the class, so its DOM and its
+  // pixels are what they were. Re-measured whenever the screen (the window) or the card changes size;
+  // without ResizeObserver (jsdom) it is measured once.
+  const [cardShort, setCardShort] = useState(false);
+  useLayoutEffect(() => {
+    const screen = screenRef.current;
+    const card = containerRef.current;
+    if (!screen || !card) return undefined;
+    const measure = () => setCardShort(cardIsTooTall(screen, card));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(screen);
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [finishOrder.length]);
 
   // THE BRAND'S COLOURS CARRY THE MOMENT, and they carry it as custom properties rather than as
   // painted styles — so the CSS can fall back to the podium's own metals (gold, silver, bronze) when
@@ -249,8 +295,11 @@ function ResultScreen() {
   const raceActionLabel = raceActionStage.charAt(0).toUpperCase() + raceActionStage.slice(1);
 
   return (
-    <div className="screen screen--result">
-      <div className="results-container" ref={containerRef}>
+    <div className="screen screen--result" ref={screenRef}>
+      <div
+        className={`results-container${cardShort ? ' results-container--short' : ''}`}
+        ref={containerRef}
+      >
         <h1 className="results-title">🏁 Race Results</h1>
 
         {/* Brand identity block (event name + subtitle + track·time) or bare track·time */}

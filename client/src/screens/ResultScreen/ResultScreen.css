@@ -34,6 +34,16 @@
   animation: slideUp 0.5s ease-out;
 }
 
+/* RESULT-LANDSCAPE-1: a window too short for the card (a phone held sideways). The card is held to
+   the screen's height — so, centred, its title sits at the top edge instead of above the window —
+   and what does not fit scrolls inside the card. Set by the screen ONLY when the card is taller than
+   the room it has: a scroll box clips, and on a card that fits it would cut off the title's glow
+   and the Back button's shadow, which reach past the card's edge. */
+.results-container--short {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
