@@ -31,14 +31,25 @@
 //              does not exist — the RaceScreen would have to stamp the payload, and the race screen
 //              is out of scope here. The skip below is what makes that cheap: any click or key press
 //              ends the sequence at once.
+//
+//              ── A WINDOW TOO SHORT FOR THE CARD (RESULT-LANDSCAPE-1, 2026-10-18) ───────────────
+//              On a phone held sideways the card is taller than the window. Only then does the card
+//              get `results-container--short`: held to the window, title at the top, content
+//              scrolling inside. A card that fits never gets the class, so the rule above — the
+//              final DOM is the DOM from before the build-up — still holds wherever the card fits.
+//              On a window of SHORT_WINDOW_MAX_PX or less the too-tall card is also COMPACT
+//              (`results-container--compact`): title, logo and the whole podium inside the window,
+//              only the Final Rankings list scrolling, the logo scaled by the race screen's
+//              `brandLogoMaxHeightPx` (RaceScreen/brandLogoSize.js).
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { recordFinishedRace, SYNC } from '../../modules/raceHistory.js';
 import { sendOne } from '../../modules/pendingRaces.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
+import { brandLogoMaxHeightPx } from '../RaceScreen/brandLogoSize.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import './ResultScreen.css';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
@@ -88,6 +99,40 @@ function tailClass(step) {
   return step >= STEP.TAIL ? '' : ' result-pending';
 }
 
+/**
+ * RESULT-LANDSCAPE-1: is the card taller than the room the screen gives it?
+ *
+ * The room is the screen's inner height (its height less its own padding). The card's natural
+ * height is its scroll height (content and padding, unclamped even while the card is held short)
+ * plus its border — `offsetHeight - clientHeight` — so the answer does not flip once the short
+ * layout is on. Measured, not guessed from a window size: the card's height depends on the field
+ * size, the brand block and the sponsor line.
+ */
+/**
+ * RESULT-LANDSCAPE-1, short windows (2026-10-18): at this window height and below, a card that is
+ * too tall is laid out compact — title, brand block and podium all inside the window, only the
+ * Final Rankings list scrolling (`results-container--compact` in ResultScreen.css).
+ */
+export const SHORT_WINDOW_MAX_PX = 500;
+
+/**
+ * The result screen's logo at full size, in CSS px — the `max-height` / `max-width` of
+ * `.brand-logo-result__img` in ResultScreen.css. On a short window the logo is scaled down from it
+ * by the race screen's own rule (`brandLogoMaxHeightPx`, RaceScreen/brandLogoSize.js): a proportion
+ * of the window's shorter side, full size at 540 CSS px and above.
+ */
+export const RESULT_LOGO_MAX_PX = 210;
+
+function cardIsTooTall(screen, card) {
+  const style = getComputedStyle(screen);
+  const room =
+    screen.clientHeight -
+    (parseFloat(style.paddingTop) || 0) -
+    (parseFloat(style.paddingBottom) || 0);
+  const natural = card.scrollHeight + (card.offsetHeight - card.clientHeight);
+  return natural > room;
+}
+
 function ResultScreen() {
   const navigate = useFadeNavigate();
   const [finishOrder, setFinishOrder] = useState([]);
@@ -115,6 +160,51 @@ function ResultScreen() {
 
   const timersRef = useRef([]);
   const containerRef = useRef(null);
+  const screenRef = useRef(null);
+
+  // ── A WINDOW TOO SHORT FOR THE CARD (RESULT-LANDSCAPE-1) ────────────────────────────────────────
+  // On a phone held sideways the card is taller than the window; centred, its title sat above the
+  // top edge. When — and only when — `cardIsTooTall` says so, the card gets `--short`: held to the
+  // screen's height and scrolling inside. A card that fits never gets the class, so its DOM and its
+  // pixels are what they were. Re-measured whenever the screen (the window) or the card changes size;
+  // without ResizeObserver (jsdom) it is measured once.
+  //
+  // On a window of SHORT_WINDOW_MAX_PX or less a too-tall card is also COMPACT: the podium stays
+  // whole inside the window and only the rankings list scrolls; the logo is scaled to the window by
+  // `brandLogoMaxHeightPx`. `compactLogoPx` is null wherever the card is not compact, so a card that
+  // fits keeps the logo's CSS size to the pixel.
+  //
+  // The compact decision is HELD for the window size it was made at: the compact layout fits by
+  // construction (the list shrinks), so re-measuring it would answer "fits", drop the class, find
+  // the card too tall again — a loop. It is made afresh only when the window changes size.
+  const [cardShort, setCardShort] = useState(false);
+  const [compactLogoPx, setCompactLogoPx] = useState(null);
+  const compactAtRef = useRef(null);
+  useLayoutEffect(() => {
+    const screen = screenRef.current;
+    const card = containerRef.current;
+    if (!screen || !card) return undefined;
+    const measure = () => {
+      const held = compactAtRef.current;
+      if (held && held.w === window.innerWidth && held.h === window.innerHeight) return;
+      compactAtRef.current = null;
+      const short = cardIsTooTall(screen, card);
+      const compact = short && window.innerHeight <= SHORT_WINDOW_MAX_PX;
+      if (compact) compactAtRef.current = { w: window.innerWidth, h: window.innerHeight };
+      setCardShort(short);
+      setCompactLogoPx(
+        compact
+          ? brandLogoMaxHeightPx(RESULT_LOGO_MAX_PX, window.innerWidth, window.innerHeight)
+          : null
+      );
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(screen);
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [finishOrder.length]);
 
   // THE BRAND'S COLOURS CARRY THE MOMENT, and they carry it as custom properties rather than as
   // painted styles — so the CSS can fall back to the podium's own metals (gold, silver, bronze) when
@@ -249,8 +339,13 @@ function ResultScreen() {
   const raceActionLabel = raceActionStage.charAt(0).toUpperCase() + raceActionStage.slice(1);
 
   return (
-    <div className="screen screen--result">
-      <div className="results-container" ref={containerRef}>
+    <div className="screen screen--result" ref={screenRef}>
+      <div
+        className={`results-container${cardShort ? ' results-container--short' : ''}${
+          compactLogoPx != null ? ' results-container--compact' : ''
+        }`}
+        ref={containerRef}
+      >
         <h1 className="results-title">🏁 Race Results</h1>
 
         {/* Brand identity block (event name + subtitle + track·time) or bare track·time */}
@@ -295,7 +390,13 @@ function ResultScreen() {
               src={activeBrand.logo}
               alt={activeBrand.eventName}
               className="brand-logo-result__img"
-              style={{ opacity: activeBrand.logoOpacity ?? 0.9 }}
+              style={{
+                opacity: activeBrand.logoOpacity ?? 0.9,
+                ...(compactLogoPx != null && {
+                  maxHeight: `${compactLogoPx}px`,
+                  maxWidth: `${compactLogoPx}px`,
+                }),
+              }}
             />
           </div>
         )}
@@ -347,7 +448,8 @@ function ResultScreen() {
           </div>
         </div>
 
-        {/* Ranks 4+ in a fixed-height scroll panel; hidden when ≤3 finishers */}
+        {/* Ranks 4+ in a scroll panel — fixed height, or on a compact card the height that is
+            left (RESULT-LANDSCAPE-1); hidden when ≤3 finishers */}
         {finishOrder.length > 3 && (
           <div className={`rankings-section${tailClass(step)}`}>
             <h2 className="rankings-title">Final Rankings</h2>

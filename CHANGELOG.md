@@ -67,6 +67,11 @@ is.
 
 ### Changed
 
+- The result screen fits a phone held sideways: when the window is too short for the results card,
+  the card is held to the window with its title at the top, and what does not fit scrolls inside the
+  card. On a window 500 px high or less the card is compact: the title, the brand logo (smaller) and
+  the whole podium stay in view and only the Final Rankings list scrolls. Where the card already
+  fits, the result screen is unchanged. *(on `master`, 2026-10-18)*
 - The race screen's own fullscreen (its fullscreen button) now uses the whole screen: the race
   picture is as large as the screen allows, centred, with black around it, and the standings column
   is hidden off the right edge — move the mouse to the right edge to slide it in over the picture

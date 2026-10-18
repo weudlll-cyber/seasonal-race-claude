@@ -1860,6 +1860,47 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **RESULT-LANDSCAPE-1 — the result screen on a phone held sideways — ACCEPTED 2026-10-18 AND
+      MERGED.** The facts
+      (BRAND-LOGO-SCALE-1, PART TWO): at an 844x390 window the results card is taller than the
+      window, and because the screen centres it (`.screen--result`, `align-items: center`, overflow
+      hidden) its title sat above the top edge. The owner decided on 2026-10-18 to have it fixed.
+      **Built:** the screen measures whether the card is taller than the room it has
+      (`cardIsTooTall` in `ResultScreen/index.jsx`, re-measured by a `ResizeObserver` on the screen
+      and the card) and only then gives the card `results-container--short` (`ResultScreen.css`:
+      `max-height: 100%`, `overflow-y: auto`) — the card is held to the window, its title at the top,
+      and its content scrolls inside it. Nothing is rescaled. Only when needed, because a scroll box
+      clips: on a card that fits it would cut off the title's glow and the Back button's shadow
+      (measured: 2,992 differing pixels at 1280x720 when the rule applied always). **Measured** in
+      headless Chromium on the production build, a 20-racer result with no brand: at 844x390 the
+      title's top goes from y = -75 to y = 28, the card from 556 px tall (top at -83) to 350 px (top
+      at 20) scrolling 554 px of content; at 667x375 from -75.5 to 37, 560 px to 335 px scrolling
+      558 px. Where the card fits nothing changes: 0 differing pixels at 1920x1080, 1280x720,
+      1024x768, 820x1180 and 390x844, master build against this branch's, same payload, animations
+      disabled. Held by `ResultScreen.landscape.test.jsx` (component) and
+      `client/e2e/result-landscape.spec.js` (Browser gate).
+      ★ **Short windows, 2026-10-18.** On 4173 at `98aa5f3c` (Edge device mode, 800x350) the logo
+      and the podium medals were cut off at the top, the logo was large beside the podium and the
+      rankings ran off the bottom. Measured in headless Chromium with the seeded brand active, 20
+      racers: the 210 px logo overlapped the podium at 800x350, the medals stood above their slots
+      (fixed slot heights, content taller), and the whole card scrolled so the list and Back ran off
+      the bottom. **Built:** on a window of 500 px or less (`SHORT_WINDOW_MAX_PX`) a too-tall card is
+      also `results-container--compact`: a column that does not scroll, the Final Rankings list
+      taking the height left and scrolling, Back to Setup in the window; vertical spacing tightened
+      (screen and card padding, podium-slot padding and heights, the gap above the podium), the
+      title at the 22 px the phone layout uses, names, times and places unchanged; the logo scaled
+      by `brandLogoMaxHeightPx` (RaceScreen/brandLogoSize.js, reused: the window's shorter side,
+      full size at 540 px) — 136 px at 800x350, 152 px at 844x390. Title / logo / 1st medal top,
+      before -> after: 800x350 28/47/125 -> 16/35/82, 844x390 28/47/124 -> 16/35/81, 667x375 37/—/129
+      -> 25/—/92, 740x360 37/—/129 -> 25/—/92 (no logo at 768 px wide and below, unchanged); the
+      podium fully inside and the logo clear of it at all four, so the logo did not need hiding at
+      any height measured. A card that fits gets neither class: 0 differing pixels at 1920x1080,
+      1280x720, 1024x768 and 820x1180, and 6 at 390x844 — the same 6 between two runs of one build.
+      The Browser-gate check covers the four sizes and is red with the compact layout switched off
+      (logo over the podium, Back outside the window).
+      **Accepted:** the owner looked at it on 2026-10-18 at 800x350 (100 % zoom) on the production
+      preview and accepted it; merged the same day.
+
 - [x] **`sessionInvalidation.test.js` timed out at 5 s in premerge's server suite — CLOSED 2026-10-18
       (branch `fix/session-test-timeout`).** Twice on 2026-10-18 two of its tests crossed vitest's 5 s
       limit with the server suite running alone (on `feat/legal-pages` and `fix/health-head`); PART
@@ -2114,8 +2155,9 @@ proposal arriving again in six months looking new.
       proportionally smaller on a smaller one (`controlInfo.js`, with its DEVSCREEN-CHAPTERS-1 row).
       **Noticed, not built:** on a phone held sideways (844x390) the whole results card (583 px
       tall) does not fit the window and its title is clipped above the top edge — a layout question
-      for the result screen as a whole, not a logo-size one. *(verify: the owner's look in phone
-      mode and on a desktop window)*
+      for the result screen as a whole, not a logo-size one. *(Built 2026-10-18 as RESULT-LANDSCAPE-1,
+      PART ONE, after the owner decided that day to have it fixed.)* *(verify: the owner's look in
+      phone mode and on a desktop window)*
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
@@ -2682,7 +2724,7 @@ proposal arriving again in six months looking new.
       (needs a machine where `npm install` upgrades); the breakpoints (a question about phone use). None
       is a defect with one obvious fix that he would not see.
       ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
-      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
+      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:504` (768px),
       `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed
       1280×720 field (`camera/projection.js:37-38`). **Whether phone use is a goal is
       unestablished**; the breakpoints and the fixed field are both facts and nothing in the
