@@ -231,13 +231,15 @@ The ResultScreen is no longer a bare `<h1>`. As of `b9a2f03`:
 - **Scrollable rank panel** (ranks 4+): fixed-height panel showing 5 rows before scrolling
   ([`ResultScreen/index.jsx:447–464`](../client/src/screens/ResultScreen/index.jsx#L447-L464)).
   `max-height` is set to the measured actual row height × 5 (233 px).
-- **A window too short for the card** (RESULT-LANDSCAPE-1, built 2026-10-18, on
-  `fix/result-landscape` until the owner accepts it): on a phone held sideways the card is taller
-  than the window. The screen measures that (`cardIsTooTall` in `ResultScreen/index.jsx`) and only
-  then gives the card `results-container--short` (`ResultScreen.css`): the card is held to the
-  window's height with its title at the top, and its content — the logo included — scrolls inside
-  the card. Nothing is rescaled. A card that fits never gets the class, so on every window it fits
-  the screen is unchanged to the pixel.
+- **A window too short for the card** (RESULT-LANDSCAPE-1, accepted and merged 2026-10-18): on a
+  phone held sideways the card is taller than the window. The screen measures that (`cardIsTooTall`
+  in `ResultScreen/index.jsx`) and only then gives the card `results-container--short`
+  (`ResultScreen.css`): the card is held to the window's height with its title at the top, and its
+  content scrolls inside the card. On a window 500 px high or less (`SHORT_WINDOW_MAX_PX`) it is
+  also `results-container--compact`: the title, the logo and the whole podium stay inside the
+  window and only the Final Rankings list scrolls; the logo is scaled by the race screen's rule
+  (`brandLogoMaxHeightPx`, `RaceScreen/brandLogoSize.js`) from its full 210 px. A card that fits
+  gets neither class, so on every window it fits the screen is unchanged to the pixel.
 - **The build-up's accent** (PODIUM-BUILD-1): while the podium is arriving, each slot flashes its
   frame once as it lands — the winner in the profile's `primaryColor`, 2nd and 3rd in
   `secondaryColor`. It is the ending answering the brand card the start ceremony now opens on. The

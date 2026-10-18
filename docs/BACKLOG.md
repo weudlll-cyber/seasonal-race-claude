@@ -1849,10 +1849,19 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
-### Built 2026-10-18, his eye owed
+---
 
-- [ ] **RESULT-LANDSCAPE-1 — the result screen on a phone held sideways. BUILT on branch
-      `fix/result-landscape`, UNMERGED — kept until the owner accepts it.** The facts
+# PART TWO — CLOSED
+
+**Nothing here is deleted** — that is the owner's decision of 2026-08-23 (D4 below). Every item
+names what closed it and when, and any reasoning that states a general rule is kept, because the
+rule outlives the item.
+
+**Why keep it at all:** a struck claim with its cause is the only thing that stops the same
+proposal arriving again in six months looking new.
+
+- [x] **RESULT-LANDSCAPE-1 — the result screen on a phone held sideways — ACCEPTED 2026-10-18 AND
+      MERGED.** The facts
       (BRAND-LOGO-SCALE-1, PART TWO): at an 844x390 window the results card is taller than the
       window, and because the screen centres it (`.screen--result`, `align-items: center`, overflow
       hidden) its title sat above the top edge. The owner decided on 2026-10-18 to have it fixed.
@@ -1889,19 +1898,8 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       1280x720, 1024x768 and 820x1180, and 6 at 390x844 — the same 6 between two runs of one build.
       The Browser-gate check covers the four sizes and is red with the compact layout switched off
       (logo over the podium, Back outside the window).
-      *(verify: the owner looks at the result screen on a phone held sideways and accepts or rejects
-      it)*
-
----
-
-# PART TWO — CLOSED
-
-**Nothing here is deleted** — that is the owner's decision of 2026-08-23 (D4 below). Every item
-names what closed it and when, and any reasoning that states a general rule is kept, because the
-rule outlives the item.
-
-**Why keep it at all:** a struck claim with its cause is the only thing that stops the same
-proposal arriving again in six months looking new.
+      **Accepted:** the owner looked at it on 2026-10-18 at 800x350 (100 % zoom) on the production
+      preview and accepted it; merged the same day.
 
 - [x] **`sessionInvalidation.test.js` timed out at 5 s in premerge's server suite — CLOSED 2026-10-18
       (branch `fix/session-test-timeout`).** Twice on 2026-10-18 two of its tests crossed vitest's 5 s

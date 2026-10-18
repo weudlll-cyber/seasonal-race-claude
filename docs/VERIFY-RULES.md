@@ -528,7 +528,7 @@ this rule says about the per-push path and about `verify` is still exactly true,
 asserts it is untouched. What changed is that a browser now runs automatically **somewhere else**:
 `.github/workflows/browser-gate.yml` is its OWN workflow — on push to master, on a daily schedule and
 on demand — and runs the **curated fast set** (`test:e2e:prod:fast`, **17 specs / 126 tests, counted 2026-10-18 with `--list`** as
-`fix/result-landscape` took master in; 10 / 110 on 2026-09-25, since joined by `delivery-test-aids`,
+`fix/result-landscape` merged; 10 / 110 on 2026-09-25, since joined by `delivery-test-aids`,
 `csp-no-violations`, `devscreen-narrow`, `race-fullscreen`, `requestRetry`, `legal-pages` and
 `result-landscape`)
 against the
