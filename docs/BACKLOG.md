@@ -1842,6 +1842,22 @@ owner's hand**: parked here with enough context to be actionable months from now
       is a decision. *(verify: either `HEAD /api/health` answers 200 with a test pinning it, or the
       guide's GET instruction is the accepted answer and this row closes on that)*
 
+## Found during the night chain of 2026-10-18
+
+- [ ] **Two Dev Screen tests still fail at vitest's 5 s per-test limit under load.** A4-02 (PART TWO)
+      gave the two chapter walks' `beforeAll` hooks 60 s; the per-test limit stayed at vitest's 5 s.
+      On 2026-10-18, with parallel builds on the machine: `DevScreen.a11yNames.test.jsx` › "names the
+      ten fields by their visible labels …" timed out at 5000 ms in a premerge client suite that took
+      755 s (normally ~310 s), and `devScreenChapters.savedSettings.test.jsx` › "two parts of one
+      stored block keep each other edits" timed out (5052 ms and 5074 ms) in client-suite runs; each
+      passed when re-run on a quiet machine. The second one's passing runs took between 1.4 s and
+      4.8 s, so it sits close to the budget even unloaded. Neither change on the branches involved touched those
+      files. Both are load-sensitive budgets, not defects in the code under test. Not changed tonight
+      (the rule against raising timeouts blindly applies; whether to give these tests headroom, as
+      A4-02 did for the hooks, is a small decision). *(verify: both files pass inside a premerge
+      client suite run with a parallel build, or the per-test budget is raised with a comment saying
+      why and broken once to prove it fires)*
+
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
