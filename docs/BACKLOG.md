@@ -1811,6 +1811,19 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
+## Found while writing the operator guide's monitoring section (2026-10-18)
+
+- [ ] **`HEAD /api/health` answers `401`; only `GET` is public.** The public allow-list matches the
+      method exactly (`server/src/auth/guards.js:14-19`, compared at `:152-158`), while the same
+      file states that HEAD must inherit GET's policy (`:114-119`) — which holds for `ROUTE_POLICY`
+      and not for `PUBLIC_PATHS`. Checked 2026-10-18 by running the real `createRequireAuth` with a
+      request of each method: `GET 200`, `HEAD 401`. An uptime checker that sends `HEAD` (some do
+      unless told otherwise) reports a healthy server as failing. Documented for operators in
+      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2, *Watching it from outside* ("configure the check as a
+      `GET` request"). Not changed: it touches the auth guard, and whether HEAD joins the allow-list
+      is a decision. *(verify: either `HEAD /api/health` answers 200 with a test pinning it, or the
+      guide's GET instruction is the accepted answer and this row closes on that)*
+
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
