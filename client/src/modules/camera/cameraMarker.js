@@ -240,7 +240,7 @@ export function parseMarkerLine(line) {
   try {
     marker = JSON.parse(rest.slice(start, end + 1));
   } catch (e) {
-    throw new Error(`marker payload is not valid JSON: ${e.message}`);
+    throw new Error(`marker payload is not valid JSON: ${e.message}`, { cause: e });
   }
   if (marker?.v !== 1) throw new Error(`unsupported marker version: ${marker?.v}`);
   return marker;

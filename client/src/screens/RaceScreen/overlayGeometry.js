@@ -135,10 +135,10 @@ const SHIPPED_ANCHORS = {
 export function overlayRectCssPxShipped(key, { wrapperCssW, wrapperCssH }) {
   const a = SHIPPED_ANCHORS[key];
   if (!a) return null;
-  let x = 0;
+  const x = a.centered
+    ? wrapperCssW / 2 - a.widthCssPx / 2
+    : wrapperCssW - a.rightCssPx - a.widthCssPx;
   const y = wrapperCssH - a.bottomCssPx - a.heightCssPx;
-  if (a.centered) x = wrapperCssW / 2 - a.widthCssPx / 2;
-  else x = wrapperCssW - a.rightCssPx - a.widthCssPx;
   return { x, y, w: a.widthCssPx, h: a.heightCssPx };
 }
 

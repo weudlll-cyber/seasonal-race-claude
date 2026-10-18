@@ -165,8 +165,6 @@ describe('Physics step count per rAF', () => {
   it('12ms + 12ms frames: first yields 0 steps, second yields 1 step (remainder 8ms)', () => {
     let physicsAccum = 0;
     let stepCount = 0;
-    let physicsAccumAfterFirst = 0;
-    let stepCountAfterFirst = 0;
 
     // Simulate manually to capture intermediate state
     physicsAccum += 12;
@@ -174,8 +172,8 @@ describe('Physics step count per rAF', () => {
       stepCount++;
       physicsAccum -= FIXED_DT;
     }
-    stepCountAfterFirst = stepCount;
-    physicsAccumAfterFirst = physicsAccum;
+    const stepCountAfterFirst = stepCount;
+    const physicsAccumAfterFirst = physicsAccum;
 
     physicsAccum += 12;
     while (physicsAccum >= FIXED_DT) {
