@@ -829,11 +829,28 @@ are in PART TWO with what closed them; these are the ones still standing.
         detection, Docker install, ufw, unattended-upgrades, the DNS check, the real certificate,
         the systemd timers, alert e-mails);
       - the written pre-exposure bar (auth item 2 above; item 1, the CSP, is on since 2026-10-12).
+
+      **Observed 2026-10-18 (the end-to-end test, three runs, local Docker on Windows), not fixed:**
+      in 2 of 6 starts on an EMPTY data directory, right after the image was built, the app did not
+      pass its health check within the compose `start_period` and retries, compose marked it
+      unhealthy and did not start Caddy, and `racearena start` failed after 120 s; the next command
+      that runs `compose up` (here a restore) started Caddy and everything answered. The other 4
+      starts were healthy within seconds. Today's behaviour is kept. On the first VPS run, if
+      `racearena start` reports this, running it (or the install command) again runs `compose up`
+      again, which is what started Caddy in the test — expected to repair it, not yet seen there.
 - [ ] ★ **COPY THE BACKUPS OFF THE SERVER (VPS-INSTALL-1, 2026-10-07).** The install makes a backup
       every day into `/var/backups/racearena` on the SAME disk as the data, keeping 14 days. A copy
       on the same disk does not survive losing the disk. Nothing copies them elsewhere yet. The
       install's closing text and [VPS-INSTALL.md](VPS-INSTALL.md) say so. Where they go — another
       machine, storage he rents — is the owner's choice.
+      ★ **2026-10-18 — THE EMERGENCY DRILL PASSES on a local Docker** (`deploy/test/e2e-local.sh`,
+      its last section): a backup taken on one install and copied off it, that install removed with
+      `--purge-data`, a NEW install made (its own session secret, its own first admin), the carried
+      archive put into the new `/var/backups/racearena` and `racearena restore <archive>` run — the
+      old install's admin signs in, its race reads back, and the new install's own admin is gone
+      (the backup's accounts replace it). The whole test: 71 of 71 on the third run; the first two
+      runs failed only on a slow first start (the GOING ONLINE row above), the drill's restore checks
+      passing in the second. What it cannot show is the copy itself to another machine.
       **verify:** a backup archive exists somewhere other than the server, newer than 2 days.
 - [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
       deliberately does not change the SSH configuration: a mistake there locks the owner out of his

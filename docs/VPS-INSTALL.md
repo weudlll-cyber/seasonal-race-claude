@@ -109,5 +109,9 @@ something goes wrong — is in the [operator guide](OPERATOR-GUIDE.md).
 - **Tested on a local Docker (VPS-INSTALL-1, 2026-10-07)**, exactly as the installer starts the stack,
   with Caddy's own test certificate instead of a public one: see
   [reports/release/VPS-INSTALL-1.md](../reports/release/VPS-INSTALL-1.md).
+- **The emergency drill, on the same local Docker (2026-10-18):** a backup copied off one install,
+  that install removed with `--purge-data`, a new install made, the archive put into its
+  `/var/backups/racearena` and `racearena restore <archive>` run — the old accounts and races came
+  back. On a real loss, that is the way back: install afresh, copy the archive in, restore.
 - **Tested only on the real server, at the first install:** the system check, the Docker install, ufw,
   unattended-upgrades, the DNS check, the real certificate, the systemd timers and the alert e-mails.

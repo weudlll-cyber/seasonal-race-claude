@@ -5,9 +5,13 @@
 # Project:     RaceArena — VPS-INSTALL-1 (2026-10-07)
 # Description: The production stack end to end on a local Docker, started EXACTLY as install.sh
 #              starts it — the same three settings files written the same way, then the same
-#              `racearena` commands (start, first-admin, verify-signin, backup, restore, update) —
-#              with two differences a machine without a public name needs: Caddy signs for itself
-#              (`tls internal`, as PROXY-PROBE-1 did) and the name is `racearena.test`.
+#              `racearena` commands (start, first-admin, verify-signin, backup, restore, update,
+#              uninstall) — with two differences a machine without a public name needs: Caddy signs
+#              for itself (`tls internal`, as PROXY-PROBE-1 did) and the name is `racearena.test`.
+#              Last, the EMERGENCY DRILL (2026-10-18): a backup is carried off the install before
+#              `uninstall --purge-data` removes it, a NEW install is made (its own secret, its own
+#              first admin), and `racearena restore` of the carried archive must bring back the old
+#              install's admin and race; the drill's install is then purged too.
 #
 # Usage: bash e2e-local.sh <e2eRoot> <repoClone> <refA> <refB> <refC>
 #   <repoClone>  a git repository holding the three refs; it becomes the checkout's `origin`
@@ -15,7 +19,9 @@
 #   <refB>       a newer one whose update must run a migration (a test migration, `e2e-test-1`)
 #   <refC>       a version whose app can never become healthy — its update must roll back by itself
 # Run from Git Bash with Docker; it publishes 80 and 443 on this machine, so both must be free.
-# Everything it creates is under <e2eRoot> or carries the compose project name `racearena`.
+# Everything it creates is under <e2eRoot> or carries the compose project name `racearena`; the
+# stack's containers, volumes and app images are removed by its own uninstall steps; the pulled
+# Caddy and Debian base images stay in Docker's image store.
 # ============================================================
 set -uo pipefail
 
@@ -41,22 +47,30 @@ ca_file() { docker exec racearena-caddy-1 cat /data/caddy/pki/authorities/local/
 visitor() { node "$HERE/e2e-check.mjs" "$DOMAIN" "$(ca_file)" "$@"; }
 
 # ── the layout install.sh step 5 makes, written the way it writes it ─────────────────────────────
-mkdir -p "$RA_ETC/state" "$RA_DATA" "$RA_BACKUPS"
-git clone --quiet "$CLONE" "$RA_HOME"
-git -C "$RA_HOME" checkout --quiet --detach "$REF_A"
-{
-  printf 'RA_PUBLIC_ORIGIN=https://%s\n' "$DOMAIN"
-  printf 'RA_SESSION_SECRET=%s\n' "$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
-  printf 'RA_BOOTSTRAP_TOKEN=%s\n' "$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'))")"
-} >"$RA_ETC/racearena.env"
-sed -e "s|{{DOMAIN}}|$DOMAIN|" -e "s|{{EMAIL}}|e2e@$DOMAIN|" -e 's|{{TLS_LINE}}|tls internal|' \
-  "$RA_HOME/deploy/Caddyfile.template" >"$RA_ETC/Caddyfile"
-printf 'RA_DATA_HOST=%s\nRA_BACKUP_HOST=%s\nRA_ENV_FILE=%s\nRA_CADDYFILE=%s\n' \
-  "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/racearena.env" "$RA_ETC/Caddyfile" >"$RA_ETC/compose.env"
-# install.sh installs racearena to /usr/local/bin, a COPY: the checkout changes under it during an
-# update, and bash reads a script while it runs it. The test runs a copy for the same reason.
-mkdir -p "$E2E/bin"
-cp "$RA_HOME/deploy/racearena" "$E2E/bin/racearena"
+# lay_out_install [token] — a checkout of <refA>, the settings file with a NEW session secret (and,
+# with "token", the one-time setup token an empty install needs), the Caddyfile, compose.env, and
+# the helper. Used three times: the first install, the fresh copy before --purge-data (on the kept
+# data, so no token), and the emergency drill's new install (empty data, so a token).
+lay_out_install() {
+  mkdir -p "$RA_ETC/state" "$RA_DATA" "$RA_BACKUPS" "$E2E/bin"
+  git clone --quiet "$CLONE" "$RA_HOME"
+  git -C "$RA_HOME" checkout --quiet --detach "$REF_A"
+  {
+    printf 'RA_PUBLIC_ORIGIN=https://%s\n' "$DOMAIN"
+    printf 'RA_SESSION_SECRET=%s\n' "$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+    if [[ "${1:-}" == token ]]; then
+      printf 'RA_BOOTSTRAP_TOKEN=%s\n' "$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'))")"
+    fi
+  } >"$RA_ETC/racearena.env"
+  sed -e "s|{{DOMAIN}}|$DOMAIN|" -e "s|{{EMAIL}}|e2e@$DOMAIN|" -e 's|{{TLS_LINE}}|tls internal|' \
+    "$RA_HOME/deploy/Caddyfile.template" >"$RA_ETC/Caddyfile"
+  printf 'RA_DATA_HOST=%s\nRA_BACKUP_HOST=%s\nRA_ENV_FILE=%s\nRA_CADDYFILE=%s\n' \
+    "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/racearena.env" "$RA_ETC/Caddyfile" >"$RA_ETC/compose.env"
+  # install.sh installs racearena to /usr/local/bin, a COPY: the checkout changes under it during an
+  # update, and bash reads a script while it runs it. The test runs a copy for the same reason.
+  cp "$RA_HOME/deploy/racearena" "$E2E/bin/racearena"
+}
+lay_out_install token
 RACEARENA=(bash "$E2E/bin/racearena")
 
 echo "── install.sh step 6: start, first admin, sign-in over https"
@@ -138,24 +152,36 @@ check "the data is KEPT" test -f "$RA_DATA/users.json"
 check "the backups are KEPT" test -n "$(find "$RA_BACKUPS" -name 'racearena-backup-*.tar')"
 
 echo "── racearena uninstall --purge-data, on a fresh copy of the stack"
-git clone --quiet "$CLONE" "$RA_HOME"
-git -C "$RA_HOME" checkout --quiet --detach "$REF_A"
-mkdir -p "$RA_ETC/state"
-{
-  printf 'RA_PUBLIC_ORIGIN=https://%s\n' "$DOMAIN"
-  printf 'RA_SESSION_SECRET=%s\n' "$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
-} >"$RA_ETC/racearena.env"
-sed -e "s|{{DOMAIN}}|$DOMAIN|" -e "s|{{EMAIL}}|e2e@$DOMAIN|" -e 's|{{TLS_LINE}}|tls internal|' \
-  "$RA_HOME/deploy/Caddyfile.template" >"$RA_ETC/Caddyfile"
-printf 'RA_DATA_HOST=%s\nRA_BACKUP_HOST=%s\nRA_ENV_FILE=%s\nRA_CADDYFILE=%s\n' \
-  "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/racearena.env" "$RA_ETC/Caddyfile" >"$RA_ETC/compose.env"
-cp "$RA_HOME/deploy/racearena" "$RA_BIN"
+lay_out_install
 check "the stack starts again on the kept data" "${RACEARENA[@]}" start
+# The emergency drill below needs a backup of THIS install that outlives it: take one and copy the
+# archive and its checksum OFF (to $E2E/carried), as the operator guide says to do with every backup.
+check "racearena backup, then the archive is copied off the install" "${RACEARENA[@]}" backup
+CARRIED="$(cat "$RA_ETC/state/last-backup")"
+mkdir -p "$E2E/carried"
+cp "$RA_BACKUPS/$CARRIED" "$RA_BACKUPS/$CARRIED.sha256" "$E2E/carried/"
 check "--purge-data refuses without the second confirmation" bash -c "! printf '%s\nno\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data && [ -f '$RA_DATA/users.json' ]"
 check "racearena uninstall --purge-data (both confirmations)" bash -c "printf '%s\ndelete all data\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data"
 check "the data is gone" test ! -e "$RA_DATA"
 check "the backups are gone" test ! -e "$RA_BACKUPS"
 check "no container of the stack is left" bash -c "[ -z \"\$(docker ps -aq --filter label=com.docker.compose.project=racearena)\" ]"
+
+echo "── the emergency drill: a NEW install, then the backup carried from the old one restored into it"
+# What losing the server looks like: nothing of the old install is left (above), a fresh install is
+# made with its own secret and its own first admin, the carried archive is put into its backups
+# directory, and `racearena restore` brings back the old install's accounts and races.
+NEW_ADMIN=e2e-new-admin
+NEW_PW="$(node -e "console.log(require('crypto').randomBytes(12).toString('base64url'))")"
+lay_out_install token
+check "the new install starts on an empty data directory" "${RACEARENA[@]}" start
+check "the new install's own first admin is created" bash -c "printf '%s\n' '$NEW_PW' | ${RACEARENA[*]} first-admin --user $NEW_ADMIN"
+cp "$E2E/carried/$CARRIED" "$E2E/carried/$CARRIED.sha256" "$RA_BACKUPS/"
+check "racearena restore $CARRIED (made on the old install)" "${RACEARENA[@]}" restore "$CARRIED"
+check "the old install's admin signs in on the new install" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $ADMIN"
+check "the old install's race reads back on the new install" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
+check "the new install's own admin is replaced by the backup's accounts" bash -c "! printf '%s\n' '$NEW_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $NEW_ADMIN"
+check "the drill's install is removed with --purge-data" bash -c "printf '%s\ndelete all data\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data"
+check "no container of the stack is left after the drill" bash -c "[ -z \"\$(docker ps -aq --filter label=com.docker.compose.project=racearena)\" ]"
 
 echo
 echo "summary: $(grep -c '^PASS' "$RESULTS") passed, $(grep -c '^FAIL' "$RESULTS") failed — $RESULTS"

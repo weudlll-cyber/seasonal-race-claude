@@ -151,6 +151,30 @@ runs a copy too.
 **shellcheck** (koalaman/shellcheck v0.10.0, pinned by digest): `install.sh`, `racearena` and
 `e2e-local.sh` clean.
 
+## 2026-10-18 — the test again after master `7d57fd81` was merged in, with the emergency drill
+
+The same harness, with refs made the same way (A = `b3874c6c`, the merged branch; B = A plus
+`e2e-test-1`; C = A with a server that exits at start; B and C throwaway, never pushed), now 71
+checks. Its last section is new, the **emergency drill**: before `uninstall --purge-data` removes
+the second stack, `racearena backup` runs and the archive and its `.sha256` are copied off the
+install; after the purge a NEW install is laid out (a new session secret, the one-time token) and
+started, its own first admin `e2e-new-admin` is created, the carried archive is copied into its
+backups directory and `racearena restore` runs. Checked: the old install's admin signs in, the old
+race reads back, the new install's own admin can no longer sign in (the backup's accounts replace
+it), and the drill's install is purged with no container left. The layout the three installs share
+is now one helper, `lay_out_install`.
+
+| run | result | what failed |
+| --- | --- | --- |
+| 1 | 58 of 71 | the FIRST start on an empty data directory: the app was not healthy within the compose health window, so compose did not start Caddy and `racearena start` failed after 120 s; every check that needs https or the stored race failed after it (13). The next `compose up` (the restore) started Caddy and the restore, sign-in, update, rollback and drill checks that need no stored race passed |
+| 2 | 69 of 71 | the same, once, at the drill's new install (its start and its first-admin wait); the drill's restore, sign-in, race read and replaced-admin checks passed |
+| 3 | **71 of 71** | — |
+
+The other four empty-data starts were healthy within seconds (run 2's first start: healthy at the
+first check, 5 s after the container started). Not reproduced on demand and not fixed; recorded in
+the GOING ONLINE row of `docs/BACKLOG.md`. **shellcheck** v0.10.0 (digest `sha256:2097951f…221fb`):
+`e2e-local.sh`, `hardening-check.sh`, `install.sh`, `racearena` clean.
+
 ## What could NOT be tested here — on the owner's VPS, at the first install
 
 - the system detection on the real machine (the dry run checked the parser on Debian 12);
