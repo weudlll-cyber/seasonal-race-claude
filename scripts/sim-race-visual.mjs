@@ -688,7 +688,7 @@ function runSimulation(track, seed, burstIndex, burstLen) {
       }
     }
 
-    // ── Camera update (same call as index.jsx line 1133) ───────────────────
+    // ── Camera update (same call as index.jsx line 1331) ───────────────────
     const raceState = {
       raceElapsed: raceTs,
       finishedCount: racers.filter((r) => r.finished).length,

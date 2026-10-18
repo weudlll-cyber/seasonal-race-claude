@@ -8,7 +8,7 @@
 //
 // ── ★ THE HOLE THIS CLOSES, AND WHY IT WAS INVISIBLE ───────────────────────────────────────────
 //
-// `RaceScreen/index.jsx:1072-1078` delivers the plan ONCE, MID-RACE, on the first frame it exists —
+// `RaceScreen/index.jsx:1062-1070` delivers the plan ONCE, MID-RACE, on the first frame it exists —
 // the heroes are cast inside `racePlanController.update`, so the plan is null at the start line and
 // appears later. Every instrument instead called `updateRacePlan(b1Indices)` with NO cameraPlan and
 // never called `setCameraPlan` at all.
@@ -48,7 +48,7 @@
 // ============================================================
 
 /**
- * A per-race delivery closure mirroring `RaceScreen/index.jsx:1072-1078`.
+ * A per-race delivery closure mirroring `RaceScreen/index.jsx:1062-1070` (B4a).
  *
  * Call it once per frame, inside the loop, BEFORE `cd.update(...)` — the product delivers from the
  * same frame body, and the director must see the plan on the frame it first exists rather than one

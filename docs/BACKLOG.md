@@ -378,7 +378,7 @@ these carries a recommendation.**
    the real component past its placeholder, and three render-class sabotages of `index.jsx` all go
    red (see *`RaceScreen` is not testable — ✅ ANSWERED* in PART TWO). **BUT THE BACKGROUND SABOTAGE
    NAMED HERE IS STILL GREEN, re-measured on the night of 2026-09-04:** forcing `bgImagePath` to
-   `null` at `index.jsx:435` — which blanks every track background in the game — passes **31 files
+   `null` at `index.jsx:435` (now `:578`, `const bgImagePath`) — which blanks every track background in the game — passes **31 files
    and 405 tests** in that directory, the new mount test among them.
    **★ AND IT CANNOT BE CAUGHT THERE.** The mount test stubs the 2D context, so nothing it does is
    drawn; it proves the screen RENDERS, never WHAT it renders. A test that asserted draw calls would
