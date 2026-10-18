@@ -1063,7 +1063,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8148fa92 2026-10-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6a234874 2026-10-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
 ★★ **RE-MEASURED 2026-10-19 (A7-03 piece 1, ESLint 10), IDENTICAL TO THE DIGIT** — 20606/4.36/10.43, 9014/3.71/10.24, 6049/11.77/16.00, 1944/3.22/8.22, ratio 2.89×. `cameraMarker.js`, in the closure, now passes the caught JSON error as the `cause` of the error it throws (ESLint 10's `preserve-caught-error`); the measurement does not parse a marker. Run rather than argued.
 
