@@ -10,9 +10,11 @@
 // a FRESH browser context with no cookies — a visitor who never signed in. They are cleared again at
 // the end, so no other spec sees a footer it did not expect.
 //
-// And the footer is VISIBLE WITHOUT SCROLLING (decided 2026-10-18): on the sign-in and the setup
-// screen, at three window sizes, the bar is inside the viewport as the page opens, and scrolled to the
-// end the page's spacer lies exactly under the bar — so the bar covers no content.
+// And the footer is VISIBLE WITHOUT SCROLLING (decided 2026-10-18): on the sign-in screen and each
+// setup tab, at four window sizes, the bar is inside the viewport as the page opens; scrolled to the
+// end, no content and no button lies under the bar. And there is NO SCROLLBAR WHEN THE CONTENT FITS
+// (decided the same day, after a page whose content fitted scrolled by a few pixels): the page is
+// never taller than the window unless its content, plus the bar's height, is.
 // ============================================================
 
 import { test, expect } from '@playwright/test';
@@ -77,9 +79,54 @@ test('signed out: the footer offers the source code and the operator’s legal n
 
 const SIZES = [
   { width: 1920, height: 1080 },
+  { width: 1900, height: 990 },
   { width: 1280, height: 720 },
   { width: 390, height: 844 },
 ];
+
+/**
+ * The page's height against what it needs: `contentBottom` is the bottom of the lowest content BOX —
+ * every element except the page's own containers (any ancestor of the footer spacer), the stretching
+ * main area (`flex-grow` > 0, which fills the window whatever it holds), fixed elements and the bar
+ * and spacer themselves. In practice: the bottom card. `lowestButton` is the lowest visible button.
+ * All in page coordinates (scroll-independent).
+ */
+function pageFit(page) {
+  return page.evaluate(() => {
+    const spacer = document.querySelector('[data-testid="legal-footer-spacer"]');
+    const bar = document.querySelector('[data-testid="legal-footer"]');
+    const isFixed = (el) => {
+      for (let e = el; e && e !== document.body; e = e.parentElement) {
+        if (getComputedStyle(e).position === 'fixed') return true;
+      }
+      return false;
+    };
+    let contentBottom = 0;
+    let lowestButton = { bottom: 0, what: 'none' };
+    for (const el of document.body.querySelectorAll('*')) {
+      if (el === spacer || el.contains(spacer) || el.closest('[data-testid="legal-footer"]')) {
+        continue;
+      }
+      const style = getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') continue;
+      if (Number(style.flexGrow) > 0 || isFixed(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const bottom = r.bottom + window.scrollY;
+      contentBottom = Math.max(contentBottom, bottom);
+      if (el.matches('button') && bottom > lowestButton.bottom) {
+        lowestButton = { bottom, what: el.textContent.trim().slice(0, 30) };
+      }
+    }
+    return {
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+      barHeight: bar.getBoundingClientRect().height,
+      contentBottom,
+      lowestButton,
+    };
+  });
+}
 
 /** The bar's and the spacer's boxes and the window, read in the page — no scrolling done here. */
 function footerGeometry(page) {
@@ -98,39 +145,66 @@ function footerGeometry(page) {
   });
 }
 
-/** Opens `path`, then checks the bar is on screen untouched, and covers nothing scrolled to the end. */
-async function expectFooterAlwaysVisible(page, path, ready) {
+/**
+ * Opens `path` (and each of `tabs`, by name), then checks the bar is on screen untouched, the page is
+ * no taller than its content needs, and the bar covers nothing scrolled to the end.
+ */
+async function expectFooterAlwaysVisible(page, path, ready, tabs = [null]) {
   for (const size of SIZES) {
     await page.setViewportSize(size);
     await page.goto(path);
     await expect(ready(page)).toBeVisible();
-    const label = `${path} at ${size.width}x${size.height}`;
-
-    const opened = await footerGeometry(page);
-    expect(opened.scrollY, `${label}: opened at the top`).toBe(0);
-    expect(opened.bar.top, `${label}: bar top inside the window`).toBeGreaterThanOrEqual(0);
-    expect(opened.bar.bottom, `${label}: bar bottom inside the window`).toBeLessThanOrEqual(
-      opened.vh + 0.5
-    );
-    expect(opened.bar.height, `${label}: bar has a height`).toBeGreaterThan(0);
-    // No sideways overflow of the page from the bar.
-    expect(opened.bar.right, `${label}: bar within the width`).toBeLessThanOrEqual(opened.vw + 0.5);
-    expect(opened.barOverflow, `${label}: all links fit on the bar's line`).toBeLessThanOrEqual(0);
-
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    const end = await footerGeometry(page);
-    expect(end.bar.bottom, `${label}: bar still at the bottom when scrolled`).toBeCloseTo(
-      end.vh,
-      0
-    );
-    expect(end.spacer.height, `${label}: spacer as tall as the bar`).toBeCloseTo(end.bar.height, 0);
-    // Scrolled to the end, no piece of the screen's content lies under the bar.
-    const lowest = await lowestContent(page);
-    expect(
-      lowest.bottom,
-      `${label}: lowest content (${lowest.what}) clear of the bar`
-    ).toBeLessThanOrEqual(end.bar.top + 0.5);
+    for (const tab of tabs) {
+      if (tab) await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
+      await expectFooterFits(
+        page,
+        `${path}${tab ? ` ${tab}` : ''} at ${size.width}x${size.height}`
+      );
+    }
   }
+}
+
+/** The checks for one screen state, at the current window size. */
+async function expectFooterFits(page, label) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+
+  const opened = await footerGeometry(page);
+  expect(opened.scrollY, `${label}: opened at the top`).toBe(0);
+  expect(opened.bar.top, `${label}: bar top inside the window`).toBeGreaterThanOrEqual(0);
+  expect(opened.bar.bottom, `${label}: bar bottom inside the window`).toBeLessThanOrEqual(
+    opened.vh + 0.5
+  );
+  expect(opened.bar.height, `${label}: bar has a height`).toBeGreaterThan(0);
+  // No sideways overflow of the page from the bar.
+  expect(opened.bar.right, `${label}: bar within the width`).toBeLessThanOrEqual(opened.vw + 0.5);
+  expect(opened.barOverflow, `${label}: all links fit on the bar's line`).toBeLessThanOrEqual(0);
+
+  // NO SCROLLBAR WHEN THE CONTENT FITS: the page may be taller than the window only by what the
+  // content plus the bar's height needs — so content that fits above the bar gives no scrollbar.
+  const fit = await pageFit(page);
+  const needed = Math.max(fit.innerHeight, Math.ceil(fit.contentBottom + fit.barHeight));
+  expect(
+    fit.scrollHeight,
+    `${label}: page ${fit.scrollHeight} px, window ${fit.innerHeight} px, content needs ${needed} px`
+  ).toBeLessThanOrEqual(needed + 1);
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const end = await footerGeometry(page);
+  expect(end.bar.bottom, `${label}: bar still at the bottom when scrolled`).toBeCloseTo(end.vh, 0);
+  expect(end.spacer.height, `${label}: spacer as tall as the bar`).toBeCloseTo(end.bar.height, 0);
+  // Scrolled to the end, no piece of the screen's content lies under the bar.
+  const lowest = await lowestContent(page);
+  expect(
+    lowest.bottom,
+    `${label}: lowest content (${lowest.what}) clear of the bar`
+  ).toBeLessThanOrEqual(end.bar.top + 0.5);
+  // …and the last button (the bottom card's Start Race on the setup screen) fully above it.
+  const scrolled = await pageFit(page);
+  const scrollY = await page.evaluate(() => window.scrollY);
+  expect(
+    scrolled.lowestButton.bottom - scrollY,
+    `${label}: last button "${scrolled.lowestButton.what}" fully above the bar`
+  ).toBeLessThanOrEqual(end.bar.top + 0.5);
 }
 
 /**
@@ -176,7 +250,7 @@ test('the footer is visible without scrolling and covers nothing — sign-in and
   const anon = await visitor.newPage();
   try {
     // Setup, as the run's signed-in admin.
-    await expectFooterAlwaysVisible(page, '/setup', allThree);
+    await expectFooterAlwaysVisible(page, '/setup', allThree, ['Players', 'Track', 'Settings']);
     // Sign-in, as a visitor who never signed in.
     await expectFooterAlwaysVisible(anon, '/login', allThree);
   } finally {

@@ -1901,7 +1901,12 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       entered on their install. **Built:** a slim footer bar on the sign-in and setup screens, fixed
       to the window's bottom edge so it is visible without scrolling (the owner decided that on
       2026-10-18 after seeing it reachable only by scrolling; a spacer of the bar's height keeps
-      the page's last content clear of it) —
+      the page's last content clear of it; on 2026-10-18 the setup screen showed a scrollbar of a few
+      pixels although its content fitted, and the owner decided there must be none — measured, the
+      spacer had been ADDED to the main area's 2rem bottom padding (1280x720 Players: 743 px on master,
+      775 px on the branch), so the main area now has no bottom padding and the spacer is the page's
+      bottom space; the page heights are master's again and the Browser-gate check asserts no page is
+      taller than its content plus the bar) —
       *Source code* always (the upstream repository at the build's commit, the repository root when
       the build names no commit, or the operator's `RA_SOURCE_URL`), *Legal notice* and *Privacy
       policy* only once filled in; two public pages `/legal-notice` and `/privacy` showing the

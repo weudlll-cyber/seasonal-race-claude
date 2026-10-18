@@ -5,7 +5,9 @@
    Description: The legal footer: a slim, muted bar fixed to the bottom edge of the window, so it is
                 visible without scrolling at every width (decided 2026-10-18). A spacer of the same
                 height stays in the page's flow, so the bar never covers the last of the screen's
-                content or buttons — that spacer is the only thing that moves the page.
+                content or buttons. The spacer REPLACES the screen's own bottom space rather than
+                adding to it (the setup screen's main area has no bottom padding for that reason),
+                so a page whose content fits the window shows no scrollbar.
    ============================================================ */
 
 /* ONE height for both: the bar and the room the page keeps free for it. */

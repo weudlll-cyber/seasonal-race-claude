@@ -42,7 +42,11 @@
   max-width: 960px;
   width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  /* No bottom padding: the legal footer's spacer (components/LegalFooter) follows this element and
+     is the page's bottom space — the bar's height, so the bar never covers the last card. A 2rem
+     padding here ON TOP of the spacer made a page whose content fits the window scroll by those
+     extra pixels (measured 2026-10-18: 1280x720 Players 743 px on master, 775 px with the spacer). */
+  padding: 2rem 2rem 0;
   gap: 1.5rem;
 }
 
