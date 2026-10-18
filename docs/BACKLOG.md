@@ -1829,19 +1829,6 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
-## Found during the day chain of 2026-10-18
-
-- [ ] **`sessionInvalidation.test.js` times out at 5 s in premerge's server suite — twice on
-      2026-10-18.** PART TWO D9 (2026-08-23) made the bcrypt-heavy auth timeouts a WATCH that "closes
-      when it happens a third time and is diagnosed". On 2026-10-18 it happened twice, each time with
-      the server suite running ALONE inside premerge: on `feat/legal-pages` ("still ends every OTHER
-      session of that same user", "leaves an unrelated user untouched", after a client suite of
-      478 s) and on `fix/health-head` ("leaves an unrelated user untouched", "a role-only update does
-      not touch sessions", server suite 223 s; normally ~95–130 s). Each re-run passed it. Neither
-      branch touches the file or the session code. Not diagnosed; the 5 s limit is NOT raised (the
-      rule of the bcrypt fix). *(verify: the cause is named — what holds those tests past 5 s when
-      the suite runs alone — or the tests are shown to need a budget and get one, broken once)*
-
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
@@ -1872,6 +1859,22 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **`sessionInvalidation.test.js` timed out at 5 s in premerge's server suite — CLOSED 2026-10-18
+      (branch `fix/session-test-timeout`).** Twice on 2026-10-18 two of its tests crossed vitest's 5 s
+      limit with the server suite running alone (on `feat/legal-pages` and `fix/health-head`); PART
+      TWO D9 (2026-08-23) had made these bcrypt timeouts a watch that closes "when it happens a third
+      time and is diagnosed". **Diagnosed, measured alone:** each test took 1.0–2.6 s, almost all of
+      it bcrypt at the production cost of 12 (`usersStore.js` `BCRYPT_COST`, ~247 ms a call): six to
+      ten hashes and compares per test as it creates users, logs in and changes passwords — so the
+      contention of a loaded machine pushed the slowest two past 5 s. There is no test-cost setting.
+      **What closed it:** the file mocks `bcrypt` for itself only, so `hash` runs at cost 4
+      (`compare` follows the hash's own cost) — the tests took 52–125 ms each. The production cost is
+      untouched, and what the file proves (a password change ends sessions; guards.js's epoch check)
+      does not depend on hash strength, which `usersStore.test.js` holds at the real cost. Still red
+      when the epoch check is switched off (three tests: 200 instead of 401). The global limit stays.
+      `changePassword.test.js` and `changePasswordContract.test.js` keep their own 30 s budget for
+      the same cause (noticed, left as they are). D9's watch is answered for this file.
 
 - [x] **LEGAL-PAGES-1 — a source-code link, two public legal pages and a legal-notice template —
       ACCEPTED 2026-10-18 AND MERGED, with the compact setup screen.** The facts of
