@@ -1842,6 +1842,22 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **PRIVACY-TEMPLATE-1 — a privacy-policy template beside the legal notice's — MERGED
+      2026-10-18.** On 2026-10-18 the owner asked for an English, country-neutral privacy-policy
+      template, the counterpart of LEGAL-PAGES-1's legal-notice template (below). **Built:**
+      `PRIVACY_POLICY_TEMPLATE` beside `LEGAL_NOTICE_TEMPLATE` in the one template module
+      (`client/src/modules/legal/legalNoticeTemplate.js`), and an *Insert template* button under the
+      privacy-policy field in the Dev Screen's *Legal pages*, through the same `insertTemplate` as
+      the legal notice's — fills an empty field, asks before replacing text, never saves. Every
+      factual sentence was checked against [PRIVACY-FACTS.md](PRIVACY-FACTS.md) and the code (the
+      cookie's `maxAge` of 30 days in `server/src/auth/session.js`, no other cookie, no IP address
+      or access log written by the app, stored races kept for good, the browser's stored settings,
+      race history and last user, the release check's daily cache in `server/src/releaseCheck.js`);
+      none needed changing. The chapter design gains row 353 (DEVSCREEN-CHAPTERS-1). Held by
+      `LegalPagesSection.test.jsx` (the same tests for both buttons, the privacy one broken once on
+      purpose) and the chapter guard (353 rows). PRIVACY-FACTS.md now names the template as derived
+      from it, to be kept in step.
+
 - [x] **OFFLINE-1 — when the venue's connection drops, three things a viewer or operator notices
       (opened 2026-10-18) — ACCEPTED 2026-10-18 AND MERGED.** Measured on the production build with throwaway data
       ([reports/release/OFFLINE-1.md](../reports/release/OFFLINE-1.md)): **no result was lost and no

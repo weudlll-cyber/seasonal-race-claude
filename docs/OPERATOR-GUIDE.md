@@ -187,16 +187,18 @@ notice" and "Privacy policy" appear only once you have filled them in.** Both pa
 visitor reads them at `/legal-notice` and `/privacy` without signing in.
 
 **Filling them in (admins).** Dev Screen → *Accounts and system* → *Legal pages*. Write each text as
-plain text; line breaks are kept and nothing is read as markup. **Insert template** fills the legal-
-notice field with a country-neutral template (it asks first when the field already holds text, and
-it does not save); replace every bracketed field with your details, delete what does not apply,
-then press **Save legal pages**. There is no privacy-policy template. Leaving a field empty removes
-its link. The texts are stored on the server in `legal-pages.json` in the data folder, so every
+plain text; line breaks are kept and nothing is read as markup. Each field has an **Insert
+template** button that fills it with a country-neutral template (it asks first when the field
+already holds text, and it does not save); replace every bracketed part with your details, delete
+what does not apply, then press **Save legal pages**. The privacy-policy template (since 2026-10-18)
+is written from what this application actually stores, as listed in
+[PRIVACY-FACTS.md](PRIVACY-FACTS.md); what your hosting or proxy logs, and how long you keep
+backups, only you can fill in. Leaving a field empty removes its link. The texts are stored on the server in `legal-pages.json` in the data folder, so every
 backup carries them.
 
 ★ **You, the operator, are responsible for what the pages say.** Which details a legal notice and a
 privacy policy must contain depends on the country you operate from — some require a legal notice,
-others do not. Check what applies to you; the template is a starting point, not legal advice.
+others do not. Check what applies to you; the templates are a starting point, not legal advice.
 
 **Where "Source code" points.** The game is free software under the GNU AGPL-3.0-or-later, so
 everyone who uses it is offered its source. By default the link opens the upstream repository at
