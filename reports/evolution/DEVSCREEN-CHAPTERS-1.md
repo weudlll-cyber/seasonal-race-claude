@@ -1,7 +1,8 @@
-# DEVSCREEN-CHAPTERS-1 — the Plan D design: 348 rows (347 controls and one read-only box) in seven chapters, each placed once, an info text each
+# DEVSCREEN-CHAPTERS-1 — the Plan D design: 352 rows (351 controls and one read-only box) in seven chapters, each placed once, an info text each
 
 *(348 as designed and merged. On 2026-10-06 the test-aids switch added one (TEST-AIDS-1) and two winners settings were removed (REMOVE-WINNERS-SETTING-1); on 2026-10-09 the read-only admin status box added a 348th row
-(AUDIT-1 D2) — see the last three sections.)*
+(AUDIT-1 D2); on 2026-10-18 the legal pages added four, rows 349 to 352 (LEGAL-PAGES-1) — see the
+sections at the end.)*
 
 **Owns:** the design of the Dev Screen rebuilt as chapters — which chapter every control goes into,
 in which order, and the info text each one carries. **It is a design. Nothing in it is built**: no
@@ -170,9 +171,9 @@ intro text, written to sit at the top of the chapter on the rebuilt screen.
 | 4 | Tracks, racers, brands and groups | 68 | 62 (+6 for an admin) | records and per-type settings |
 | 5 | History and evaluation | 15 | 13 (+2 for an admin) | reads the record |
 | 6 | Diagnostics and verification | 18 | 0 | changes neither |
-| 7 | Accounts and system | 22 | 4 | changes neither |
+| 7 | Accounts and system | 26 | 4 | changes neither |
 | — | Sidebar (all chapters) | 3 | 2 (+1 for an admin) | the screen's frame |
-| | **Total** | **348** | **88** (+9 for an admin) | |
+| | **Total** | **352** | **88** (+9 for an admin) | |
 
 ### 1 · The race — 100
 
@@ -243,11 +244,12 @@ whether the overlays, the logs and every other test aid are shown at all.
 Advanced today, where they read as camera settings; Export Race Config is a card of its own. All of
 them serve someone checking the game, none someone running an event.
 
-### 7 · Accounts and system — 22
+### 7 · Accounts and system — 26
 
 *Intro:* Who may use the screen and what it keeps: for an admin, first a read-only status of the
-installation; then your own password, the race directors of the server, and backups of everything
-this browser stores. *(The status clause added 2026-10-09, AUDIT-1 D2.)*
+installation; then your own password, the race directors of the server, backups of everything this
+browser stores, and — for an admin — the legal pages this installation shows to every visitor.
+*(The status clause added 2026-10-09, AUDIT-1 D2; the legal-pages clause 2026-10-18, LEGAL-PAGES-1.)*
 
 *Why one chapter.* Change Password, User Management and System are about access and storage, not
 racing.
@@ -285,7 +287,7 @@ specific fine mechanics. A reset button sits at the head of the values it resets
 | 4 · Things a race is made of | Player groups → Tracks → Racer types → Brands | The order Race Setup asks for them: who races, where, as what, under which look. Inside each: the editor link, New, per-entry actions, the form fields, Save, Cancel. |
 | 5 · History and evaluation | Race history → Period evaluation | General → specific: the full record before the summary built on it. Filters before the actions they feed. |
 | 6 · Diagnostics | On-screen diagnostics → Logs → Race configuration export | What you see on screen while racing before what is written out afterwards. |
-| 7 · Accounts and system | Installation status → Your password → Race directors → Backup and reset | General → specific, with the destructive reset last. |
+| 7 · Accounts and system | Installation status → Your password → Race directors → Backup and reset → Legal pages | General → specific, with the destructive reset last. |
 
 ---
 
@@ -690,7 +692,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 6.16 | Race configuration export | `ConfigExportSection.jsx` | Export race config | `export-race-config` (testId) | advanced | Downloads world.json — the exact configuration the game reads when a race starts — so a simulator run can be checked against it, and copies it to the clipboard where it can. The hash beside it names that configuration. | REWRITTEN |
 | 6.17 | Race configuration export | `ConfigExportSection.jsx` | ↻ refresh | `refresh` (handler) | advanced | Recomputes the configuration hash and the list of changed settings after you have changed something. | REWRITTEN |
 
-### 7 · Accounts and system — 22 rows, and the sidebar's 3
+### 7 · Accounts and system — 26 rows, and the sidebar's 3
 
 Rows 7.1–7.3 are placed in **Sidebar (all chapters)** (the owner's decision of 2026-10-05); their
 numbers are kept so earlier references still find them.
@@ -722,6 +724,10 @@ numbers are kept so earlier references still find them.
 | 7.22 | Backup and reset | `SystemSettings.jsx` | ⬆ Import Settings JSON | `importRef.current?.click` (handler) | advanced | Restores settings from an exported file. Settings the file does not contain are left as they are. It does not bring back tracks, racers, player groups or brands — those come back only from a server backup. | REWRITTEN |
 | 7.23 | Backup and reset | `SystemSettings.jsx` | 🔬 Export Diagnostic Snapshot | `handleDiagnosticExport` (handler) | advanced | Downloads the browser’s complete stored state, to attach to a bug report so the problem can be reproduced elsewhere. | REWRITTEN |
 | 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared. | REWRITTEN |
+| 7.25 | Legal pages | `LegalPagesSection.jsx` | Legal notice | `legal-notice-text` (testId) | advanced | The legal notice this installation shows to every visitor at /legal-notice, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Legal notice link. You, the operator, are responsible for its content and for checking which details apply where you operate. Stored on the server when you save. | NEW |
+| 7.26 | Legal pages | `LegalPagesSection.jsx` | Insert template | `legal-notice-template` (testId) | advanced | Fills in a country-neutral legal notice template. Replace the bracketed fields with your details and check which details apply where you operate. | NEW |
+| 7.27 | Legal pages | `LegalPagesSection.jsx` | Privacy policy | `privacy-policy-text` (testId) | advanced | The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. There is no template: describe how you run the game. Stored on the server when you save. | NEW |
+| 7.28 | Legal pages | `LegalPagesSection.jsx` | Save legal pages | `legal-pages-save` (testId) | advanced | Stores both texts on the server, for every visitor at once. Each text has a length limit; the count under each field shows how much of it is used. Nothing is stored until you press this — Insert template does not save. | NEW |
 
 ---
 
@@ -1200,3 +1206,21 @@ the desktop counts, where master showed one colour-contrast finding fewer in thr
 those elements were cut off the screen there, and axe does not judge text it cannot see. No rule
 is new. AUDIT-1 ran axe on the opening chapter only, so these were never recorded; they are
 **noticed and left** here (not this piece's scope) and named for the owner.
+
+---
+
+## LEGAL-PAGES-1 — rows 349 to 352, the legal pages (2026-10-18)
+
+The owner decided on 2026-10-18 that the game carries a source-code link and a legal notice, English
+and country-neutral, each operator entering their own details on their install. The texts are edited
+in a new last sub-group of *Accounts and system*, **Legal pages** (`sections/LegalPagesSection.jsx`),
+built on branch `feat/legal-pages`: the legal-notice field (7.25), *Insert template* (7.26), the
+privacy-policy field (7.27) and *Save legal pages* (7.28) — positions 25 to 28, after *Backup and
+reset*, so every earlier row keeps its number. Advanced tier, so only the All view (admins) shows
+them; the server refuses anyone else's change (`ROUTE_POLICY`). The operator view is unchanged:
+88 (+9 for an admin). The chapter's intro gained one clause naming the legal pages.
+
+**Counts.** The table and the chapter guard hold **352 rows** (chapter 7: 26). `count-controls.mjs`
+printed **349** on master before this piece (not the 347 recorded above — it had drifted with later
+pieces, not re-recorded here) and prints **353** with it: the four controls, each by its literal
+test id. The two text fields are written with their own literal test ids for exactly that reason.

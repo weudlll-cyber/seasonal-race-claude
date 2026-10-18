@@ -655,4 +655,12 @@ export const CONTROL_INFO = {
     'Downloads the browser’s complete stored state, to attach to a bug report so the problem can be reproduced elsewhere.',
   'SystemSettings:handleReset':
     'Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared.',
+  'LegalPagesSection:legal-notice-text':
+    'The legal notice this installation shows to every visitor at /legal-notice, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Legal notice link. You, the operator, are responsible for its content and for checking which details apply where you operate. Stored on the server when you save.',
+  'LegalPagesSection:legal-notice-template':
+    'Fills in a country-neutral legal notice template. Replace the bracketed fields with your details and check which details apply where you operate.',
+  'LegalPagesSection:privacy-policy-text':
+    'The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. There is no template: describe how you run the game. Stored on the server when you save.',
+  'LegalPagesSection:legal-pages-save':
+    'Stores both texts on the server, for every visitor at once. Each text has a length limit; the count under each field shows how much of it is used. Nothing is stored until you press this — Insert template does not save.',
 };

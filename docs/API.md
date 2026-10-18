@@ -2,9 +2,9 @@
 
 **Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Complete as of 2026-10-09: all 66 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
-the two settings routes, AUDIT-1 D2 the admin status route). Counted from source, not from earlier
-counts: the `router.<verb>(` calls in the eleven routers `server/src/app.js` mounts under `/api` (56), the three promote/export sub-routes
+**Complete as of 2026-10-18: all 68 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
+the two settings routes, AUDIT-1 D2 the admin status route, LEGAL-PAGES-1 the two legal-pages routes). Counted from source, not from earlier
+counts: the `router.<verb>(` calls in the eleven routers `server/src/app.js` mounts under `/api` (58), the three promote/export sub-routes
 `attachPromoteExport`
 (`server/src/routes/_defaultPromote.js`) adds to each of tracks, player groups and brands (9), and
 `GET /api/health` (1). Every entry says who may call it, what it takes, what it answers and every
@@ -31,7 +31,8 @@ client + SPA fallback (`:51-52`, both refuse `/api/*`) → `requireAuth` (`:54`)
 
 **Public paths** — exact method + path match, after the path is lower-cased and a trailing slash is stripped
 (`server/src/auth/guards.js:14-19`, matched at `:143-149`, normalisation at `:100-103`):
-`GET /api/health`, `GET /api/auth/setup-needed`, `POST /api/auth/setup`, `POST /api/auth/login`.
+`GET /api/health`, `GET /api/auth/setup-needed`, `POST /api/auth/setup`, `POST /api/auth/login`,
+and — since 2026-10-18, LEGAL-PAGES-1 — `GET /api/settings/legal-pages` (`server/src/auth/guards.js:22`).
 
 **Any signed-in user** — every other `/api/*` path (deny by default). `requireAuth` answers
 `401 {"error":"not authenticated"}` when there is no session user (`server/src/auth/guards.js:151-153`),
@@ -54,6 +55,7 @@ authenticates, with `team: null` (`:185-190`). The two roles are `operator` and 
 | tracks promote/export | GET POST | `/api/tracks/:id/(set-default\|clear-default\|export-seed)` | `server/src/auth/guards.js:57-62` |
 | race verify | POST | `/api/races/:shortKey/verify` | `server/src/auth/guards.js:67-72` |
 | points rule write | PUT | `/api/races/evaluation/points-rule` | `server/src/auth/guards.js:75-80` |
+| legal pages write | PUT | `/api/settings/legal-pages` | `server/src/auth/guards.js:95-100` (2026-10-18) |
 
 The policy matches on the path pattern alone, before any route runs, so an operator gets 403 on an
 admin path whether or not the record exists.
@@ -1055,31 +1057,60 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 ## Settings (`/api/settings`)
 
-Installation-wide settings, one JSON file each in the data folder — today one, the test-aids switch
-(`server/src/routes/settings.js:1-12`, `server/src/settings/testAids.js`). Mounted at
-`server/src/app.js:79`. Read by every signed-in user, written by admins only, the same shape as the
-points rule above. TEST-AIDS-1, the owner's decision of 2026-10-04.
+Installation-wide settings, one JSON file each in the data folder — two: the test-aids switch
+(`server/src/settings/testAids.js`) and the operator's legal pages (`server/src/settings/legalPages.js`),
+both in `server/src/routes/settings.js`. Mounted at `server/src/app.js:79`. Written by admins only,
+the same shape as the points rule above. The test-aids switch is read by every signed-in user
+(TEST-AIDS-1, the owner's decision of 2026-10-04); the legal pages are read by ANYONE, signed in or
+not (LEGAL-PAGES-1, the owner's decision of 2026-10-18).
 
 ### `GET /api/settings/test-aids`
 
-- **Who:** any signed-in user (operator+); not in `ROUTE_POLICY` for GET (`server/src/auth/guards.js:81-88`).
+- **Who:** any signed-in user (operator+); not in `ROUTE_POLICY` for GET (`server/src/auth/guards.js:85-92`).
   Every gate in the client reads it (`client/src/modules/testAids.js`).
 - **Request:** none.
-- **Response:** 200 `{ enabled: boolean }` (`server/src/routes/settings.js:23`). **No file — a fresh
+- **Response:** 200 `{ enabled: boolean }` (`server/src/routes/settings.js:44`). **No file — a fresh
   installation — answers `{ enabled: false }`** (`server/utils/jsonSettingStore.js:32`); so does an
   unreadable or invalid file, logged on every read while the file is invalid (`:33-40`).
 - **Errors:** 401.
 
 ### `PUT /api/settings/test-aids`
 
-- **Who:** admin only (`server/src/auth/guards.js:81-88`).
+- **Who:** admin only (`server/src/auth/guards.js:85-92`).
 - **Request:** JSON `{ enabled: boolean }` — nothing else is accepted (`server/src/settings/testAids.js:32-37`).
-- **Response:** 200 `{ enabled }`, the value as stored (`server/src/routes/settings.js:25-29`), written
+- **Response:** 200 `{ enabled }`, the value as stored (`server/src/routes/settings.js:46-50`), written
   atomically (`server/utils/jsonSettingStore.js:42-46`) to `<data folder>/test-aids.json`
   (`server/src/settings/testAids.js:40`).
 - **Errors:** 400 `{ error }` when the body is not `{ enabled: <boolean> }`
-  (`server/src/routes/settings.js:27`, `server/src/settings/testAids.js:34`). 401. 403 (operator,
-  `server/src/auth/guards.js:206-207`). CSRF 403.
+  (`server/src/routes/settings.js:48`, `server/src/settings/testAids.js:34`). 401. 403 (operator,
+  `server/src/auth/guards.js:227-228`). CSRF 403.
+
+### `GET /api/settings/legal-pages`
+
+- **Who:** anyone — **public**, on `PUBLIC_PATHS` (`server/src/auth/guards.js:22`), because the
+  sign-in screen's footer and the two public pages `/legal-notice` and `/privacy` read it before
+  anyone signs in. LEGAL-PAGES-1, 2026-10-18.
+- **Request:** none.
+- **Response:** 200 `{ legalNotice: string, privacyPolicy: string, maxChars: number, sourceUrl:
+  string|null }` (`server/src/routes/settings.js:52-58`). The two texts are plain text, `''` when
+  not provided; **no file — a fresh installation — answers two empty texts**, and so does an unreadable
+  or invalid file, logged on every read while it is invalid (`server/utils/jsonSettingStore.js:32-40`).
+  `maxChars` is the bound below; `sourceUrl` is the operator's `RA_SOURCE_URL` or `null`
+  (`server/src/sourceUrl.js`), and the client then links to its own build's commit.
+- **Errors:** none of its own.
+
+### `PUT /api/settings/legal-pages`
+
+- **Who:** admin only (`server/src/auth/guards.js:95-100`).
+- **Request:** JSON `{ legalNotice?: string, privacyPolicy?: string }` — a text left out keeps its
+  stored value; each sent text is a string of at most 20,000 characters; no other key is accepted
+  (`server/src/settings/legalPages.js:45-58`, the shared checks `checkString` and `unknownFields` of
+  `server/utils/recordFields.js`).
+- **Response:** 200, the same shape as the GET, as stored (`server/src/routes/settings.js:60-64`),
+  written atomically to `<data folder>/legal-pages.json` (`server/src/settings/legalPages.js:68-81`).
+- **Errors:** 400 `{ error }` for a body that is not an object, an unknown key, a text that is not a
+  string or is longer than the bound (`server/src/routes/settings.js:61-62`). 401. 403 (operator).
+  CSRF 403.
 
 ---
 
@@ -1174,7 +1205,9 @@ Read-only facts about the installation for the status box at the top of the Dev 
 | 63 | POST | `/api/races/:shortKey/verify` | admin (own team) |
 | 64 | GET | `/api/settings/test-aids` | signed-in |
 | 65 | PUT | `/api/settings/test-aids` | admin |
-| 66 | GET | `/api/admin/status` | admin |
+| 66 | GET | `/api/settings/legal-pages` | **public** |
+| 67 | PUT | `/api/settings/legal-pages` | admin |
+| 68 | GET | `/api/admin/status` | admin |
 ---
 
 ## Planned (Phase 5)

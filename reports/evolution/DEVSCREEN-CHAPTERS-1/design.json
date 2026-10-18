@@ -4174,5 +4174,53 @@
     "tier": "advanced",
     "infoText": "Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared.",
     "textStatus": "REWRITTEN"
+  },
+  {
+    "chapter": "Accounts and system",
+    "position": 25,
+    "subgroup": "Legal pages",
+    "section": "sections/LegalPagesSection.jsx",
+    "label": "Legal notice",
+    "id": "legal-notice-text",
+    "idKind": "testId",
+    "tier": "advanced",
+    "infoText": "The legal notice this installation shows to every visitor at /legal-notice, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Legal notice link. You, the operator, are responsible for its content and for checking which details apply where you operate. Stored on the server when you save.",
+    "textStatus": "NEW"
+  },
+  {
+    "chapter": "Accounts and system",
+    "position": 26,
+    "subgroup": "Legal pages",
+    "section": "sections/LegalPagesSection.jsx",
+    "label": "Insert template",
+    "id": "legal-notice-template",
+    "idKind": "testId",
+    "tier": "advanced",
+    "infoText": "Fills in a country-neutral legal notice template. Replace the bracketed fields with your details and check which details apply where you operate.",
+    "textStatus": "NEW"
+  },
+  {
+    "chapter": "Accounts and system",
+    "position": 27,
+    "subgroup": "Legal pages",
+    "section": "sections/LegalPagesSection.jsx",
+    "label": "Privacy policy",
+    "id": "privacy-policy-text",
+    "idKind": "testId",
+    "tier": "advanced",
+    "infoText": "The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. There is no template: describe how you run the game. Stored on the server when you save.",
+    "textStatus": "NEW"
+  },
+  {
+    "chapter": "Accounts and system",
+    "position": 28,
+    "subgroup": "Legal pages",
+    "section": "sections/LegalPagesSection.jsx",
+    "label": "Save legal pages",
+    "id": "legal-pages-save",
+    "idKind": "testId",
+    "tier": "advanced",
+    "infoText": "Stores both texts on the server, for every visitor at once. Each text has a length limit; the count under each field shows how much of it is used. Nothing is stored until you press this — Insert template does not save.",
+    "textStatus": "NEW"
   }
 ]

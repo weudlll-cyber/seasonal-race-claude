@@ -15,6 +15,13 @@ is.
 
 ### Added
 
+- A "Source code" link under the sign-in screen and the setup screen, pointing at the source of the
+  running version; an operator who runs a modified copy points it at their own source with the
+  server setting `RA_SOURCE_URL`. Beside it, "Legal notice" and "Privacy policy" — two pages anyone
+  can open without signing in — once an admin has filled them in on the Dev Screen (*Accounts and
+  system*, *Legal pages*), where an "Insert template" button offers a country-neutral legal-notice
+  template to edit. The texts are stored on the server and travel with its backups.
+  *(branch `feat/legal-pages`)*
 - Pause and resume a running race: a Pause/Resume button under Cancel Race on the race screen, and
   the Space key, in the countdown and during the race. While paused everything stands still — the
   racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the

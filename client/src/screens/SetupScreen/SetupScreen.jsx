@@ -16,6 +16,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SeedRedeliveryNotice from '../../components/SeedRedeliveryNotice.jsx';
+import LegalFooter from '../../components/LegalFooter/LegalFooter.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
 import PlayerGroupPicker from './PlayerGroupPicker.jsx';
 import { sectionsOf } from './rosterGroups.js';
@@ -1877,6 +1878,8 @@ function SetupScreen() {
           </div>
         </div>
       </main>
+      {/* LEGAL-PAGES-1: Source code always; the operator's legal pages when filled in. */}
+      <LegalFooter />
     </div>
   );
 }

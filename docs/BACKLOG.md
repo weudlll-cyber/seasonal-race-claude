@@ -1831,6 +1831,29 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
 
+### Built 2026-10-18, his eye owed
+
+- [ ] **LEGAL-PAGES-1 — a source-code link, two public legal pages and a legal-notice template. BUILT
+      on branch `feat/legal-pages`, UNMERGED — stays open until the owner accepts it.** The facts of
+      2026-10-18: the project is AGPL-3.0-or-later and the client had no link to its source code (no
+      "source code" or repository link anywhere in `client/src`). The owner decided on 2026-10-18 to
+      add a source-code link and to provide a legal notice, English and country-neutral, because many
+      operators in different countries run the game; each operator's own details are operator data,
+      entered on their install. **Built:** a small footer on the sign-in and setup screens —
+      *Source code* always (the upstream repository at the build's commit, the repository root when
+      the build names no commit, or the operator's `RA_SOURCE_URL`), *Legal notice* and *Privacy
+      policy* only once filled in; two public pages `/legal-notice` and `/privacy` showing the
+      operator's text as plain text; the texts stored on the server in `legal-pages.json`
+      (`GET /api/settings/legal-pages` public, `PUT` admin-only, each text at most 20,000
+      characters); a Dev Screen section *Legal pages* in *Accounts and system* (admins) with an
+      *Insert template* button. Held by `server/src/routes/legalPages.test.js`,
+      `server/src/sourceUrl.test.js`, the component tests `LegalFooter.test.jsx`,
+      `LegalPage.test.jsx` and `LegalPagesSection.test.jsx`, the chapter guard (352 rows) and
+      `client/e2e/legal-pages.spec.js` (Browser gate). How-to: [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md),
+      *Legal pages and the source-code link*.
+      *(verify: the owner looks at the footer, the two pages and the Dev Screen section and accepts
+      or rejects them)*
+
 ---
 
 # PART TWO — CLOSED

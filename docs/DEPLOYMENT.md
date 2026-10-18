@@ -78,6 +78,7 @@ exactly as it always has.
 | `RA_TRUST_PROXY`   | `1`                             | Reverse-proxy hops in front of the server: `1` behind one proxy, `0` when clients reach the port directly. Unset = one hop when `NODE_ENV=production`, none otherwise, as before, plus one startup line recommending it. Not a whole number → the server refuses to start. |
 | `RA_RACES_WAL`     | `1`                             | Runs the race store in WAL mode, so a save is not blocked while a backup reads it. Off by default; keeps `-wal`/`-shm` files beside `races.sqlite` while running, so not for a data folder in a synced folder. Not 1/true/0/false → the server refuses to start. See [ENVIRONMENT.md](ENVIRONMENT.md). |
 | `RA_BACKUP_DIR`    | `/var/backups/racearena`        | Where `npm run backup` writes and where `npm run status` looks for the newest backup. Read by those two commands, and by the server only to show the newest backup in the admin status box on the Dev Screen (`GET /api/admin/status`); when the server cannot see this directory, the box says the backup is not visible from the app. |
+| `RA_SOURCE_URL`    | `https://example.org/your-fork` | Where the start screen's **"Source code"** link points. Unset = the upstream repository at the commit the client was built from. **Set it when you run a modified copy**, to the source of what you run. Not an absolute http(s) address → the server refuses to start. See [ENVIRONMENT.md](ENVIRONMENT.md). |
 
 ## Install, update and roll back — from a release download
 

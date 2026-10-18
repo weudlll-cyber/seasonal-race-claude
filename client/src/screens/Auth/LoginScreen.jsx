@@ -3,12 +3,14 @@
 // Path:        client/src/screens/Auth/LoginScreen.jsx
 // Project:     RaceArena
 // Created:     2026-06-14
-// Description: Login page — sign in with username/password
+// Description: Login page — sign in with username/password; the legal footer below the card
+//              (LEGAL-PAGES-1, components/LegalFooter).
 // ============================================================
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
+import LegalFooter from '../../components/LegalFooter/LegalFooter.jsx';
 import styles from './Auth.module.css';
 
 export default function LoginScreen() {
@@ -96,6 +98,8 @@ export default function LoginScreen() {
           </button>
         </form>
       </div>
+      {/* LEGAL-PAGES-1: Source code always; the operator's legal pages when filled in. */}
+      <LegalFooter />
     </div>
   );
 }

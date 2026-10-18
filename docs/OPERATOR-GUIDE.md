@@ -40,7 +40,7 @@ install. What is in it:
 | `races.sqlite` | every stored race |
 | `tracks/`, `backgrounds/`, `tracks-backups/` | tracks, their pictures, and the newest copies of each track |
 | `racers/`, `racer-sprites/`, `brands/`, `brand-logos/`, `player-groups/` | racer types, brands and player groups |
-| `test-aids.json`, `migrations.json`, `recover-admin-audit.log` | the test-aids switch, which data migrations ran, and every admin recovery |
+| `test-aids.json`, `legal-pages.json`, `migrations.json`, `recover-admin-audit.log` | the test-aids switch, your legal notice and privacy policy, which data migrations ran, and every admin recovery |
 
 | path | the data folder | the backups | the settings |
 | --- | --- | --- | --- |
@@ -143,6 +143,30 @@ not in the archive in place (DEPLOYMENT.md, *Roll back a bad update*).
 
 **Moving to another machine** is a backup on the old one and a restore into the empty data folder of a
 fresh install on the new one.
+
+### Legal pages and the source-code link
+
+The sign-in screen and the setup screen carry a small footer. **"Source code" is always there**; **"Legal
+notice" and "Privacy policy" appear only once you have filled them in.** Both pages are public — a
+visitor reads them at `/legal-notice` and `/privacy` without signing in.
+
+**Filling them in (admins).** Dev Screen → *Accounts and system* → *Legal pages*. Write each text as
+plain text; line breaks are kept and nothing is read as markup. **Insert template** fills the legal-
+notice field with a country-neutral template (it asks first when the field already holds text, and
+it does not save); replace every bracketed field with your details, delete what does not apply,
+then press **Save legal pages**. There is no privacy-policy template. Leaving a field empty removes
+its link. The texts are stored on the server in `legal-pages.json` in the data folder, so every
+backup carries them.
+
+★ **You, the operator, are responsible for what the pages say.** Which details a legal notice and a
+privacy policy must contain depends on the country you operate from — some require a legal notice,
+others do not. Check what applies to you; the template is a starting point, not legal advice.
+
+**Where "Source code" points.** The game is free software under the GNU AGPL-3.0-or-later, so
+everyone who uses it is offered its source. By default the link opens the upstream repository at
+the commit the app was built from (the repository's front page when the build names no commit, and
+the link says so). **If you run a modified copy, set `RA_SOURCE_URL` to the address of your own
+source** ([ENVIRONMENT.md](ENVIRONMENT.md)); a value that is not an http(s) address stops the start.
 
 ---
 
