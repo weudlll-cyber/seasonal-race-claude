@@ -1829,20 +1829,6 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
-## Found during the night chain of 2026-10-18
-
-- [ ] **The Browser gate's `socket hang up` on `GET /api/tracks` came back.** On master `1bbc3d33`
-      (a docs-only merge, 2026-10-18), Browser gate run 39093148036: 1 failed, 117 passed — the
-      failure was `client/e2e/d11-ux-verification.spec.js` V8 "race with 5 racers and behavior enabled
-      produces no errors", `apiRequestContext.get: socket hang up` at `client/e2e/appReady.js:80` (the
-      geometry-key read inside `ensureTrackGeometriesCached`). The same spec failed with the same error on
-      2026-10-01 and was recorded then as an intermittent, cause not proven (PART TWO, *The Browser gate
-      was RED on master*). A docs-only commit cannot have caused it; the server dropped the connection
-      during the request. The failed job was re-run the same night. *(verify: the cause is named
-      from the server side of a failing run — e.g. the server log in the run's transcript at that
-      moment — or the read in `appReady.js` is shown to need a retry and gets one, broken once to prove
-      it)*
-
 ## Found during the day chain of 2026-10-18
 
 - [ ] **`sessionInvalidation.test.js` times out at 5 s in premerge's server suite — twice on
@@ -1886,6 +1872,24 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **The Browser gate's `socket hang up` on `GET /api/tracks` — CLOSED 2026-10-18 by a bounded
+      retry (branch `fix/appready-hangup`); the cause is still NOT proven.** Opened by the night chain of
+      2026-10-18: on master `1bbc3d33` (a docs-only merge) Browser gate run 39093148036 failed one spec,
+      `d11-ux-verification.spec.js` V8, with `apiRequestContext.get: socket hang up` at
+      `client/e2e/appReady.js`'s geometry-key read — the same spec and error as on 2026-10-01. **The server
+      side was looked for first** (the run's transcript and error context, attempt 1): no server line at
+      that moment, the server stayed up, and every later spec passed — nothing names a cause. A
+      candidate, not shown: a pooled keep-alive connection closed by the server (Node's default
+      `keepAliveTimeout`, 5 s; the server sets none) as the client reuses it. **What closed it:**
+      `client/e2e/requestRetry.js`, `getWithConnectionRetry` — up to 3 tries, 250 ms apart, ONLY when
+      the request rejected with a dropped-connection error (socket hang up, ECONNRESET, ECONNREFUSED,
+      EPIPE, ECONNABORTED), never on an HTTP status, which Playwright returns as a response and the
+      read still checks on its first answer; `appReady.js` uses it for that read.
+      `client/e2e/requestRetry.spec.js` (Browser gate fast set) drives it against a local server that
+      destroys the first connections: with no retry it fails with the gate's own error, with it the
+      next answer is returned; a 500 is one request; all dropped gives up after three. Broken once
+      (no retry): red with `apiRequestContext.get: socket hang up`.
 
 - [x] **Two Dev Screen tests failed at vitest's 5 s per-test limit under load — CLOSED 2026-10-18
       (branch `fix/devscreen-test-timeouts`).** Opened by the night chain of 2026-10-18:
