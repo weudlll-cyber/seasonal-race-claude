@@ -1857,6 +1857,19 @@ owner's hand**: parked here with enough context to be actionable months from now
       moment — or the read in `appReady.js` is shown to need a retry and gets one, broken once to prove
       it)*
 
+## Found during the day chain of 2026-10-18
+
+- [ ] **`sessionInvalidation.test.js` times out at 5 s in premerge's server suite — twice on
+      2026-10-18.** PART TWO D9 (2026-08-23) made the bcrypt-heavy auth timeouts a WATCH that "closes
+      when it happens a third time and is diagnosed". On 2026-10-18 it happened twice, each time with
+      the server suite running ALONE inside premerge: on `feat/legal-pages` ("still ends every OTHER
+      session of that same user", "leaves an unrelated user untouched", after a client suite of
+      478 s) and on `fix/health-head` ("leaves an unrelated user untouched", "a role-only update does
+      not touch sessions", server suite 223 s; normally ~95–130 s). Each re-run passed it. Neither
+      branch touches the file or the session code. Not diagnosed; the 5 s limit is NOT raised (the
+      rule of the bcrypt fix). *(verify: the cause is named — what holds those tests past 5 s when
+      the suite runs alone — or the tests are shown to need a budget and get one, broken once)*
+
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
@@ -1887,6 +1900,15 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **`gracefulShutdown.test.js` waited a fixed 50 ms for its request — found and fixed 2026-10-18
+      (branch `fix/health-head`).** Its re-run premerge failed once on "a request that will not
+      finish: the exit is forced with 1 after the timeout": the signal was sent 50 ms after the
+      `fetch`, under load the request had not reached the server yet, the close found nothing in
+      flight and the exit read 0. The two tests that need a request in flight now send the signal once
+      the server has RECEIVED it (`slowArrived` in the harness), not after a pause. The test still
+      fails when the forced exit is broken (`exit(1)` → `exit(0)` in `gracefulShutdown.js`: red).
+      Test-only; the product code is unchanged.
 
 - [x] **`HEAD /api/health` answered `401`; only `GET` was public — CLOSED 2026-10-18 (branch
       `fix/health-head`).** Found while writing the operator guide's monitoring section the same day:
