@@ -35,7 +35,7 @@ function lsGet(key) {
   try {
     return localStorage.getItem(key);
   } catch (e) {
-    throw new Error(`localStorage is unavailable: ${e.message}`);
+    throw new Error(`localStorage is unavailable: ${e.message}`, { cause: e });
   }
 }
 
@@ -43,7 +43,7 @@ function lsSet(key, value) {
   try {
     localStorage.setItem(key, value);
   } catch (e) {
-    throw new Error(`localStorage is unavailable: ${e.message}`);
+    throw new Error(`localStorage is unavailable: ${e.message}`, { cause: e });
   }
 }
 
@@ -51,7 +51,7 @@ function lsRemove(key) {
   try {
     localStorage.removeItem(key);
   } catch (e) {
-    throw new Error(`localStorage is unavailable: ${e.message}`);
+    throw new Error(`localStorage is unavailable: ${e.message}`, { cause: e });
   }
 }
 

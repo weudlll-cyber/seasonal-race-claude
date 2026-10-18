@@ -83,7 +83,7 @@ export async function apiCall(url, options = {}) {
     // before with a note attached, so every caller behaves exactly as it did.
     reportServerReachable(false);
     console.warn(DEV_HINT);
-    throw new Error(err.code === 'TIMEOUT' ? err.message : UNREACHABLE_MSG);
+    throw new Error(err.code === 'TIMEOUT' ? err.message : UNREACHABLE_MSG, { cause: err });
   }
   // ANY response means the server is there. A 401 or a 500 is an ANSWER, and reporting it as
   // "unreachable" would send somebody to restart a backend that is already running.

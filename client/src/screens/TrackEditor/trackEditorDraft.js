@@ -105,14 +105,14 @@ export function saveDraft(state, storage = globalThis.localStorage, serverId = n
  * stop the editor from opening.
  */
 export function loadDraft(storage = globalThis.localStorage, now = Date.now(), serverId = null) {
-  let raw = null;
+  let raw;
   try {
     raw = storage.getItem(draftKeyFor(serverId));
   } catch {
     return null;
   }
   if (!raw) return null;
-  let d = null;
+  let d;
   try {
     d = JSON.parse(raw);
   } catch {
