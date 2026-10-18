@@ -175,6 +175,14 @@ first check, 5 s after the container started). Not reproduced on demand and not 
 the GOING ONLINE row of `docs/BACKLOG.md`. **shellcheck** v0.10.0 (digest `sha256:2097951f…221fb`):
 `e2e-local.sh`, `hardening-check.sh`, `install.sh`, `racearena` clean.
 
+## 2026-10-18, later — the test again after master `fbcbe1e7` was merged in
+
+The same harness and the same way of making the refs (A = `75a49ddb`, the merged branch; B = A
+plus `e2e-test-1`; C = A with a server that exits at start; B and C throwaway local branches, never
+pushed). **71 of 71 on the first run**; every start on an empty data directory was healthy, and no
+container of the stack was left afterwards. Nothing under `deploy/` changed in the merge, so the
+shellcheck result above stands.
+
 ## What could NOT be tested here — on the owner's VPS, at the first install
 
 - the system detection on the real machine (the dry run checked the parser on Debian 12);
