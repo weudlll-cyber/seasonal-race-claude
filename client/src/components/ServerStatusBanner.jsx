@@ -23,7 +23,9 @@
 // ── WHAT IT IS NOT ─────────────────────────────────────────────────────────────────────────────
 //
 // It does not retry, poll or reconnect: it renders `serverStatus.js`, which only records what the
-// application's own requests already found out. It is not an offline mode and does not pretend the
+// application's own requests already found out — among them, since OFFLINE-1 F2 (2026-10-18), the
+// recovery probe's `GET /api/health` every ~10 s while the server is not answering, which is what
+// now clears this banner within seconds of the server's return. It is not an offline mode and does not pretend the
 // server is there — the actions that need the server keep failing exactly as they did, and say so
 // themselves. And it renders NOTHING in the `unknown` state, before anything has been tried, because
 // a status line that guesses is worse than none.

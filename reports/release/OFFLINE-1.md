@@ -138,3 +138,55 @@ Under `C:\Users\weudl\ra-measure\OFFLINE-1-shots\` (not in the repository), name
 same server serves it); sign-in, saving or editing during the outage (the banner text already says
 they fail); a real **Start Race** race (Quick Test was used, as `race-save.spec.js` does; both reach
 the same result screen and the same `recordFinishedRace`).
+
+## After the fix — F1, F2 and F3 (2026-10-18, branch `fix/offline-1`)
+
+**The owner decided on 2026-10-18 to fix all three findings.** The line numbers in the sections above
+are those of `2a3a1661`, where the measurement was taken; the files they cite have since changed. What
+was built:
+
+- **F1** — `client/src/modules/track-effects/bgImageCache.js` no longer keeps a failed load for the
+  life of the page: a failed path is tried again at most once every 10 s while something asks for it
+  (the race screen asks every frame, so the background can arrive during a race), and every failed
+  path is forgotten the moment the server answers anything.
+- **F2** — `client/src/modules/serverRecoveryProbe.js` sends `GET /api/health` about every 10 s, **only
+  while the app is in its "server not answering" state**, and stops once the server answers. The
+  answer goes through the same event every request uses, so the banner clears and the existing
+  `pendingRaces.js` flush sends the pending race; there is no second send path. While the server
+  answers, nothing polls.
+- **F3** — a note in the standings column, *"Server not reachable — results are kept and sent later"*
+  (`client/src/screens/RaceScreen/RaceServerNote.jsx`), never over the race picture; in the app's
+  fullscreen it is in the drawer. A failed track background now asks the probe to check once, so an
+  outage that began before the race is noticed at the race's start.
+
+**Re-run once per scenario**, the same harness and settings as above (arm R only, the connection
+blocked in the browser), on `fix/offline-1`'s production build, throwaway data, ports 4850:
+
+| case | during the race | at the result screen | 12 s after the server is back, nothing clicked | stored on the server |
+| --- | --- | --- | --- | --- |
+| (a) setup | **note shown** in the standings; banner shown; no background (the server is gone) | red banner, race `pending` | **banner gone, race `sent`** | once |
+| (b) countdown | no note (background already loaded; nothing asks the server) | red banner, `pending` | **banner gone, `sent`** | once |
+| (c) mid-race | no note (as b) | red banner, `pending` | **banner gone, `sent`** | once |
+| (d) last racer crossed | — | red banner, `pending` | **banner gone, `sent`** | once |
+
+**Before → after**, on the same measure:
+
+- **F2:** 10 s after the server returned, the banner was still up and the race still pending in all
+  eight earlier runs; now, at 12 s, the banner was gone and the race sent in all four, with no
+  navigation and no reload. The server's race count rose by exactly one per run (2 → 5 over b–d).
+- **F1:** a race on the same page after recovery used to stay without its background until a reload;
+  `client/e2e/offline-recovery.spec.js` now starts a race offline, lets the server return, and starts
+  the next race from the result screen's Back to Setup — **its background is drawn**, no reload.
+- **F3:** the viewer used to learn nothing until the result screen; now, in case (a), the standings
+  column says so from the race's start. **Not changed, and said plainly:** an outage that begins
+  after the race's background has loaded (cases b and c) is still noticed only when the race ends,
+  because a running race makes no request — the probe runs only once the app knows the server is
+  gone, which is the decided scope. Whether the race screen should also ask while the server is
+  thought to be answering is the owner's call.
+- **Cost while the server is gone:** one `GET /api/health` and, while a race is drawn without its
+  background, one background request, every 10 s (case a: 12 and 11 over 110 s). None while it answers.
+- In every run: no page error, the result screen reached, the race kept locally first.
+
+Screenshots, under `C:\Users\weudl\ra-measure\OFFLINE-1-shots\` (not in the repository):
+`after-<case>-R-<step>.png` for the four runs, and `F3-note-normal.png`, `F3-note-normal-column.png`,
+`F3-fullscreen-drawer-closed.png`, `F3-fullscreen-drawer-open.png` for the note.

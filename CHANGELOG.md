@@ -15,6 +15,11 @@ is.
 
 ### Added
 
+- When the venue's connection to the server drops: a short note in the race screen's standings
+  column, "Server not reachable — results are kept and sent later" (in the drawer in fullscreen);
+  once the server is back, the red banner clears and the waiting result is sent by themselves within
+  about ten seconds, with nothing clicked; and a track picture that could not load during the
+  outage comes back without a reload. *(branch `fix/offline-1`)*
 - Pause and resume a running race: a Pause/Resume button under Cancel Race on the race screen, and
   the Space key, in the countdown and during the race. While paused everything stands still — the
   racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the

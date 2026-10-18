@@ -17,6 +17,12 @@
 // OTHER request succeeded — the auth probe, the track list, a save — which is exactly "the next
 // successful contact the client makes anyway". Nothing here asks the server whether it is back.
 //
+// ★ SINCE OFFLINE-1 F2 (the owner's decision of 2026-10-18) one of those requests is a probe:
+// while the server is `unreachable`, `serverRecoveryProbe.js` asks `GET /api/health` about every
+// 10 s, so the transition — and with it this flush — comes within seconds of the server's return
+// rather than at the app's next request. This module still has no timer: the probe only moves the
+// signal it already listens to, and the send path is this one.
+//
 // ── WHY A FAILED SEND IS NOT AN ERROR ANYWHERE ──────────────────────────────────────────────────
 // The race is already recorded. A send that fails leaves the entry `pending` and returns; the
 // player is told nothing, because there is nothing they need to do. The banner from SERVER-GONE-1

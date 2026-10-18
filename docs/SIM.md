@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **230 files that can change the race** — the engine's own imports AND the imports of every
+the **231 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -265,6 +265,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/LeadChangeDiagHUD.jsx` | LEAD_CHANGE diagnostics overlay for the DevPanel. |
 | `screens/RaceScreen/PerfLogHUD.jsx` | Per-frame timing overlay — active only when enablePerfLog is ON. |
 | `screens/RaceScreen/RacePlanHUD.jsx` | Race-Plan debug overlays: winner-list panel and top-10 speed monitor. |
+| `screens/RaceScreen/RaceServerNote.jsx` | A small note IN THE STANDINGS COLUMN while the server is not answering — never over the race picture. |
 | `screens/RaceScreen/Scoreboard.jsx` | STANDINGS-RULE |
 | `screens/RaceScreen/ScoreboardCard.jsx` | SCOREBOARD-SLOT-LAYER |
 | `screens/RaceScreen/ScoreboardSlots.jsx` | SCOREBOARD-SLOT-LAYER |
@@ -361,7 +362,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 | `shared/playerNames.mjs` | PERIOD-EVALUATION-1 (the owner's decisions of 2026-10-04) |
 
-230 files, 24 of them UNKNOWN.
+231 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

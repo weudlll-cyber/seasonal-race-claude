@@ -9,6 +9,8 @@
 //              FULLSCREEN-USEFUL-1 (2026-10-17): in the app's fullscreen the picture is the
 //              largest 16:9 box that fits and the standings column becomes a drawer off the
 //              right edge (see "FULLSCREEN-USEFUL-1" below and RaceScreen.css).
+//              OFFLINE-1 F3 (2026-10-18): while the server is not answering, a short note under
+//              the standings says the result is kept (RaceServerNote.jsx).
 //
 // ★ WHAT THIS FILE OWNS SINCE P4-RACESCREEN-SPLIT-1 (2026-10-02). The React component — its state,
 //   refs and effects, the race-init effect that wires one race together, the rAF loop (phase
@@ -59,6 +61,7 @@ import { emitBurst } from './drawing/particleRendering.js';
 import { advanceRacerDust } from './racerDust.js';
 import { advanceBurstParticles } from './burstParticles.js';
 import Scoreboard from './Scoreboard.jsx';
+import RaceServerNote from './RaceServerNote.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { interpolateRacers } from './renderInterpolation.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
@@ -1854,6 +1857,10 @@ export default function RaceScreen() {
             rosterIcon={rosterIcon}
             attach={attachScoreboardCard}
           />
+
+          {/* OFFLINE-1 F3: while the server is not answering, a short note under the standings —
+              in the column, never over the race; in fullscreen it rides in the drawer. */}
+          <RaceServerNote />
 
           {phase === PHASE.COUNTDOWN && (
             <div className="race-phase-badge race-phase-badge--countdown">

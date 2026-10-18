@@ -432,20 +432,24 @@ reads (measured: about 20 ms). It is off by default because it keeps two more fi
 
 **Measured on 2026-10-18** on the production build with throwaway data, the connection blocked and,
 separately, the server stopped — on the setup screen, in the countdown, mid-race and as the last
-racer crossed ([OFFLINE-1.md](../reports/release/OFFLINE-1.md)):
+racer crossed, and again after the fixes of the same day, once per moment with the connection
+blocked ([OFFLINE-1.md](../reports/release/OFFLINE-1.md), *After the fix*):
 
 - **The race goes on and nothing is lost.** Every race ran to the result screen, the result was kept
   in that browser's race history as waiting to be sent, and once the server could be reached again it
   was stored on the server exactly once. No reload is needed.
 - **Keep the page open; do not reload it while the connection is down.** A reload is the one step
   that was not measured, and when the server itself is gone the app is not served at all.
-- **The red banner** (*"The server is not answering"*) first appears on the result screen, not
-  during the race. **After the connection is back it stays until the app next asks the server for
-  something** — pressing **← Back to Setup** did it in every run, and the waiting race was sent at
-  that moment.
+- **While the app knows the server is gone, it checks about every 10 seconds whether it is back**,
+  and once it answers the red banner (*"The server is not answering"*) clears and the waiting race
+  is sent, without anything being clicked.
+- **During a race, the standings column says "Server not reachable — results are kept and sent
+  later"** when the app knows the server is gone — from the start if the race began during the
+  outage. An outage that begins in the middle of a race is noticed when the race ends.
 - **A race started while the connection is down is drawn without its track picture** (racers,
-  track markers and standings are all there), and the picture stays missing on that page until it
-  is reloaded once the connection is back. A race whose picture had loaded before the drop keeps it.
+  track markers and standings are all there). The picture comes back by itself once the connection
+  does — during that race or at the latest the next one — without a reload. A race whose picture
+  had loaded before the drop keeps it.
 
 ---
 
