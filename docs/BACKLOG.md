@@ -1913,6 +1913,11 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       `LegalPage.test.jsx` and `LegalPagesSection.test.jsx`, the chapter guard (352 rows) and
       `client/e2e/legal-pages.spec.js` (Browser gate). How-to: [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md),
       *Legal pages and the source-code link*.
+      ★ **Found by this branch's premerge on 2026-10-18, fixed on it:** the client suite failed once
+      on an unhandled error — `SurfaceClassPreview.jsx` drew its first frame on a `null` 2D context
+      (jsdom has none) while `devScreenChapters.guard.test.jsx`, whose walk this branch lengthened by
+      one section, was still mounted. The preview now starts no loop without a context (no change in
+      a real browser); `SurfaceClassPreview.test.jsx` holds it, red without the guard.
       *(verify: the owner looks at the footer, the two pages and the Dev Screen section and accepts
       or rejects them)*
 
