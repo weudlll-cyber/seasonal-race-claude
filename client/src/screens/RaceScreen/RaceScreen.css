@@ -350,6 +350,20 @@
   padding-left: 2px;
 }
 
+/* ── OFFLINE-1 F3: the server note under the standings (RaceServerNote.jsx) ───── */
+/* Small and in the column's own colours, with the banner's red as its accent: it says the server is
+   gone and that nothing is lost, and it must never pull the eye off the race. */
+.race-server-note {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  border-left: 3px solid #ff6b4a;
+  border-radius: 4px;
+  background: rgba(122, 39, 24, 0.35);
+  color: #ffe9e2;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 /* ── Phase badges ────────────────────────────────────────────────────────── */
 .race-phase-badge {
   text-align: center;

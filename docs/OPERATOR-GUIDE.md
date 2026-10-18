@@ -43,7 +43,7 @@ install. What is in it:
 | `tracks/`, `backgrounds/`, `tracks-backups/` | tracks, their pictures, and the newest copies of each track |
 | `racers/`, `racer-sprites/`, `brands/`, `brand-logos/`, `player-groups/` | racer types, brands and player groups |
 | `surface-classes/`, `period-points-rule.json` | custom surface classes, and the period evaluation's points rule |
-| `test-aids.json`, `migrations.json`, `recover-admin-audit.log` | the test-aids switch, which data migrations ran, and every admin recovery |
+| `test-aids.json`, `legal-pages.json`, `migrations.json`, `recover-admin-audit.log` | the test-aids switch, your legal notice and privacy policy, which data migrations ran, and every admin recovery |
 
 | path | the data folder | the backups | the settings |
 | --- | --- | --- | --- |
@@ -85,7 +85,7 @@ answers `ok` while sign-in fails (§6). After any repair, sign in once to be sur
 ### Watching it from outside
 
 **Point any uptime checker at `https://<your domain>/api/health`.** The route needs no sign-in: it is
-on the public allow-list (`server/src/auth/guards.js:14-19`) and is mounted in
+on the public allow-list (`server/src/auth/guards.js:15-24`) and is mounted in
 `server/src/app.js:70`; its handler is `server/src/health.js:51-65`.
 
 | answer | what it means |
@@ -94,11 +94,10 @@ on the public allow-list (`server/src/auth/guards.js:14-19`) and is mounted in
 | `503`, body `{ "status": "error", …, "problems": [{ "store": "users", … }] }` | the server runs but **the account store (`users.json`) cannot be read, so nobody can sign in** (`server/src/health.js:35-48`, `:58-63`); see §6, *A damaged data file* |
 | no answer, a timeout, or a proxy error page | the server, the proxy or the machine is down or unreachable |
 
-★ **Configure the check as a `GET` request.** A `HEAD` request to the same address is answered
-`401 not authenticated` (checked on 2026-10-18 against the real guard): the allow-list matches the
-method exactly (`server/src/auth/guards.js:152-158`), and only `GET /api/health` is on it. Some
-checkers send `HEAD` unless told otherwise; with one of those the check reports a failure while the
-server is fine. Recorded as an open row in [BACKLOG.md](BACKLOG.md) PART ONE.
+★ **`GET` or `HEAD`, either works.** A `HEAD` request to the same address gets the same status with
+no body — the allow-list judges `HEAD` as `GET` (`server/src/auth/guards.js:149-153`), so a checker
+that sends `HEAD` unless told otherwise sees a healthy server as healthy. `GET` also shows the body,
+which names the version running.
 
 ★ **The route checks less than `npm run status`.** It does not look at free disk, at whether the data
 folder is writable, or at backups — a full disk still answers `200` (§6, *The disk is full*). The
@@ -180,6 +179,31 @@ not in the archive in place (DEPLOYMENT.md, *Roll back a bad update*).
 **Moving to another machine** is a backup on the old one and a restore into the empty data folder of a
 fresh install on the new one.
 
+### Legal pages and the source-code link
+
+The sign-in screen and the setup screen carry a slim footer bar fixed to the bottom of the window, so
+it is visible without scrolling (not on the race screen). **"Source code" is always there**; **"Legal
+notice" and "Privacy policy" appear only once you have filled them in.** Both pages are public — a
+visitor reads them at `/legal-notice` and `/privacy` without signing in.
+
+**Filling them in (admins).** Dev Screen → *Accounts and system* → *Legal pages*. Write each text as
+plain text; line breaks are kept and nothing is read as markup. **Insert template** fills the legal-
+notice field with a country-neutral template (it asks first when the field already holds text, and
+it does not save); replace every bracketed field with your details, delete what does not apply,
+then press **Save legal pages**. There is no privacy-policy template. Leaving a field empty removes
+its link. The texts are stored on the server in `legal-pages.json` in the data folder, so every
+backup carries them.
+
+★ **You, the operator, are responsible for what the pages say.** Which details a legal notice and a
+privacy policy must contain depends on the country you operate from — some require a legal notice,
+others do not. Check what applies to you; the template is a starting point, not legal advice.
+
+**Where "Source code" points.** The game is free software under the GNU AGPL-3.0-or-later, so
+everyone who uses it is offered its source. By default the link opens the upstream repository at
+the commit the app was built from (the repository's front page when the build names no commit, and
+the link says so). **If you run a modified copy, set `RA_SOURCE_URL` to the address of your own
+source** ([ENVIRONMENT.md](ENVIRONMENT.md)); a value that is not an http(s) address stops the start.
+
 ---
 
 ## 3. Updates and rollback
@@ -226,7 +250,7 @@ admin opens it; nothing announces a new release by itself. What the line says
 Every line but `unknown` ends with when the check was made. The box reads **tags**
 (`server/src/releaseCheck.js:154-164`), so it sees a release tag as soon as it is pushed, whether or
 not a release is published on GitHub's page. The route behind the box is admin-only
-(`server/src/auth/guards.js:89-97`) and reads only (`server/src/routes/adminStatus.js:56-84`).
+(`server/src/auth/guards.js:102-110`) and reads only (`server/src/routes/adminStatus.js:56-84`).
 
 **`racearena update` without a tag** — VPS install (branch feat/vps-install, not yet merged) — takes
 the newest release tag from the repository (`deploy/racearena:98-101` on that branch: tags matching
@@ -294,22 +318,22 @@ first-admin setup, and works only when there are no users at all.
 **One install is one shared space; only stored races are kept apart, by team.** That is a decision
 of 2026-10-01, and its home is [DEPLOYMENT.md](DEPLOYMENT.md), *What organizers on one installation
 share*. Each account has a team (§4, *Adding and changing accounts*); the server reads it from the
-account on every request, never from what the browser sends (`server/src/auth/guards.js:177-207`,
+account on every request, never from what the browser sends (`server/src/auth/guards.js:194-224`,
 `server/src/routes/races.js:31-35`). What that means record by record, as the code stands:
 
 | record | who sees it | who changes it |
 | --- | --- | --- |
-| tracks and their pictures | every signed-in user (`server/src/routes/tracks.js:571`) | every signed-in user creates, edits and deletes — a default track can be edited but not deleted (`server/src/routes/tracks.js:682-687`); making one a default (`set-default`, `clear-default`) and exporting it as seed data is admin-only (`server/src/auth/guards.js:55-62`) |
+| tracks and their pictures | every signed-in user (`server/src/routes/tracks.js:571`) | every signed-in user creates, edits and deletes — a default track can be edited but not deleted (`server/src/routes/tracks.js:682-687`); making one a default (`set-default`, `clear-default`) and exporting it as seed data is admin-only (`server/src/auth/guards.js:60-67`) |
 | racer types and sprites | every signed-in user (`server/src/routes/racers.js:190`) | every signed-in user creates, edits and deletes |
-| brands and logos | every signed-in user (`server/src/routes/brands.js:195`) | every signed-in user creates, edits and deletes — not a default one (`server/src/routes/brands.js:294`); default and export admin-only (`server/src/auth/guards.js:47-54`) |
-| player groups — **with the names of the people in them** | every signed-in user (`server/src/routes/playerGroups.js:123`) | every signed-in user creates, edits and deletes — not a default one (`server/src/routes/playerGroups.js:199`); default and export admin-only (`server/src/auth/guards.js:38-46`) |
-| surface classes | every signed-in user (`server/src/routes/surfaceClasses.js:88`) | admins only (`server/src/auth/guards.js:31-37`) |
-| the period evaluation's points rule | every signed-in user (`server/src/routes/races.js:212`) | admins only (`server/src/auth/guards.js:73-80`) |
-| the test-aids switch | every signed-in user (`server/src/routes/settings.js:23`) | admins only (`server/src/auth/guards.js:81-88`) |
+| brands and logos | every signed-in user (`server/src/routes/brands.js:195`) | every signed-in user creates, edits and deletes — not a default one (`server/src/routes/brands.js:294`); default and export admin-only (`server/src/auth/guards.js:52-59`) |
+| player groups — **with the names of the people in them** | every signed-in user (`server/src/routes/playerGroups.js:123`) | every signed-in user creates, edits and deletes — not a default one (`server/src/routes/playerGroups.js:199`); default and export admin-only (`server/src/auth/guards.js:43-51`) |
+| surface classes | every signed-in user (`server/src/routes/surfaceClasses.js:88`) | admins only (`server/src/auth/guards.js:36-42`) |
+| the period evaluation's points rule | every signed-in user (`server/src/routes/races.js:212`) | admins only (`server/src/auth/guards.js:78-85`) |
+| the test-aids switch | every signed-in user (`server/src/routes/settings.js:44`) | admins only (`server/src/auth/guards.js:86-93`) |
 | the warning about re-delivered built-in records | every signed-in user (`server/src/routes/seedNotices.js:31`) | any signed-in user dismisses it, for everyone (`server/src/routes/seedNotices.js:36-39`) |
-| **stored races** | **only users of the team that ran them** — the list, a race by its short key and the period evaluation (`server/src/routes/races.js:164-181`, `:188-206`, `:228-230`) | every signed-in user stores the races they run, filed under their own team (`server/src/routes/races.js:101-132`); nobody changes or deletes a stored race ([PRIVACY-FACTS.md](PRIVACY-FACTS.md)); re-checking one on demand is admin-only and also limited to the admin's own team (`server/src/auth/guards.js:67-72`, `server/src/routes/races.js:253-257`) |
-| accounts | admins only, **every account on the install, whatever its team** (`server/src/auth/guards.js:25-30`) | admins only; each user changes their own password |
-| the admin status box | admins only (`server/src/auth/guards.js:89-97`) | nobody; it reads only |
+| **stored races** | **only users of the team that ran them** — the list, a race by its short key and the period evaluation (`server/src/routes/races.js:164-181`, `:188-206`, `:228-230`) | every signed-in user stores the races they run, filed under their own team (`server/src/routes/races.js:101-132`); nobody changes or deletes a stored race ([PRIVACY-FACTS.md](PRIVACY-FACTS.md)); re-checking one on demand is admin-only and also limited to the admin's own team (`server/src/auth/guards.js:72-77`, `server/src/routes/races.js:253-257`) |
+| accounts | admins only, **every account on the install, whatever its team** (`server/src/auth/guards.js:30-35`) | admins only; each user changes their own password |
+| the admin status box | admins only (`server/src/auth/guards.js:102-110`) | nobody; it reads only |
 | the Dev Screen's race settings (behaviour, camera and the rest) | **not shared**: kept in each browser's local storage (`client/src/modules/storage/storage.js:15`, `:18-24`; §1, the Dev Screen's "Backup and reset") | whoever uses that browser |
 
 ★ **An admin sees only their own team's races too.** The race routes filter by the signed-in user's
@@ -434,20 +458,26 @@ Caddy (`deploy/docker-compose.prod.yml`).
 
 **Measured on 2026-10-18** on the production build with throwaway data, the connection blocked and,
 separately, the server stopped — on the setup screen, in the countdown, mid-race and as the last
-racer crossed ([OFFLINE-1.md](../reports/release/OFFLINE-1.md)):
+racer crossed, and again after the fixes of the same day, once per moment with the connection
+blocked ([OFFLINE-1.md](../reports/release/OFFLINE-1.md), *After the fix*):
 
 - **The race goes on and nothing is lost.** Every race ran to the result screen, the result was kept
   in that browser's race history as waiting to be sent, and once the server could be reached again it
   was stored on the server exactly once. No reload is needed.
 - **Keep the page open; do not reload it while the connection is down.** A reload is the one step
   that was not measured, and when the server itself is gone the app is not served at all.
-- **The red banner** (*"The server is not answering"*) first appears on the result screen, not
-  during the race. **After the connection is back it stays until the app next asks the server for
-  something** — pressing **← Back to Setup** did it in every run, and the waiting race was sent at
-  that moment.
+- **While the app knows the server is gone, it checks about every 10 seconds whether it is back**,
+  and once it answers the red banner (*"The server is not answering"*) clears and the waiting race
+  is sent, without anything being clicked.
+- **During a race, the standings column says "Server not reachable — results are kept and sent
+  later"** when the app knows the server is gone — from the start if the race began during the
+  outage. An outage that begins in the middle of a race is noticed when the race ends — by design
+  (decided 2026-10-18): a running race does not ask the server while it seems to be answering, and
+  the result is kept either way.
 - **A race started while the connection is down is drawn without its track picture** (racers,
-  track markers and standings are all there), and the picture stays missing on that page until it
-  is reloaded once the connection is back. A race whose picture had loaded before the drop keeps it.
+  track markers and standings are all there). The picture comes back by itself once the connection
+  does — during that race or at the latest the next one — without a reload. A race whose picture
+  had loaded before the drop keeps it.
 
 ---
 

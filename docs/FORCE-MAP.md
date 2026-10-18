@@ -15,6 +15,11 @@
 > place because 27 individually rewritten citations, none of them re-verified line by line, would be a
 > worse document than one honest paragraph: this file's own promise is that a source line can be
 > checked, and a bulk edit would quietly break that promise while looking like a repair.
+>
+> *(2026-10-18, stale-citations: the body was re-pointed line by line on 2026-10-03; the last
+> `index.jsx` line citations — the step order and the force table below — are now re-pointed to
+> `raceCore.js` / `raceWorldSetup.js` too, each checked against the source. The one that stays in
+> `index.jsx` is the `advanceSlowmo` call, which really is there.)*
 
 > Analysis only. Every force is backed by a source line so it can be verified against the source.
 >
@@ -66,7 +71,7 @@ A racer's motion has **two independent axes**, computed in **two different files
 
 Per physics step the order is:
 
-1. **Re-roll / trajectory / PulkLeadRotation** update the longitudinal multipliers (`index.jsx` re-roll ~1063–1097; the trajectory controller ~990–1003; `applyPulkLeadRotation` ~1018–1035). **There is no rubber-band step** — the `applyRubberBand` speed force and its `raceRubberBand.js` module were removed (do not confuse with the still-live CameraDirector `endgameThreshold` gate, a camera-only mechanism). The PulkLeadRotation call runs **unconditionally whenever a race plan is active** (`racePlanEnabled`, on by default for races ≥ 30 s); it writes `governorMult` for every racer in the PULK window and slews it back to **exactly 1.0** everywhere else.
+1. **Re-roll / trajectory / PulkLeadRotation** update the longitudinal multipliers (`raceCore.js` re-roll ~643–690; the trajectory controller ~601–614; `applyPulkLeadRotation` ~617–634). **There is no rubber-band step** — the `applyRubberBand` speed force and its `raceRubberBand.js` module were removed (do not confuse with the still-live CameraDirector `endgameThreshold` gate, a camera-only mechanism). The PulkLeadRotation call runs **unconditionally whenever a race plan is active** (`racePlanEnabled`, on by default for races ≥ 30 s); it writes `governorMult` for every racer in the PULK window and slews it back to **exactly 1.0** everywhere else.
 2. **Longitudinal integration** — the ONE shared t-update `advanceRacerT()` in [`raceStep.js`](../client/src/modules/raceStep.js) (imported by both browser and sim): `r.t += baseSpeed × boost × brake × rowEnvMult × trajectoryMult × areaBonusMult × governorMult × dt`, finish-clamped ([`raceStep.js` → `computeRowEnvSmoothed`](../client/src/modules/raceStep.js#L72-L86); browser call [`raceCore.js` → `advanceRacerT` call](../client/src/modules/raceCore.js#L703)). `dt` = 1.0 (fixed timestep) both sides. **There is no `pulkSurgeMult` and no `zoneMult` in the shared step** — surge was removed and zoneMult is not part of `advanceRacerT`. `governorMult` is **1.0 outside PULK** but **actively written inside PULK** (not "default OFF").
 3. `computePositions()` projects `(t, physicalY)` → world `(x, y, angle)`.
 4. **`applyRacerBehavior()`** computes the _next_ frame's lateral move and the brake/draft **flags** used by step 2 next frame (one-frame lag is intentional).
@@ -191,7 +196,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A12. BATTLE slowmo — global time scaling (not per-racer)
 
-- **Code**: [`battleSlowmo.js` → `advanceSlowmo`](../client/src/screens/RaceScreen/battleSlowmo.js#L37), called from [`index.jsx:1034`](../client/src/screens/RaceScreen/index.jsx#L1034).
+- **Code**: [`battleSlowmo.js` → `advanceSlowmo`](../client/src/screens/RaceScreen/battleSlowmo.js#L37), called from [`index.jsx:1037`](../client/src/screens/RaceScreen/index.jsx#L1037).
 - **What**: during `BATTLE_ZOOM` the **physics clock** (not an individual force) is scaled, slowing _all_ racers uniformly for cinematic effect. Affects `rawDt` feeding the step, with fade in/out.
 - **Magnitude**: `battleSlowmoFactor` **0.5** (half speed), `battleSlowmoFadeDuration` 0.3 s, min hold 2.0 s.
 - **Note**: a global multiplier on the step clock — it does not change relative ordering, so it is fairness-neutral but it does change every racer's instantaneous `t`-rate.
@@ -450,18 +455,18 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | #   | Force                                                                 | Default                                                              | When                                    | File:line           |
 | --- | --------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------- | ------------------- |
 | A0  | base speed                                                            | the duration anchor                                                  | always                                  | raceBaseSpeed.js:29 |
-| A1  | speedMultiplier (type)                                                | per-type                                                             | always                                  | index.jsx:416       |
-| A2  | spreadFactor (luck/re-roll)                                           | ±17.7% spread, 58% re-roll                                           | until 80% race                          | index.jsx:595,924   |
-| A3  | speedBonusMult (row)                                                  | 1.0 factor                                                           | always                                  | index.jsx:578       |
-| A4  | drafting boost                                                        | 1.04                                                                 | in wake cone                            | index.jsx:961       |
-| A5  | speed brake floor + warmup                                            | 0.945, ramp 3 s open                                                 | same-lane close                         | index.jsx:972       |
+| A1  | speedMultiplier (type)                                                | per-type                                                             | always                                  | raceWorldSetup.js:94 |
+| A2  | spreadFactor (luck/re-roll)                                           | ±17.7% spread, 58% re-roll                                           | until 80% race                          | raceCore.js:192,646 |
+| A3  | speedBonusMult (row)                                                  | 1.0 factor                                                           | always                                  | raceCore.js:193     |
+| A4  | drafting boost                                                        | 1.04                                                                 | in wake cone                            | raceCore.js:693     |
+| A5  | speed brake floor + warmup                                            | 0.945, ramp 3 s open                                                 | same-lane close                         | raceCore.js:699     |
 | A6  | brake-to-match cap                                                    | targets leader speed                                                 | faster trailer                          | raceBehavior.js:909-915 |
 | A7  | trajectoryMult (controller)                                           | [0.85,1.10]                                                          | OUTCOME [choreoOutcomeStart, corridorEnd] | racePlanner.js:549  |
 | A8  | areaBonusMult (band)                                                  | +6%…−2% (×2.0)                                                       | until 0.75 then fade                    | racePlanner.js:113  |
 | A9  | rubberBandMult (cap-the-lead brake)                                   | **REMOVED** (raceRubberBand.js deleted)                              | —                                       | —                   |
 | A10 | zoneMult (race zone)                                                  | **REMOVED** (raceZones.js deleted)                                   | —                                       | —                   |
-| A11 | runoutDecay                                                           | ×0.97/frame                                                          | after finish                            | index.jsx:995       |
-| A12 | BATTLE slowmo (global clock)                                          | 0.5                                                                  | BATTLE_ZOOM                             | index.jsx:824       |
+| A11 | runoutDecay                                                           | ×0.97/frame                                                          | after finish                            | raceCore.js:716     |
+| A12 | BATTLE slowmo (global clock)                                          | 0.5                                                                  | BATTLE_ZOOM                             | index.jsx:1037 (`advanceSlowmo`) |
 | A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost `pulkChallengerBoost` / leader brake `pulkLeaderBrake`, envelope `pulkEnvelopeMaxEffect` (values in `defaults.js`), ceiling `NATURALNESS_CEILING` | PULK [pulkStart, choreoOutcomeStart), faded→1.0 at corrStart | raceGovernor.js:247 |
 | A14 | gapBrakeStrength — the GAP leader brake (**shipped ON 2026-09-17**)   | bounded by `gapBrakeMaxAuthority`; silent below `gapBrakeAllowedGapPx` | [choreoOutcomeStart, `gapBrakeWindowEnd`], leader only | racePlanner.js:_computeGapLeaderBrake |
 

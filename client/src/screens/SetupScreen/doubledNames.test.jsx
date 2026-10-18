@@ -24,6 +24,9 @@ import { forbidNetwork } from '../../test/mockServerTracks.js';
 import { encodeRaceIdentifier } from '../../modules/raceIdentifier.js';
 import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
 
+// LEGAL-PAGES-1: the setup screen's legal footer asks the server for the legal pages; a screen
+// test talks to no server (forbidNetwork), so the footer gets no answer — only its Source code link.
+vi.mock('../../modules/legal/useLegalPages.js', () => ({ useLegalPages: () => null }));
 vi.mock('../../modules/storage/useServerTracks.js', async () => {
   const { serverTracksMock } = await import('../../test/mockServerTracks.js');
   return serverTracksMock();

@@ -38,10 +38,12 @@
 // hypotheses but never name the cause, because the evidence had been discarded at the moment it
 // existed. See reports/evolution/BUILD-UNKNOWN-1.md.
 //
-// The virtual module is imported by ONE file (RaceScreen/index.jsx). It is deliberately NOT imported
-// by anything under `modules/`, because `scripts/render-fingerprint.mjs` drives the real drawing code
-// directly in node, outside Vite, where a bare `virtual:` specifier cannot resolve. The build badge
-// reaches the renderer as frame data, exactly like `cfgBadge`.
+// The virtual module is imported by THREE files: RaceScreen/index.jsx (the build badge),
+// modules/raceIdentifierBuild.js (race identifiers) and components/LegalFooter/LegalFooter.jsx (the
+// "Source code" link, LEGAL-PAGES-1). It is deliberately NOT imported by the DRAWING code under
+// `modules/`, because `scripts/render-fingerprint.mjs` drives that code directly in node, outside
+// Vite, where a bare `virtual:` specifier cannot resolve. The build badge reaches the renderer as
+// frame data, exactly like `cfgBadge`.
 // ============================================================
 
 import { execSync } from 'node:child_process';

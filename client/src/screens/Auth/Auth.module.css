@@ -9,6 +9,9 @@
 .screen {
   min-height: 100vh;
   display: flex;
+  /* LEGAL-PAGES-1: a column, so the legal footer's spacer sits BELOW the card (the bar itself is
+     fixed to the window's bottom edge; one child is unchanged). */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--color-bg);

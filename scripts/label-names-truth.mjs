@@ -151,7 +151,8 @@ function run(cfg, label) {
   // was `raceNumberLabel(undefined)` = the empty string, and the layout reasoned about 10 px boxes
   // (the padding alone) where the game draws 20-27 px. That gave the room test far more space than
   // it really has and is why it admitted names without collisions. Every other harness in this repo
-  // already does it the way RaceScreen does (index.jsx:702); this one did not.
+  // already does it the way RaceScreen does (`attachRacerDisplayFields`, index.jsx:809, which calls
+  // `assignRaceNumbers` in racerDisplayFields.js:50); this one did not.
   const numbers = assignRaceNumbers(st.racers.length, SEED);
   for (const r of st.racers) r.raceNumber = numbers[r.index] ?? null;
   attachRenderState(st);
@@ -181,7 +182,7 @@ function run(cfg, label) {
     // `renderRaceFrame` computes `showAllTags` from `st.raceStart`:
     //     showAllTags = st.phase !== RACING || (ts - st.raceStart) < nameTagAllUntilMs
     // `scripts/lib/raceDriver.mjs` keeps `raceStart` as a LOCAL and never assigns it to the state —
-    // only the live RaceScreen does (index.jsx:891). So on this driver `st.raceStart` is null,
+    // only the live RaceScreen does (index.jsx:1008). So on this driver `st.raceStart` is null,
     // `raceElapsedMs` is 0, and showAllTags is TRUE FOR THE WHOLE RACE. `computeTagLayout` then takes
     // its START-FORMATION early return, which labels everyone, does no decluttering, and returns
     // `wide` EMPTY — so every harness on this driver reports ZERO names no matter what the config

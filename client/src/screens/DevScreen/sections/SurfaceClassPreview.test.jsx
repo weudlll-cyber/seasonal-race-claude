@@ -88,6 +88,25 @@ describe('SurfaceClassPreview — rAF lifecycle', () => {
     expect(pendingRafIds.size).toBeLessThan(rafCountBefore + 1);
   });
 
+  // 2026-10-18: jsdom's canvas has no 2D context; a frame that fired while a Dev Screen test was
+  // still mounted threw on `ctx.fillStyle` and failed the whole client suite as an unhandled error.
+  it('starts no loop and throws nothing when the canvas has no 2D context', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => null);
+    const errors = [];
+    const onError = (e) => errors.push(e);
+    window.addEventListener('error', onError);
+    try {
+      render(<SurfaceClassPreview generatorId="cloud" config={CLOUD_CONFIG} />);
+      expect(pendingRafIds.size, 'no frame requested without a context').toBe(0);
+      // Let any frame that WAS requested run (the stub runs it on the next microtask).
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(errors).toEqual([]);
+    } finally {
+      window.removeEventListener('error', onError);
+    }
+  });
+
   it('renders a canvas element', () => {
     const { container } = render(
       <SurfaceClassPreview generatorId="particle" config={CLOUD_CONFIG} />

@@ -17,6 +17,7 @@ import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
 import DistributionDiagnostics from './screens/DistributionDiagnostics/DistributionDiagnostics.jsx';
 import LoginScreen from './screens/Auth/LoginScreen.jsx';
 import SetupAdminScreen from './screens/Auth/SetupAdminScreen.jsx';
+import LegalPage from './screens/Legal/LegalPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
@@ -26,6 +27,7 @@ import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import TestAidsSyncOnAuth from './components/TestAidsSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
 import ServerStatusBanner from './components/ServerStatusBanner.jsx';
+import ServerRecoveryProbe from './components/ServerRecoveryProbe.jsx';
 import PendingRaceSync from './components/PendingRaceSync.jsx';
 import { useTestAidsState } from './modules/testAids.js';
 
@@ -73,6 +75,9 @@ function App() {
         <ServerStatusBanner />
         {/* RACE-SAVE-3: sends races that could not go up when they finished. Renders nothing. */}
         <PendingRaceSync />
+        {/* OFFLINE-1 F2: while the server is not answering, asks it every ~10 s whether it is back,
+            so the banner clears and pending races go up on their own. Renders nothing. */}
+        <ServerRecoveryProbe />
         <BrandingSyncOnAuth />
         <RacerSyncOnAuth />
         <TestAidsSyncOnAuth />
@@ -149,6 +154,10 @@ function App() {
             />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/setup-admin" element={<SetupAdminScreen />} />
+            {/* LEGAL-PAGES-1: PUBLIC — no ProtectedRoute. The operator's legal notice and privacy
+                policy are read before anyone signs in (footer: components/LegalFooter). */}
+            <Route path="/legal-notice" element={<LegalPage kind="legalNotice" />} />
+            <Route path="/privacy" element={<LegalPage kind="privacyPolicy" />} />
           </Routes>
         </TransitionProvider>
       </AuthProvider>

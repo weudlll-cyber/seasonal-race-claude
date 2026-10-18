@@ -9,7 +9,8 @@
 // The hash + schema + simulatability come from the SHARED module raceConfigWorld.js — imported, NEVER
 // re-implemented, so a hash produced here matches one the sim recomputes for the same blob by
 // construction. The config is gathered by calling the SAME load*Config functions the race reads at
-// start (RaceScreen/index.jsx:52-83) — never a hand-maintained key list, which is how the next silent
+// start (`resolveRaceWorld`, called at RaceScreen/index.jsx:626; the loaders are imported in
+// raceWorldSetup.js:31-39) — never a hand-maintained key list, which is how the next silent
 // divergence would creep in.
 // ============================================================
 import { loadRaceDynamicsConfig } from './raceDynamicsConfig.js';
