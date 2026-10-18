@@ -806,39 +806,6 @@ are in PART TWO with what closed them; these are the ones still standing.
       [DEPLOYMENT.md](DEPLOYMENT.md), which carries a tested Caddy example (PROXY-PROBE-1). B4 is closed
       on that decision. **The domain, the proxy and HTTPS are still open, and so is this row.**
 
-- [ ] **OFFLINE-1 — when the venue's connection drops, three things a viewer or operator notices
-      (opened 2026-10-18).** Measured on the production build with throwaway data
-      ([reports/release/OFFLINE-1.md](../reports/release/OFFLINE-1.md)): **no result was lost and no
-      race stopped** in eight runs (setup, countdown, mid-race, last crossing; the connection blocked
-      and the server killed), and every race was stored once after recovery without a reload — the
-      local-first rule (`client/src/modules/raceHistory.js:9-14`) holds. What it found:
-      **F1** a race started while the server is unreachable is drawn without its track background,
-      and `client/src/modules/track-effects/bgImageCache.js` kept the failed load for the life of
-      the page, so later races on that track stayed without it until a reload.
-      **F2** after the server is back, the red banner and the pending race waited for the app's next
-      request (no polling, by design); the result screen went on saying the server is not answering.
-      **F3** during an outage nothing was shown until the race ended; the banner first appeared on
-      the result screen.
-      ★ **The owner decided on 2026-10-18 to fix all three. BUILT on branch `fix/offline-1`,
-      UNMERGED — stays open until the owner accepts it.** F1: a failed background is tried again at
-      most every 10 s and forgotten when the server answers (`bgImageCache.js`). F2: while — and only
-      while — the app is in its "server not answering" state, `client/src/modules/serverRecoveryProbe.js`
-      asks `GET /api/health` about every 10 s; the answer clears the banner and the existing
-      `pendingRaces.js` flush sends the pending race. F3: a note in the standings column, *"Server not
-      reachable — results are kept and sent later"* (`RaceScreen/RaceServerNote.jsx`), in the drawer
-      in the app's fullscreen; a failed background asks the probe to check once, so an outage that
-      began before the race is noticed at its start (the placement is a proposal). Re-run once per
-      scenario: 12 s after recovery, with nothing clicked, the banner was gone and the race stored
-      once in all four; an outage that begins after the background has loaded is still noticed only
-      at the race's end (a running race makes no request) — the report's *After the fix* says so.
-      The owner decided on 2026-10-18 that this is sufficient: the race screen does not ask the
-      server while it seems to be answering.
-      Held by `bgImageCache.test.js`, `serverRecoveryProbe.test.js`, `RaceServerNote.test.jsx` and
-      `client/e2e/offline-recovery.spec.js` (not in the Browser gate's fast set: two real races,
-      about 4.5 min), each broken once on purpose.
-      *(verify: the owner looks at the note on the race screen during an outage — normal and in the
-      fullscreen drawer — and at the banner clearing on its own, and accepts or rejects them)*
-
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
 several organizers on one server. **On 2026-10-01 the owner also decided that the tenancy boundary
@@ -1874,6 +1841,38 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **OFFLINE-1 — when the venue's connection drops, three things a viewer or operator notices
+      (opened 2026-10-18) — ACCEPTED 2026-10-18 AND MERGED.** Measured on the production build with throwaway data
+      ([reports/release/OFFLINE-1.md](../reports/release/OFFLINE-1.md)): **no result was lost and no
+      race stopped** in eight runs (setup, countdown, mid-race, last crossing; the connection blocked
+      and the server killed), and every race was stored once after recovery without a reload — the
+      local-first rule (`client/src/modules/raceHistory.js:9-14`) holds. What it found:
+      **F1** a race started while the server is unreachable is drawn without its track background,
+      and `client/src/modules/track-effects/bgImageCache.js` kept the failed load for the life of
+      the page, so later races on that track stayed without it until a reload.
+      **F2** after the server is back, the red banner and the pending race waited for the app's next
+      request (no polling, by design); the result screen went on saying the server is not answering.
+      **F3** during an outage nothing was shown until the race ended; the banner first appeared on
+      the result screen.
+      ★ **The owner decided on 2026-10-18 to fix all three; built on branch `fix/offline-1`.** F1: a
+      failed background is tried again at most every 10 s and forgotten when the server answers (`bgImageCache.js`). F2: while — and only
+      while — the app is in its "server not answering" state, `client/src/modules/serverRecoveryProbe.js`
+      asks `GET /api/health` about every 10 s; the answer clears the banner and the existing
+      `pendingRaces.js` flush sends the pending race. F3: a note in the standings column, *"Server not
+      reachable — results are kept and sent later"* (`RaceScreen/RaceServerNote.jsx`), in the drawer
+      in the app's fullscreen; a failed background asks the probe to check once, so an outage that
+      began before the race is noticed at its start (the placement was accepted with the rest). Re-run once per
+      scenario: 12 s after recovery, with nothing clicked, the banner was gone and the race stored
+      once in all four; an outage that begins after the background has loaded is still noticed only
+      at the race's end (a running race makes no request) — the report's *After the fix* says so.
+      The owner decided on 2026-10-18 that this is sufficient: the race screen does not ask the
+      server while it seems to be answering.
+      Held by `bgImageCache.test.js`, `serverRecoveryProbe.test.js`, `RaceServerNote.test.jsx` and
+      `client/e2e/offline-recovery.spec.js` (not in the Browser gate's fast set: two real races,
+      about 4.5 min), each broken once on purpose.
+      **Accepted:** the owner looked at the F3 and after-recovery screenshots on 2026-10-18 and
+      accepted F1, F2 and F3; merged that day.
 
 - [x] **RESULT-LANDSCAPE-1 — the result screen on a phone held sideways — ACCEPTED 2026-10-18 AND
       MERGED.** The facts

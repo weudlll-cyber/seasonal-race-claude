@@ -469,7 +469,9 @@ blocked ([OFFLINE-1.md](../reports/release/OFFLINE-1.md), *After the fix*):
   is sent, without anything being clicked.
 - **During a race, the standings column says "Server not reachable — results are kept and sent
   later"** when the app knows the server is gone — from the start if the race began during the
-  outage. An outage that begins in the middle of a race is noticed when the race ends.
+  outage. An outage that begins in the middle of a race is noticed when the race ends — by design
+  (decided 2026-10-18): a running race does not ask the server while it seems to be answering, and
+  the result is kept either way.
 - **A race started while the connection is down is drawn without its track picture** (racers,
   track markers and standings are all there). The picture comes back by itself once the connection
   does — during that race or at the latest the next one — without a reload. A race whose picture

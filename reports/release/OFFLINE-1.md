@@ -3,7 +3,7 @@
 **Owns:** the measurement of 2026-10-18 of what the production app does when the connection to its
 server drops — on the setup screen, during the countdown, mid-race and at the race end — and what
 happens when the server comes back. The rule it checks is not owned here; it is cited below. The
-open row it leads to is in [docs/BACKLOG.md](../../docs/BACKLOG.md) PART ONE; the operator's short
+row it led to is in [docs/BACKLOG.md](../../docs/BACKLOG.md) PART TWO (closed 2026-10-18); the operator's short
 version is in [docs/OPERATOR-GUIDE.md](../../docs/OPERATOR-GUIDE.md) §6.
 
 **2026-10-18, branch `test/offline-2026-10-18` from `master` at `2a3a1661`.** No product code
@@ -17,7 +17,8 @@ reached the result screen with the server gone, was written to this device's rac
 `pending`, and was stored on the server **exactly once** after the server came back and the app made
 its next request — **without a reload**. The decision rule's fix branch therefore does not apply.
 
-Three things a viewer or operator would notice are recorded as one open row (findings F1–F3 below).
+Three things a viewer or operator would notice were recorded as one row (findings F1–F3 below);
+all three were fixed, and the owner accepted the fix on 2026-10-18 (*After the fix*).
 
 ## The rule being checked
 
@@ -141,7 +142,8 @@ the same result screen and the same `recordFinishedRace`).
 
 ## After the fix — F1, F2 and F3 (2026-10-18, branch `fix/offline-1`)
 
-**The owner decided on 2026-10-18 to fix all three findings.** The line numbers in the sections above
+**The owner decided on 2026-10-18 to fix all three findings**, and accepted the fix the same day
+after looking at the F3 and after-recovery screenshots; it is merged. The line numbers in the sections above
 are those of `2a3a1661`, where the measurement was taken; the files they cite have since changed. What
 was built:
 

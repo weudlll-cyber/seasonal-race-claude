@@ -19,7 +19,8 @@ is.
   column, "Server not reachable — results are kept and sent later" (in the drawer in fullscreen);
   once the server is back, the red banner clears and the waiting result is sent by themselves within
   about ten seconds, with nothing clicked; and a track picture that could not load during the
-  outage comes back without a reload. *(branch `fix/offline-1`)*
+  outage comes back without a reload. An outage that begins mid-race is still noticed when the race
+  ends. *(on `master`, 2026-10-18)*
 - A "Source code" link in a slim bar along the bottom of the sign-in screen and the setup screen,
   visible without scrolling, pointing at the source of the
   running version; an operator who runs a modified copy points it at their own source with the
