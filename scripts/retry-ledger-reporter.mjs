@@ -41,8 +41,9 @@
 //   - It does not persist across runs, so it cannot tell you a test retried yesterday too.
 //   - It reports vitest's own `flaky` flag; it does not independently verify that a pass after a
 //     retry is a real pass rather than a test that only passes when warm.
-//   - It cannot split the DURATION per attempt — vitest 4 exposes only the test's total, so the
-//     ledger prints the total and does not guess how the retries divided it.
+//   - It cannot split the DURATION per attempt — vitest exposes only the test's total (4, and 5 as
+//     re-probed 2026-10-19), so the ledger prints the total and does not guess how the retries
+//     divided it.
 // ============================================================
 
 /**
@@ -80,7 +81,7 @@ export function reasonClass(err) {
  *
  * WHAT IS AVAILABLE, PROBED RATHER THAN ASSUMED: `result().errors` holds ONE entry per FAILED
  * attempt, in order, so attempt N's reason is `errors[N]`. Per-attempt DURATION is NOT exposed
- * anywhere in the vitest 4 reporter API — only the test's total. Rather than invent a split, the
+ * anywhere in the vitest reporter API (4, and 5 as re-probed 2026-10-19) — only the test's total. Rather than invent a split, the
  * ledger prints the total and says nothing it cannot know.
  */
 export function attemptReasons(errors, attempts) {
@@ -105,12 +106,12 @@ export function attemptReasons(errors, attempts) {
 }
 
 /**
- * The ledger rows for a finished run, from vitest 4's reporter API.
+ * The ledger rows for a finished run, from vitest's reporter API (4; unchanged in 5, 2026-10-19).
  *
  * THE SHAPE WAS PROBED, NOT ASSUMED — the first draft of this file used `onFinished(files)` and the
- * legacy task tree, and it printed nothing at all because neither exists in vitest 4. What is real:
- * `onTestRunEnd(modules)`, `module.children.allTests()`, and `testCase.diagnostic()` returning
- * `{ retryCount, flaky, duration, ... }`. A reporter that silently produces no output is the exact
+ * legacy task tree, and it printed nothing at all because neither exists in vitest 4 (nor 5). What
+ * is real: `onTestRunEnd(modules)`, `module.children.allTests()`, and `testCase.diagnostic()`
+ * returning `{ retryCount, flaky, duration, ... }`. A reporter that silently produces no output is the exact
  * failure this ledger exists to prevent, so it is worth saying how the shape was established.
  *
  * @returns {{file: string, name: string, attempts: number, state: string, flaky: boolean}[]}
