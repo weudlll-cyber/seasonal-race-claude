@@ -74,10 +74,17 @@
 
 import { expect } from '@playwright/test';
 import { E2E } from './e2e-env.js';
+import { getWithConnectionRetry } from './requestRetry.js';
 
-/** Which geometry cache keys the app needs — asked of the API rather than assumed. */
+/**
+ * Which geometry cache keys the app needs — asked of the API rather than assumed.
+ *
+ * APPREADY-HANGUP-1 (2026-10-18): the read is tried again after a DROPPED connection only
+ * (`requestRetry.js`, up to 3 tries) — it failed the Browser gate twice with `socket hang up` while
+ * the server stayed up. An HTTP error status is still checked below on its first answer.
+ */
 async function geometryKeys(page) {
-  const res = await page.request.get(`${E2E.apiUrl}/api/tracks`);
+  const res = await getWithConnectionRetry(page.request, `${E2E.apiUrl}/api/tracks`);
   expect(res.ok(), `GET /api/tracks → ${res.status()}`).toBeTruthy();
   const keys = (await res.json())
     .map((t) => t.geometryId)

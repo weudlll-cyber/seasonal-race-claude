@@ -70,6 +70,19 @@ describe('PUBLIC: anonymous access', () => {
     expect(res.status).toBe(200);
   });
 
+  // 2026-10-18: HEAD inherits GET on the public allow-list (guards.js `matchesPublicPath`). It used
+  // to answer 401, so an uptime checker sending HEAD saw a healthy server as down.
+  it('HEAD /api/health → 200, and no body', async () => {
+    const res = await request(app).head('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.text ?? '').toBe('');
+  });
+
+  it('POST /api/health → still refused (401): HEAD is GET, nothing else is', async () => {
+    const res = await request(app).post('/api/health');
+    expect(res.status).toBe(401);
+  });
+
   // BUILD-FROM-OUTSIDE-1. IF DELETED: the endpoint can silently stop naming the build and nobody
   // notices, because its absence looks exactly like the old payload. WHAT WOULD GO UNNOTICED: the
   // one question this endpoint was extended to answer — which build is live — becoming unanswerable

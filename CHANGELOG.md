@@ -22,7 +22,10 @@ is.
   can open without signing in — once an admin has filled them in on the Dev Screen (*Accounts and
   system*, *Legal pages*), where an "Insert template" button offers a country-neutral legal-notice
   template to edit. The texts are stored on the server and travel with its backups.
-  *(branch `feat/legal-pages`)*
+  *(on `master`, 2026-10-18)*
+- A more compact setup screen on desktop windows: less vertical spacing, so the Players, Track and
+  Settings tabs each fit a window about 900 px high without scrolling, the bottom card with
+  "Start Race" fully visible. Nothing removed; phones and tablets unchanged. *(on `master`, 2026-10-18)*
 - Pause and resume a running race: a Pause/Resume button under Cancel Race on the race screen, and
   the Space key, in the countdown and during the race. While paused everything stands still — the
   racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the
@@ -45,6 +48,8 @@ is.
   *(branch `feat/vps-install`)*
 - `racearena uninstall`: a final backup first, the domain typed to confirm; the data and backups are
   kept unless `--purge-data`, which asks a second time. *(branch `feat/vps-install`)*
+- `HEAD /api/health` answers like `GET` (`200` with no body) instead of `401`, so an uptime checker
+  that sends `HEAD` sees a healthy server as healthy. *(on `master`, 2026-10-18)*
 - `/api/health` answers `503`, status `error`, when the account store (`users.json`) cannot be read, so
   a server nobody can sign in to no longer reports itself healthy; the healthy answer is unchanged
   (audit finding A10-05). *(on `master`, 2026-10-12)*
