@@ -3,8 +3,11 @@
    Path:        client/src/screens/RaceScreen/RaceScreen.css
    Project:     RaceArena
    Created:     2026-04-20
-   Description: Layout and keyframe styles for the race screen — full-screen
-                canvas container and background gradient pulse animation.
+   Description: Layout and keyframe styles for the race screen — the canvas
+                container, the standings column, the background gradient pulse
+                animation, and the app's fullscreen layout (FULLSCREEN-USEFUL-1,
+                2026-10-17: the largest 16:9 picture that fits, the standings as a
+                drawer off the right edge — see the section of that name below).
    ============================================================ */
 
 /* RaceScreen.css */
@@ -95,10 +98,8 @@
   min-height: 0;
 }
 
-/* Fullscreen drops the screen padding from 10 px to 6 px, so the cap follows it. */
-.screen--race:fullscreen .race-hud {
-  max-height: calc(100vh - 12px);
-}
+/* In the app's fullscreen the column is a full-height drawer instead and this cap is lifted — see
+   FULLSCREEN-USEFUL-1 below. */
 
 /* ── Scoreboard ─────────────────────────────────────────────────────────── */
 .scoreboard {
@@ -394,9 +395,71 @@
 }
 
 /* ── Fullscreen layout override ──────────────────────────────────────────── */
+/* The screen element is what `toggleFullscreen` puts into fullscreen; its padding drops to 6 px and
+   the pulse gives way to black. Everything else about the fullscreen layout is FULLSCREEN-USEFUL-1,
+   below, and driven by a class rather than by this pseudo-class. */
 .screen--race:fullscreen {
   padding: 6px;
   background: #000;
+}
+
+/* ── FULLSCREEN-USEFUL-1 (2026-10-17): a fullscreen the picture can use ─────────────────────────
+   WHY. The picture is a fixed 16:9 canvas sized by WIDTH, and outside fullscreen it shares the row
+   with the 210 px standings column. Fullscreen used to change only the padding, so it gained only
+   HEIGHT — which a width-sized picture cannot use — and left a dark band below the picture.
+   WHAT. While the app's fullscreen is active (`index.jsx` sets `.race-layout--fullscreen` from its
+   `isFullscreen` state — a class, so it is testable and nothing changes outside fullscreen):
+     * the picture is the largest 16:9 box that fits inside the 6 px fullscreen padding, centred
+       both ways, black around it;
+     * the standings column leaves the layout, waits off the right edge at full height, and slides
+       in OVER the picture (`.race-layout--hud-open`) — the picture never moves or resizes.
+   THE ONE-COORDINATE RULE IS UNTOUCHED: only the wrapper's CSS width changes, and everything inside
+   it is percentage-anchored, so the logo, the minimap, the overlays and the cards scale with it. */
+.race-layout--fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 12px);
+  background: #000;
+}
+
+/* The fit, border included: the wrapper is border-box with a 1 px border, so its height is
+   (width - 2) * 9/16 + 2. Solving that for the 100vh - 12px available gives the second term; the
+   first is the width available. Whichever is smaller wins, and the canvas's `height: auto` keeps
+   the 16:9 from there. */
+.race-layout--fullscreen .race-canvas-wrapper {
+  flex: none;
+  width: min(calc(100vw - 12px), calc((100vh - 14px) * 16 / 9 + 2px));
+}
+
+/* The drawer. Fixed to the right edge at full height, pushed off-screen by its own width plus its
+   shadow, and above every overlay inside the picture (the highest of those is the paused overlay's
+   50). The slide time is `FS_HUD_SLIDE_MS` in index.jsx, handed in as `--fs-hud-slide`. */
+.race-layout--fullscreen .race-hud {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 210px;
+  max-height: none;
+  z-index: 1000;
+  border-radius: 8px 0 0 8px;
+  transform: translateX(calc(100% + 24px));
+  transition: transform var(--fs-hud-slide, 200ms) ease;
+}
+
+.race-layout--fullscreen.race-layout--hud-open .race-hud {
+  transform: translateX(0);
+}
+
+/* The invisible hot strip along the right edge (its width is `FS_HUD_STRIP_PX`, set inline). Just
+   under the drawer, so once the drawer is out it covers the strip. */
+.race-fs-hud-strip {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
 }
 
 /* ── Back button ─────────────────────────────────────────────────────────── */

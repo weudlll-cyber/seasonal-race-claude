@@ -186,7 +186,7 @@ The canvas carrier chain in full:
    ```
 
 4. **Race canvas title overlay**: `RaceScreen` loads `raceData` from `sessionStorage.activeRace`
-   ([`index.jsx` → `activeRace`](../client/src/screens/RaceScreen/index.jsx#L449))
+   ([`index.jsx` → `activeRace`](../client/src/screens/RaceScreen/index.jsx#L526))
    and passes it to:
    - `drawTitle(ctx, shape, raceData)` for closed tracks
      ([`RaceScreen/renderRaceFrame.js:371`](../client/src/screens/RaceScreen/renderRaceFrame.js#L371),
