@@ -9,6 +9,10 @@
 // The texts are set as the admin `auth.setup.js` created (this project's storageState), then read in
 // a FRESH browser context with no cookies — a visitor who never signed in. They are cleared again at
 // the end, so no other spec sees a footer it did not expect.
+//
+// And the footer is VISIBLE WITHOUT SCROLLING (decided 2026-10-18): on the sign-in and the setup
+// screen, at three window sizes, the bar is inside the viewport as the page opens, and scrolled to the
+// end the page's spacer lies exactly under the bar — so the bar covers no content.
 // ============================================================
 
 import { test, expect } from '@playwright/test';
@@ -65,6 +69,116 @@ test('signed out: the footer offers the source code and the operator’s legal n
     // A deep link, typed into the address bar while signed out, serves the page too.
     await anon.goto('/legal-notice');
     await expect(anon.getByTestId('legal-text')).toContainText('E2E Operator <b>not bold</b>');
+  } finally {
+    await visitor.close();
+    expect(await putLegalPages(page, { legalNotice: '', privacyPolicy: '' })).toBe(200);
+  }
+});
+
+const SIZES = [
+  { width: 1920, height: 1080 },
+  { width: 1280, height: 720 },
+  { width: 390, height: 844 },
+];
+
+/** The bar's and the spacer's boxes and the window, read in the page — no scrolling done here. */
+function footerGeometry(page) {
+  return page.evaluate(() => {
+    const box = (el) => el && el.getBoundingClientRect().toJSON();
+    const bar = document.querySelector('[data-testid="legal-footer"]');
+    return {
+      bar: box(bar),
+      // > 0 when the links do not fit on the bar's one line and it would scroll sideways.
+      barOverflow: bar.scrollWidth - bar.clientWidth,
+      spacer: box(document.querySelector('[data-testid="legal-footer-spacer"]')),
+      vw: window.innerWidth,
+      vh: window.innerHeight,
+      scrollY: window.scrollY,
+    };
+  });
+}
+
+/** Opens `path`, then checks the bar is on screen untouched, and covers nothing scrolled to the end. */
+async function expectFooterAlwaysVisible(page, path, ready) {
+  for (const size of SIZES) {
+    await page.setViewportSize(size);
+    await page.goto(path);
+    await expect(ready(page)).toBeVisible();
+    const label = `${path} at ${size.width}x${size.height}`;
+
+    const opened = await footerGeometry(page);
+    expect(opened.scrollY, `${label}: opened at the top`).toBe(0);
+    expect(opened.bar.top, `${label}: bar top inside the window`).toBeGreaterThanOrEqual(0);
+    expect(opened.bar.bottom, `${label}: bar bottom inside the window`).toBeLessThanOrEqual(
+      opened.vh + 0.5
+    );
+    expect(opened.bar.height, `${label}: bar has a height`).toBeGreaterThan(0);
+    // No sideways overflow of the page from the bar.
+    expect(opened.bar.right, `${label}: bar within the width`).toBeLessThanOrEqual(opened.vw + 0.5);
+    expect(opened.barOverflow, `${label}: all links fit on the bar's line`).toBeLessThanOrEqual(0);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const end = await footerGeometry(page);
+    expect(end.bar.bottom, `${label}: bar still at the bottom when scrolled`).toBeCloseTo(
+      end.vh,
+      0
+    );
+    expect(end.spacer.height, `${label}: spacer as tall as the bar`).toBeCloseTo(end.bar.height, 0);
+    // Scrolled to the end, no piece of the screen's content lies under the bar.
+    const lowest = await lowestContent(page);
+    expect(
+      lowest.bottom,
+      `${label}: lowest content (${lowest.what}) clear of the bar`
+    ).toBeLessThanOrEqual(end.bar.top + 0.5);
+  }
+}
+
+/**
+ * The lowest bottom edge of the screen's CONTENT in the window: text-bearing leaves and controls,
+ * not the containers whose background runs to the window's edge, nor the bar and its spacer.
+ */
+function lowestContent(page) {
+  return page.evaluate(() => {
+    const skip = (el) =>
+      el.closest('[data-testid="legal-footer"], [data-testid="legal-footer-spacer"]');
+    const controls = 'a, button, input, select, textarea, img, canvas, label';
+    let lowest = { bottom: -Infinity, what: 'nothing' };
+    for (const el of document.body.querySelectorAll('*')) {
+      if (skip(el)) continue;
+      const isLeaf = el.children.length === 0 && el.textContent.trim() !== '';
+      if (!isLeaf && !el.matches(controls)) continue;
+      const style = getComputedStyle(el);
+      if (style.visibility === 'hidden' || style.display === 'none') continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (r.bottom > lowest.bottom) {
+        lowest = {
+          bottom: r.bottom,
+          what: `${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 30)}"`,
+        };
+      }
+    }
+    return lowest;
+  });
+}
+
+test('the footer is visible without scrolling and covers nothing — sign-in and setup', async ({
+  page,
+  browser,
+}) => {
+  // Both texts filled in, so the bar carries all three links — its widest form.
+  await page.goto('/setup');
+  expect(await putLegalPages(page, { legalNotice: NOTICE, privacyPolicy: 'P' })).toBe(200);
+  const allThree = (p) =>
+    p.getByTestId('legal-footer').getByRole('link', { name: 'Privacy policy' });
+
+  const visitor = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const anon = await visitor.newPage();
+  try {
+    // Setup, as the run's signed-in admin.
+    await expectFooterAlwaysVisible(page, '/setup', allThree);
+    // Sign-in, as a visitor who never signed in.
+    await expectFooterAlwaysVisible(anon, '/login', allThree);
   } finally {
     await visitor.close();
     expect(await putLegalPages(page, { legalNotice: '', privacyPolicy: '' })).toBe(200);

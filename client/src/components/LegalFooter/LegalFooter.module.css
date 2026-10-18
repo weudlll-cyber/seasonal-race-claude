@@ -2,17 +2,39 @@
    File:        LegalFooter.module.css
    Path:        client/src/components/LegalFooter/LegalFooter.module.css
    Project:     RaceArena — LEGAL-PAGES-1
-   Description: The legal footer: small, muted, centred, wrapping on a phone. It sits below the
-                screen's content and never competes with it.
+   Description: The legal footer: a slim, muted bar fixed to the bottom edge of the window, so it is
+                visible without scrolling at every width (decided 2026-10-18). A spacer of the same
+                height stays in the page's flow, so the bar never covers the last of the screen's
+                content or buttons — that spacer is the only thing that moves the page.
    ============================================================ */
 
+/* ONE height for both: the bar and the room the page keeps free for it. */
+.footer,
+.spacer {
+  height: 2rem;
+  flex: 0 0 auto;
+}
+
 .footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Above the page, below the server banner (9000), tooltips (1000) and the transition fade (9999). */
+  z-index: 100;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 0.35rem 1.25rem;
-  padding: 0.75rem 1rem 1rem;
+  gap: 1.25rem;
+  padding: 0 1rem;
+  /* One line at every width: the three links fit at 390 px (client/e2e/legal-pages.spec.js
+     measures it); a narrower window scrolls the bar sideways rather than growing it over the page. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
   font-size: 0.75rem;
+  background: var(--color-bg);
+  border-top: 1px solid #2a2a35;
 }
 
 .link {

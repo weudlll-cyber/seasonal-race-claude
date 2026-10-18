@@ -15,7 +15,8 @@ is.
 
 ### Added
 
-- A "Source code" link under the sign-in screen and the setup screen, pointing at the source of the
+- A "Source code" link in a slim bar along the bottom of the sign-in screen and the setup screen,
+  visible without scrolling, pointing at the source of the
   running version; an operator who runs a modified copy points it at their own source with the
   server setting `RA_SOURCE_URL`. Beside it, "Legal notice" and "Privacy policy" — two pages anyone
   can open without signing in — once an admin has filled them in on the Dev Screen (*Accounts and

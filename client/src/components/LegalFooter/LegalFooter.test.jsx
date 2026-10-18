@@ -81,6 +81,21 @@ describe('Source code — always there', () => {
   });
 });
 
+describe('fixed to the window, with room kept for it (decided 2026-10-18)', () => {
+  // jsdom lays nothing out; that the bar is inside the window without scrolling, and covers no
+  // content, is measured in the browser (client/e2e/legal-pages.spec.js). Here: the bar comes with
+  // its spacer, and the spacer is invisible to assistive technology and holds nothing.
+  it('renders the bar and an empty, hidden spacer BEFORE it in the flow', () => {
+    pages = answer();
+    renderFooter();
+    const bar = screen.getByTestId('legal-footer');
+    const spacer = screen.getByTestId('legal-footer-spacer');
+    expect(spacer.getAttribute('aria-hidden')).toBe('true');
+    expect(spacer.childNodes).toHaveLength(0);
+    expect(spacer.nextElementSibling).toBe(bar);
+  });
+});
+
 describe('Legal notice and Privacy policy — only when filled in', () => {
   it('both hidden when the operator left them empty (or only blank)', () => {
     pages = answer({ legalNotice: '   \n ' });

@@ -3,8 +3,8 @@
 // Path:        client/src/screens/Auth/LoginScreen.jsx
 // Project:     RaceArena
 // Created:     2026-06-14
-// Description: Login page — sign in with username/password; the legal footer below the card
-//              (LEGAL-PAGES-1, components/LegalFooter).
+// Description: Login page — sign in with username/password; the legal footer fixed to the window's
+//              bottom edge (LEGAL-PAGES-1, components/LegalFooter).
 // ============================================================
 
 import { useEffect, useState } from 'react';

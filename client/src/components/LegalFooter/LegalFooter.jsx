@@ -12,6 +12,10 @@
 // texts and `RA_SOURCE_URL` from the public `GET /api/settings/legal-pages` (useLegalPages.js).
 // While that answer is on its way, and when it never comes, only "Source code" shows — with the
 // build's own link, which needs no server.
+//
+// Always visible without scrolling (decided 2026-10-18): the bar is fixed to the window's bottom
+// edge, and an empty spacer of the same height (LegalFooter.module.css) is left in the screen's flow
+// so the bar never covers the screen's last content. Not used on the race screen.
 // ============================================================
 
 import { Link } from 'react-router-dom';
@@ -30,26 +34,30 @@ export default function LegalFooter() {
   const pages = useLegalPages();
   const source = sourceCodeUrl({ override: pages?.sourceUrl, build: RA_BUILD });
   return (
-    <footer className={styles.footer} data-testid="legal-footer">
-      <a
-        className={styles.link}
-        href={source.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={source.exact ? undefined : INEXACT_SOURCE_NOTE}
-      >
-        Source code
-      </a>
-      {hasText(pages?.legalNotice) && (
-        <Link className={styles.link} to="/legal-notice">
-          Legal notice
-        </Link>
-      )}
-      {hasText(pages?.privacyPolicy) && (
-        <Link className={styles.link} to="/privacy">
-          Privacy policy
-        </Link>
-      )}
-    </footer>
+    <>
+      {/* The page's bottom padding: keeps the bar's height free at the end of the flow. */}
+      <div className={styles.spacer} data-testid="legal-footer-spacer" aria-hidden="true" />
+      <footer className={styles.footer} data-testid="legal-footer">
+        <a
+          className={styles.link}
+          href={source.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={source.exact ? undefined : INEXACT_SOURCE_NOTE}
+        >
+          Source code
+        </a>
+        {hasText(pages?.legalNotice) && (
+          <Link className={styles.link} to="/legal-notice">
+            Legal notice
+          </Link>
+        )}
+        {hasText(pages?.privacyPolicy) && (
+          <Link className={styles.link} to="/privacy">
+            Privacy policy
+          </Link>
+        )}
+      </footer>
+    </>
   );
 }

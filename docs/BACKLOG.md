@@ -1870,7 +1870,10 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       "source code" or repository link anywhere in `client/src`). The owner decided on 2026-10-18 to
       add a source-code link and to provide a legal notice, English and country-neutral, because many
       operators in different countries run the game; each operator's own details are operator data,
-      entered on their install. **Built:** a small footer on the sign-in and setup screens —
+      entered on their install. **Built:** a slim footer bar on the sign-in and setup screens, fixed
+      to the window's bottom edge so it is visible without scrolling (the owner decided that on
+      2026-10-18 after seeing it reachable only by scrolling; a spacer of the bar's height keeps
+      the page's last content clear of it) —
       *Source code* always (the upstream repository at the build's commit, the repository root when
       the build names no commit, or the operator's `RA_SOURCE_URL`), *Legal notice* and *Privacy
       policy* only once filled in; two public pages `/legal-notice` and `/privacy` showing the

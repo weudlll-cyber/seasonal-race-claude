@@ -182,7 +182,8 @@ fresh install on the new one.
 
 ### Legal pages and the source-code link
 
-The sign-in screen and the setup screen carry a small footer. **"Source code" is always there**; **"Legal
+The sign-in screen and the setup screen carry a slim footer bar fixed to the bottom of the window, so
+it is visible without scrolling (not on the race screen). **"Source code" is always there**; **"Legal
 notice" and "Privacy policy" appear only once you have filled them in.** Both pages are public — a
 visitor reads them at `/legal-notice` and `/privacy` without signing in.
 
