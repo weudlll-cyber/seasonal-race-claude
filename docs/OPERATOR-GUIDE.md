@@ -4,8 +4,10 @@
 (not a developer). It names the command for each task on each install path and points at
 [DEPLOYMENT.md](DEPLOYMENT.md) for the detail instead of repeating it.
 
-**Written 2026-10-09 against `master` at `290e6db3`.** Where this page and the code disagree, the code
-is right and this page is a bug.
+**Written 2026-10-09 against `master` at `290e6db3`; extended 2026-10-18 against `master` at
+`7b64d920`** (*Watching it from outside*, *Learning about new versions*, *Several organisers on one
+install*, each with the file and line it was checked against). Where this page and the code disagree,
+the code is right and this page is a bug.
 
 ## The three install paths, and how this page marks them
 
@@ -40,6 +42,7 @@ install. What is in it:
 | `races.sqlite` | every stored race |
 | `tracks/`, `backgrounds/`, `tracks-backups/` | tracks, their pictures, and the newest copies of each track |
 | `racers/`, `racer-sprites/`, `brands/`, `brand-logos/`, `player-groups/` | racer types, brands and player groups |
+| `surface-classes/`, `period-points-rule.json` | custom surface classes, and the period evaluation's points rule |
 | `test-aids.json`, `migrations.json`, `recover-admin-audit.log` | the test-aids switch, which data migrations ran, and every admin recovery |
 
 | path | the data folder | the backups | the settings |
@@ -78,6 +81,39 @@ HTTPS through Caddy, and the alerts of the last day.
 
 ★ **"Healthy" does not mean "you can sign in".** With a damaged `users.json` the health route still
 answers `ok` while sign-in fails (§6). After any repair, sign in once to be sure.
+
+### Watching it from outside
+
+**Point any uptime checker at `https://<your domain>/api/health`.** The route needs no sign-in: it is
+on the public allow-list (`server/src/auth/guards.js:14-19`) and is mounted in
+`server/src/app.js:70`; its handler is `server/src/health.js:51-65`.
+
+| answer | what it means |
+| --- | --- |
+| `200`, body `{ "status": "ok", "timestamp": …, "build": … }` | the server runs and the account store can be read (`server/src/health.js:54-56`); `build` names the version running |
+| `503`, body `{ "status": "error", …, "problems": [{ "store": "users", … }] }` | the server runs but **the account store (`users.json`) cannot be read, so nobody can sign in** (`server/src/health.js:35-48`, `:58-63`); see §6, *A damaged data file* |
+| no answer, a timeout, or a proxy error page | the server, the proxy or the machine is down or unreachable |
+
+★ **Configure the check as a `GET` request.** A `HEAD` request to the same address is answered
+`401 not authenticated` (checked on 2026-10-18 against the real guard): the allow-list matches the
+method exactly (`server/src/auth/guards.js:152-158`), and only `GET /api/health` is on it. Some
+checkers send `HEAD` unless told otherwise; with one of those the check reports a failure while the
+server is fine. Recorded as an open row in [BACKLOG.md](BACKLOG.md) PART ONE.
+
+★ **The route checks less than `npm run status`.** It does not look at free disk, at whether the data
+folder is writable, or at backups — a full disk still answers `200` (§6, *The disk is full*). The
+outside check tells you the server answers; the status check on the machine tells you it is well.
+
+**A check every 1 to 5 minutes is a reasonable interval.** That is a suggestion, not a measured
+figure; per request the route reads the account store and names the build, and logs nothing
+(`server/src/health.js:15-19`). The Docker image's own health check asks it every 30 seconds
+(`server/Dockerfile:230`).
+
+**On the VPS install (branch feat/vps-install, not yet merged)** a timer runs the status check every
+10 minutes (`deploy/systemd/racearena-status.timer:7` on that branch) and alerts by e-mail or in the
+system journal (`racearena alert`, `deploy/racearena:534-550` on that branch). **It does not replace
+an outside check:** it runs on the same machine, so when that machine is down, out of memory or cut
+off from the network, nothing is left to send the alert. Use both.
 
 ### The logs
 
@@ -159,6 +195,45 @@ fresh install on the new one.
 ★ **Without a tag, `racearena update` installs the newest release tag, and none exists yet** (no
 `v1.0.0`). Until one does, name a tag, branch or commit.
 
+### Learning about new versions
+
+A **release** is a tag named `v<major>.<minor>` or `v<major>.<minor>.<patch>` — nothing else. The
+repository carries many other tags (`v-ship-…`, `archive/…`, `pre/…`); none of them is a release
+(`server/src/releaseCheck.js:73-77`, `:98`). **No release tag exists yet:** checked on 2026-10-18
+with `git ls-remote --tags origin`, which lists no tag of that shape.
+
+| where | what it tells you |
+| --- | --- |
+| GitHub, on the repository: **Watch → Custom → Releases** | an e-mail or GitHub notification when a release is **published on GitHub's Releases page**. A tag pushed without a published release does not notify |
+| [CHANGELOG.md](../CHANGELOG.md) | what each version changes for an operator or a race director, newest first; *Unreleased* is what the next version will carry |
+| the admin status box: **Dev Screen → Accounts and system**, at the top, admins only | its line *Newer release* (below) |
+| `racearena version` — VPS install (branch feat/vps-install, not yet merged) | the version running (`git describe --tags`, with the commit), the one before the last update, the address, and where the data and the backups are (`deploy/racearena:307-316` on that branch). It does not ask whether a newer one exists |
+
+**The admin status box's *Newer release* line** comes from the server, which asks GitHub for the
+repository's tags **at most once a day** and keeps that answer — a failure included — for 24 hours
+(`server/src/releaseCheck.js:95`, `:174-182`). It sends no credentials. The box is filled when an
+admin opens it; nothing announces a new release by itself. What the line says
+(`client/src/screens/DevScreen/sections/AdminStatusSection.jsx:53-60`):
+
+| the line | when |
+| --- | --- |
+| `unknown` | the check failed: no network, a timeout, GitHub's rate limit, an unexpected answer (`server/src/releaseCheck.js:165-171`) |
+| `no release published yet` | the check worked and found no release tag — today's answer |
+| `yes — <newest> is newer than this build (<current>)` | a newer release exists |
+| `no — this build is <current>` | this build is the newest release |
+| `newest release is <newest>; this build's version is not known, so it cannot be compared` | this build did not identify itself by a release tag (a branch, a commit, or `unknown`), so the server does not guess (`server/src/releaseCheck.js:121-129`) |
+
+Every line but `unknown` ends with when the check was made. The box reads **tags**
+(`server/src/releaseCheck.js:154-164`), so it sees a release tag as soon as it is pushed, whether or
+not a release is published on GitHub's page. The route behind the box is admin-only
+(`server/src/auth/guards.js:89-97`) and reads only (`server/src/routes/adminStatus.js:56-84`).
+
+**`racearena update` without a tag** — VPS install (branch feat/vps-install, not yet merged) — takes
+the newest release tag from the repository (`deploy/racearena:98-101` on that branch: tags matching
+`^v[0-9]+\.[0-9]+(\.[0-9]+)?$`, the highest by version order) and **refuses when there is none**:
+`no release tag (v<major>.<minor>[.<patch>]) exists yet — name one: racearena update <ref>`
+(`deploy/racearena:232-236` on that branch). Today that refusal is what it prints.
+
 ---
 
 ## 4. Accounts
@@ -213,6 +288,40 @@ first-admin setup, and works only when there are no users at all.
 | Node | stop the server; from the release directory with the settings loaded, run the command above; start the server |
 | Docker | `docker compose stop`; once, `npm ci --prefix server` on the host; `RA_DATA_DIR=server/data node scripts/recover-admin.mjs promote <username>`; `docker compose start`. **Not tested on this path:** if the host account cannot write the files the container created, the tool fails with a permission error |
 | VPS install (branch feat/vps-install, not yet merged) | **no route is written down.** `recover-admin.mjs` is not among the tools the branch's app image carries, and the host has no Node. Until the branch adds one, keep a second admin account |
+
+### Several organisers on one install
+
+**One install is one shared space; only stored races are kept apart, by team.** That is a decision
+of 2026-10-01, and its home is [DEPLOYMENT.md](DEPLOYMENT.md), *What organizers on one installation
+share*. Each account has a team (§4, *Adding and changing accounts*); the server reads it from the
+account on every request, never from what the browser sends (`server/src/auth/guards.js:177-207`,
+`server/src/routes/races.js:31-35`). What that means record by record, as the code stands:
+
+| record | who sees it | who changes it |
+| --- | --- | --- |
+| tracks and their pictures | every signed-in user (`server/src/routes/tracks.js:571`) | every signed-in user creates, edits and deletes — a default track can be edited but not deleted (`server/src/routes/tracks.js:682-687`); making one a default (`set-default`, `clear-default`) and exporting it as seed data is admin-only (`server/src/auth/guards.js:55-62`) |
+| racer types and sprites | every signed-in user (`server/src/routes/racers.js:190`) | every signed-in user creates, edits and deletes |
+| brands and logos | every signed-in user (`server/src/routes/brands.js:195`) | every signed-in user creates, edits and deletes — not a default one (`server/src/routes/brands.js:294`); default and export admin-only (`server/src/auth/guards.js:47-54`) |
+| player groups — **with the names of the people in them** | every signed-in user (`server/src/routes/playerGroups.js:123`) | every signed-in user creates, edits and deletes — not a default one (`server/src/routes/playerGroups.js:199`); default and export admin-only (`server/src/auth/guards.js:38-46`) |
+| surface classes | every signed-in user (`server/src/routes/surfaceClasses.js:88`) | admins only (`server/src/auth/guards.js:31-37`) |
+| the period evaluation's points rule | every signed-in user (`server/src/routes/races.js:212`) | admins only (`server/src/auth/guards.js:73-80`) |
+| the test-aids switch | every signed-in user (`server/src/routes/settings.js:23`) | admins only (`server/src/auth/guards.js:81-88`) |
+| the warning about re-delivered built-in records | every signed-in user (`server/src/routes/seedNotices.js:31`) | any signed-in user dismisses it, for everyone (`server/src/routes/seedNotices.js:36-39`) |
+| **stored races** | **only users of the team that ran them** — the list, a race by its short key and the period evaluation (`server/src/routes/races.js:164-181`, `:188-206`, `:228-230`) | every signed-in user stores the races they run, filed under their own team (`server/src/routes/races.js:101-132`); nobody changes or deletes a stored race ([PRIVACY-FACTS.md](PRIVACY-FACTS.md)); re-checking one on demand is admin-only and also limited to the admin's own team (`server/src/auth/guards.js:67-72`, `server/src/routes/races.js:253-257`) |
+| accounts | admins only, **every account on the install, whatever its team** (`server/src/auth/guards.js:25-30`) | admins only; each user changes their own password |
+| the admin status box | admins only (`server/src/auth/guards.js:89-97`) | nobody; it reads only |
+| the Dev Screen's race settings (behaviour, camera and the rest) | **not shared**: kept in each browser's local storage (`client/src/modules/storage/storage.js:15`, `:18-24`; §1, the Dev Screen's "Backup and reset") | whoever uses that browser |
+
+★ **An admin sees only their own team's races too.** The race routes filter by the signed-in user's
+team whatever the role; there is no "all teams" view.
+
+★ **A user without a team** (an account from before teams existed) signs in normally, sees no stored
+races, and cannot store one: the server keeps the race in the browser and logs a line naming
+`scripts/migrate-teams.mjs` (`server/src/routes/races.js:104-118`, `:166-175`).
+
+**In the Dev Screen an operator sees only the parts marked for operators**
+(`client/src/screens/DevScreen/DevScreen.jsx:30-47`, `:97`); the server's role checks above apply
+whatever the screen shows.
 
 ---
 
