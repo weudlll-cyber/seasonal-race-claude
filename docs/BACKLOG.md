@@ -1873,6 +1873,52 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **LEGAL-PAGES-1 — a source-code link, two public legal pages and a legal-notice template —
+      ACCEPTED 2026-10-18 AND MERGED, with the compact setup screen.** The facts of
+      2026-10-18: the project is AGPL-3.0-or-later and the client had no link to its source code (no
+      "source code" or repository link anywhere in `client/src`). The owner decided on 2026-10-18 to
+      add a source-code link and to provide a legal notice, English and country-neutral, because many
+      operators in different countries run the game; each operator's own details are operator data,
+      entered on their install. **Built:** a slim footer bar on the sign-in and setup screens, fixed
+      to the window's bottom edge so it is visible without scrolling (the owner decided that on
+      2026-10-18 after seeing it reachable only by scrolling; a spacer of the bar's height keeps
+      the page's last content clear of it; on 2026-10-18 the setup screen showed a scrollbar of a few
+      pixels although its content fitted, and the owner decided there must be none — measured, the
+      spacer had been ADDED to the main area's 2rem bottom padding (1280x720 Players: 743 px on master,
+      775 px on the branch), so the main area now has no bottom padding and the spacer is the page's
+      bottom space; the page heights are master's again and the Browser-gate check asserts no page is
+      taller than its content plus the bar) —
+      *Source code* always (the upstream repository at the build's commit, the repository root when
+      the build names no commit, or the operator's `RA_SOURCE_URL`), *Legal notice* and *Privacy
+      policy* only once filled in; two public pages `/legal-notice` and `/privacy` showing the
+      operator's text as plain text; the texts stored on the server in `legal-pages.json`
+      (`GET /api/settings/legal-pages` public, `PUT` admin-only, each text at most 20,000
+      characters); a Dev Screen section *Legal pages* in *Accounts and system* (admins) with an
+      *Insert template* button. Held by `server/src/routes/legalPages.test.js`,
+      `server/src/sourceUrl.test.js`, the component tests `LegalFooter.test.jsx`,
+      `LegalPage.test.jsx` and `LegalPagesSection.test.jsx`, the chapter guard (352 rows) and
+      `client/e2e/legal-pages.spec.js` (Browser gate). How-to: [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md),
+      *Legal pages and the source-code link*.
+      ★ **Found by this branch's premerge on 2026-10-18, fixed on it:** the client suite failed once
+      on an unhandled error — `SurfaceClassPreview.jsx` drew its first frame on a `null` 2D context
+      (jsdom has none) while `devScreenChapters.guard.test.jsx`, whose walk this branch lengthened by
+      one section, was still mounted. The preview now starts no loop without a context (no change in
+      a real browser); `SurfaceClassPreview.test.jsx` holds it, red without the guard.
+      ★ **The compact setup screen, decided 2026-10-18 before the merge** (the owner said that day he
+      did not need to look at it first): on a desktop window of about 1870x1000 the Settings tab still
+      scrolled and its bottom card sat partly behind the bar — the setup screen's own height, which
+      scrolled on master too at smaller heights. Vertical spacing only, in one block for widths above
+      900 px (`SetupScreen.module.css`): header, main, panel and bottom-card padding, the gaps between
+      them, and the player, group, track-card and track-option spacing; the track options' inline
+      style became the `.trackOptions` class with the same values so the block can reach it. No
+      content, font size, width or phone layout changed. Measured in the fullest state (eight players
+      — the list at its height cap —, a track selected, test aids on), the height each tab needs fell
+      Players 1024 -> 882, Track 1111 -> 895, Settings 754 -> 619 px, so every tab fits a 900 px
+      window with the bottom card above the bar (1920x1080, 1900x990, 1900x900, 1440x900 — held by
+      `client/e2e/legal-pages.spec.js`, red with the block switched off: Track at 1920x1080 31 px over).
+      **Accepted:** the owner accepted LEGAL-PAGES-1 on 2026-10-18 (the footer, the source link, the
+      legal pages and the template) and it was merged with the compact screen the same day.
+
 - [x] **The Browser gate's `socket hang up` on `GET /api/tracks` — CLOSED 2026-10-18 by a bounded
       retry (branch `fix/appready-hangup`); the cause is still NOT proven.** Opened by the night chain of
       2026-10-18: on master `1bbc3d33` (a docs-only merge) Browser gate run 39093148036 failed one spec,
@@ -2890,7 +2936,7 @@ proposal arriving again in six months looking new.
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
       `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
-      (`guards.js:169-173`), and backups and exports have no retention. No email, no request log
+      (`guards.js:181-185`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**
       **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
 

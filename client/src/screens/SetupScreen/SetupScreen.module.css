@@ -42,7 +42,11 @@
   max-width: 960px;
   width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  /* No bottom padding: the legal footer's spacer (components/LegalFooter) follows this element and
+     is the page's bottom space — the bar's height, so the bar never covers the last card. A 2rem
+     padding here ON TOP of the spacer made a page whose content fits the window scroll by those
+     extra pixels (measured 2026-10-18: 1280x720 Players 743 px on master, 775 px with the spacer). */
+  padding: 2rem 2rem 0;
   gap: 1.5rem;
 }
 
@@ -339,6 +343,15 @@
   margin-top: 0.25rem;
 }
 
+/* The racer type, surface and laps under the track grid (was an inline style in SetupScreen.jsx,
+   moved here unchanged so the compact desktop rules at the end of this file can reach it). */
+.trackOptions {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 /* ── RaceSettings ── */
 .settingsGrid {
   display: flex;
@@ -609,4 +622,72 @@
 .startSummaryGroups {
   color: var(--color-muted);
   font-size: 0.9em;
+}
+
+/* ── COMPACT SETUP SCREEN — desktop widths only (decided 2026-10-18) ──────────────────────────────
+   The setup screen is made more compact so that its tabs fit a desktop window of about 900 px
+   without scrolling, with the bottom card above the legal footer bar. VERTICAL SPACING ONLY: every
+   rule below is a padding, margin or gap that already exists above, made smaller; no content is
+   removed or hidden, no font size or width changes. Phone and tablet widths (<= 900 px) keep the
+   values above unchanged. The measured heights are in docs/BACKLOG.md (LEGAL-PAGES-1, PART TWO). */
+@media (min-width: 901px) {
+  .header {
+    padding: 0.6rem 2rem;
+  }
+
+  .body {
+    padding-top: 1rem;
+    gap: 0.5rem;
+  }
+
+  .panel {
+    padding: 0.75rem 1.5rem;
+  }
+
+  .panelTitle {
+    margin-bottom: 0.75rem;
+  }
+
+  .startBar {
+    padding: 0.6rem 1.5rem;
+  }
+
+  .quickTestBtn {
+    padding: 0.5rem 1.25rem;
+  }
+
+  .playerInputRow {
+    margin-bottom: 0.6rem;
+  }
+
+  .playerCount {
+    margin-bottom: 0.5rem;
+  }
+
+  .groupPicker {
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .trackGrid {
+    gap: 0.5rem;
+  }
+
+  .trackCard {
+    gap: 0.2rem;
+    padding: 0.35rem 0.75rem;
+  }
+
+  .trackColorBar {
+    margin-top: 0;
+  }
+
+  .trackOptions {
+    margin-top: 0.6rem;
+    gap: 0.5rem;
+  }
+
+  .settingsGrid {
+    gap: 0.85rem;
+  }
 }

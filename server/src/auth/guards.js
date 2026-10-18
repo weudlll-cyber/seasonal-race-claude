@@ -17,6 +17,10 @@ export const PUBLIC_PATHS = [
   { method: 'GET', path: '/api/auth/setup-needed' },
   { method: 'POST', path: '/api/auth/setup' },
   { method: 'POST', path: '/api/auth/login' },
+  // LEGAL-PAGES-1 (the owner's decision of 2026-10-18): the operator's legal notice and privacy
+  // policy, and the source-code link, are shown BEFORE anyone signs in — the start screen's footer
+  // and the two public pages read them. GET only; setting them is admin-only (ROUTE_POLICY below).
+  { method: 'GET', path: '/api/settings/legal-pages' },
 ];
 
 // ── Role-elevation policy (operator+ by default; explicit entries raise to admin) ─
@@ -86,6 +90,14 @@ const ROUTE_POLICY = [
     test: (p) => /^\/api\/settings\/test-aids$/.test(p),
     role: 'admin',
     desc: 'the test-aids switch — admin sets, everyone reads (TEST-AIDS-1)',
+  },
+  // LEGAL-PAGES-1 (2026-10-18): the operator's legal texts are PUBLIC to read (PUBLIC_PATHS above)
+  // and set by an admin only, beside the test-aids switch.
+  {
+    methods: ['PUT'],
+    test: (p) => /^\/api\/settings\/legal-pages$/.test(p),
+    role: 'admin',
+    desc: 'the legal pages — admin sets, anyone reads (LEGAL-PAGES-1)',
   },
   // AUDIT-1 D2: the admin status box (`GET /api/admin/status`) reports paths, free disk, backup
   // ages and the build — install facts an operator has no business reading. The WHOLE namespace,

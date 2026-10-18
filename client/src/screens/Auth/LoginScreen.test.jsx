@@ -27,6 +27,10 @@ vi.mock('../../contexts/AuthContext.jsx', () => ({
   useAuth: () => mockAuthValue,
 }));
 
+// LEGAL-PAGES-1: the legal footer asks the server for the legal pages; this test talks to no server,
+// so the footer gets no answer (its own tests are components/LegalFooter/LegalFooter.test.jsx).
+vi.mock('../../modules/legal/useLegalPages.js', () => ({ useLegalPages: () => null }));
+
 function renderLogin() {
   render(
     <MemoryRouter initialEntries={['/login']}>

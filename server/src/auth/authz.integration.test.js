@@ -101,6 +101,15 @@ describe('PUBLIC: anonymous access', () => {
     const res = await request(app).get('/api/auth/setup-needed');
     expect(res.status).toBe(200);
   });
+
+  // LEGAL-PAGES-1: the operator's legal pages are read before anyone signs in; setting them is not.
+  it('GET /api/settings/legal-pages → 200, PUT → 401', async () => {
+    const res = await request(app).get('/api/settings/legal-pages');
+    expect(res.status).toBe(200);
+    expect(typeof res.body.legalNotice).toBe('string');
+    const put = await request(app).put('/api/settings/legal-pages').send({ legalNotice: 'x' });
+    expect(put.status).toBe(401);
+  });
 });
 
 // ── Deny-by-default ───────────────────────────────────────────────────────────
