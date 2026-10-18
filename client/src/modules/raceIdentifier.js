@@ -7,33 +7,36 @@
 //
 // ── WHY A SEED IS NOT ENOUGH, at source ─────────────────────────────────────────────────────────
 //
-// `SetupScreen.jsx:677` fixes the plan seed into the race payload, and the race is a pure function
-// of what it is given. But `RaceScreen/index.jsx:488` reads the action stage and `:503` gathers the
-// whole config world — both from THE HOST'S OWN STORAGE at the moment the race starts. So the same
+// `SetupScreen.jsx:678` fixes the plan seed into the race payload, and the race is a pure function
+// of what it is given. But `resolveRaceWorld` (called at `RaceScreen/index.jsx:623`) reads the
+// action stage (`raceWorldSetup.js:129`) and gathers the whole config world (`raceWorldSetup.js:144`)
+// — both from THE HOST'S OWN STORAGE at the moment the race starts. So the same
 // seed on two machines is two races, and neither operator changed anything. This module carries
 // everything the seed does not.
 //
 // ── WHAT IS ENCODED: the nine inputs, counted at source rather than carried over ────────────────
 //
 // RACE-IDENTITY-1 named nine. Counted again on 2026-09-05 by reading every `raceData.` access in
-// `RaceScreen/index.jsx` and following each one to where it lands, the nine hold:
+// `RaceScreen/index.jsx` and following each one to where it lands, the nine hold. (Line numbers
+// re-pointed 2026-10-18: since the RaceScreen split, five of the accesses live in
+// `RaceScreen/raceWorldSetup.js`, `resolveRaceWorld`; bare `:NNN` is `index.jsx`.)
 //
-//   1. `geometryId`         :409, :417 — resolves the track through `getTrack()`
-//   2. `racerTypeId`        :406
-//   3. the NAME LIST, IN ORDER — :749, copied onto every racer; a name is physics, because
-//                                `stablePairBit` hashes it
-//   4. field size           :404 — implied exactly by the length of the name list, so it is not
+//   1. `geometryId`         :551, :559 — resolves the track through `getTrack()`
+//   2. `racerTypeId`        :548
+//   3. the NAME LIST, IN ORDER — :809 (`attachRacerDisplayFields`), copied onto every racer; a name
+//                                is physics, because `stablePairBit` hashes it
+//   4. field size           :546 — implied exactly by the length of the name list, so it is not
 //                                 encoded twice
-//   5. `racePlanSeed`       :569
-//   6. `raceActionStage`    :488
-//   7. `targetLaps` / `targetDurationSec`  :582, :583
-//   8. `racePlanEnabled`    :586
-//   9. THE WORLD CONFIG     :503 — `buildWorldConfig()`, which reads the host's localStorage through
-//                                 the SAME loaders the race path uses
+//   5. `racePlanSeed`       raceWorldSetup.js:167
+//   6. `raceActionStage`    raceWorldSetup.js:129
+//   7. `targetLaps` / `targetDurationSec`  raceWorldSetup.js:191, :192
+//   8. `racePlanEnabled`    raceWorldSetup.js:194
+//   9. THE WORLD CONFIG     raceWorldSetup.js:144 — `buildWorldConfig()`, which reads the host's
+//                                 localStorage through the SAME loaders the race path uses
 //
 // ★ TWO PAYLOAD FIELDS REACH THE PICTURE BUT NOT THE ENGINE, and they are deliberately NOT in the
-// list above: `worldWidth`/`worldHeight` (:407, :432) go to the CameraDirector (:610) and
-// `renderRaceFrame` (:1542), and `trackSurfaceClasses` (:725) goes only to `r.surfaceEmitter`, which
+// list above: `worldWidth`/`worldHeight` (:575, :549) go to the CameraDirector (`createRaceCamera`,
+// :692) and `renderRaceFrame` (:1415), and `trackSurfaceClasses` (:791) goes only to `r.surfaceEmitter`, which
 // no engine file reads. They decide what the race LOOKS like, not who wins. They are named here so
 // the omission is a decision on the record rather than an oversight.
 //
@@ -175,7 +178,7 @@ export function encodeRaceIdentifier({
     s: racePlanSeed,
     a: raceActionStage,
     p: racePlanEnabled ? 1 : 0,
-    // Exactly one of these is meaningful per race mode, which is the shape `SetupScreen.jsx:668-669`
+    // Exactly one of these is meaningful per race mode, which is the shape `SetupScreen.jsx:669-670`
     // already writes. The absent one is omitted rather than nulled, so it round-trips as absent.
     ...(targetLaps == null ? {} : { l: targetLaps }),
     ...(targetDurationSec == null ? {} : { d: targetDurationSec }),

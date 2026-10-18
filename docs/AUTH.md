@@ -192,7 +192,11 @@ GET  /api/health
 GET  /api/auth/setup-needed
 POST /api/auth/setup
 POST /api/auth/login
+GET  /api/settings/legal-pages
 ```
+
+`GET /api/settings/legal-pages` joined the list on 2026-10-18 (LEGAL-PAGES-1): the operator's legal
+notice and privacy policy are read before anyone signs in. Setting them is admin-only.
 
 Everything else needs a session; an unauthenticated request gets **`401`**. A second layer,
 `requireAdmin`, raises specific routes to admin via one central policy: all of `/api/users`, the
@@ -203,11 +207,13 @@ sub-paths of player-groups, brands and tracks, re-checking a stored race (`POST
 authenticated operator hitting one of those gets **`403`**. The list is `ROUTE_POLICY` in
 `server/src/auth/guards.js`.
 
-**The public allow-list matches the method exactly**: `HEAD /api/health` is not on it and answers
-`401` (checked 2026-10-18; open as a row in [BACKLOG.md](BACKLOG.md) PART ONE). Inside
-`ROUTE_POLICY`, by contrast, `HEAD` is judged as `GET`.
+**On the public allow-list, as in `ROUTE_POLICY`, `HEAD` is judged as `GET`**, so every `GET` entry
+admits `HEAD` too: `HEAD /api/health` answers `200`. Until 2026-10-18 the allow-list matched the
+method exactly and `HEAD /api/health` answered `401` (closed that day; BACKLOG PART TWO). `POST`
+entries admit nothing else.
 
-**Client — every screen except the two gates.** `/login` and `/setup-admin` are open. Everything else
+**Client — every screen except the two gates and the two legal pages.** `/login`, `/setup-admin`,
+`/legal-notice` and `/privacy` are open. Everything else
 is wrapped in `ProtectedRoute`: `/setup`, **`/race`**, `/results`, `/dev`, `/track-editor`,
 `/racer-editor`, and `/diagnose-verteilung` (admin only).
 

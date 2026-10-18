@@ -5,7 +5,7 @@
 //
 // WHAT THIS IS FOR: turning a build identity into the one short string the owner reads off the HUD,
 // and nothing else. Pure — no git, no imports, no environment. The identity itself is supplied by
-// `virtual:ra-build` (see client/vite-plugin-ra-build.js), which is imported in exactly one place.
+// `virtual:ra-build` (see client/vite-plugin-ra-build.js, whose header names the files that import it).
 //
 // WHY THE DIRTY MARK IS NOT DECORATION. A dirty tree means the screen is showing something that NO
 // COMMIT DESCRIBES, so the sha alone would be a lie of omission: quoting it invites somebody to

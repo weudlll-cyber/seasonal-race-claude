@@ -36,6 +36,7 @@ import racersRouter from '../routes/racers.js';
 import seedNoticesRouter from '../routes/seedNotices.js';
 import racesRouter from '../routes/races.js';
 import adminStatusRouter from '../routes/adminStatus.js';
+import settingsRouter from '../routes/settings.js';
 
 const MOUNT_MAP = [
   { prefix: '/api/auth', router: authRouter },
@@ -48,6 +49,8 @@ const MOUNT_MAP = [
   { prefix: '/api/seed-notices', router: seedNoticesRouter },
   { prefix: '/api/races', router: racesRouter },
   { prefix: '/api/admin', router: adminStatusRouter },
+  // LEGAL-PAGES-1: the settings router was missing from this map, so its PUTs were never walked.
+  { prefix: '/api/settings', router: settingsRouter },
 ];
 
 // ── Operator-plus allowlist (these do NOT require admin) ──────────────────────
@@ -163,6 +166,13 @@ describe('route-surface drift guard', () => {
   it('the test-aids switch: setting it is admin-only, reading it is not', () => {
     expect(requiredRole('PUT', '/api/settings/test-aids')).toBe('admin');
     expect(requiredRole('GET', '/api/settings/test-aids')).toBeNull();
+  });
+
+  // LEGAL-PAGES-1 (the owner's decision of 2026-10-18): the legal pages are read by anyone, signed in
+  // or not (PUBLIC_PATHS), and set by admins only. Pinned both ways.
+  it('the legal pages: setting them is admin-only, reading them is not', () => {
+    expect(requiredRole('PUT', '/api/settings/legal-pages')).toBe('admin');
+    expect(requiredRole('GET', '/api/settings/legal-pages')).toBeNull();
   });
 
   it('all /api/users mutating routes are admin-classified', () => {

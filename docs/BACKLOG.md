@@ -378,7 +378,7 @@ these carries a recommendation.**
    the real component past its placeholder, and three render-class sabotages of `index.jsx` all go
    red (see *`RaceScreen` is not testable — ✅ ANSWERED* in PART TWO). **BUT THE BACKGROUND SABOTAGE
    NAMED HERE IS STILL GREEN, re-measured on the night of 2026-09-04:** forcing `bgImagePath` to
-   `null` at `index.jsx:435` — which blanks every track background in the game — passes **31 files
+   `null` at `index.jsx:435` (now `:578`, `const bgImagePath`) — which blanks every track background in the game — passes **31 files
    and 405 tests** in that directory, the new mount test among them.
    **★ AND IT CANNOT BE CAUGHT THERE.** The mount test stubs the 2D context, so nothing it does is
    drawn; it proves the screen RENDERS, never WHAT it renders. A test that asserted draw calls would
@@ -1829,19 +1829,6 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
-## Found while writing the operator guide's monitoring section (2026-10-18)
-
-- [ ] **`HEAD /api/health` answers `401`; only `GET` is public.** The public allow-list matches the
-      method exactly (`server/src/auth/guards.js:14-19`, compared at `:152-158`), while the same
-      file states that HEAD must inherit GET's policy (`:114-119`) — which holds for `ROUTE_POLICY`
-      and not for `PUBLIC_PATHS`. Checked 2026-10-18 by running the real `createRequireAuth` with a
-      request of each method: `GET 200`, `HEAD 401`. An uptime checker that sends `HEAD` (some do
-      unless told otherwise) reports a healthy server as failing. Documented for operators in
-      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2, *Watching it from outside* ("configure the check as a
-      `GET` request"). Not changed: it touches the auth guard, and whether HEAD joins the allow-list
-      is a decision. *(verify: either `HEAD /api/health` answers 200 with a test pinning it, or the
-      guide's GET instruction is the accepted answer and this row closes on that)*
-
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
@@ -1896,6 +1883,119 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **`sessionInvalidation.test.js` timed out at 5 s in premerge's server suite — CLOSED 2026-10-18
+      (branch `fix/session-test-timeout`).** Twice on 2026-10-18 two of its tests crossed vitest's 5 s
+      limit with the server suite running alone (on `feat/legal-pages` and `fix/health-head`); PART
+      TWO D9 (2026-08-23) had made these bcrypt timeouts a watch that closes "when it happens a third
+      time and is diagnosed". **Diagnosed, measured alone:** each test took 1.0–2.6 s, almost all of
+      it bcrypt at the production cost of 12 (`usersStore.js` `BCRYPT_COST`, ~247 ms a call): six to
+      ten hashes and compares per test as it creates users, logs in and changes passwords — so the
+      contention of a loaded machine pushed the slowest two past 5 s. There is no test-cost setting.
+      **What closed it:** the file mocks `bcrypt` for itself only, so `hash` runs at cost 4
+      (`compare` follows the hash's own cost) — the tests took 52–125 ms each. The production cost is
+      untouched, and what the file proves (a password change ends sessions; guards.js's epoch check)
+      does not depend on hash strength, which `usersStore.test.js` holds at the real cost. Still red
+      when the epoch check is switched off (three tests: 200 instead of 401). The global limit stays.
+      `changePassword.test.js` and `changePasswordContract.test.js` keep their own 30 s budget for
+      the same cause (noticed, left as they are). D9's watch is answered for this file.
+
+- [x] **LEGAL-PAGES-1 — a source-code link, two public legal pages and a legal-notice template —
+      ACCEPTED 2026-10-18 AND MERGED, with the compact setup screen.** The facts of
+      2026-10-18: the project is AGPL-3.0-or-later and the client had no link to its source code (no
+      "source code" or repository link anywhere in `client/src`). The owner decided on 2026-10-18 to
+      add a source-code link and to provide a legal notice, English and country-neutral, because many
+      operators in different countries run the game; each operator's own details are operator data,
+      entered on their install. **Built:** a slim footer bar on the sign-in and setup screens, fixed
+      to the window's bottom edge so it is visible without scrolling (the owner decided that on
+      2026-10-18 after seeing it reachable only by scrolling; a spacer of the bar's height keeps
+      the page's last content clear of it; on 2026-10-18 the setup screen showed a scrollbar of a few
+      pixels although its content fitted, and the owner decided there must be none — measured, the
+      spacer had been ADDED to the main area's 2rem bottom padding (1280x720 Players: 743 px on master,
+      775 px on the branch), so the main area now has no bottom padding and the spacer is the page's
+      bottom space; the page heights are master's again and the Browser-gate check asserts no page is
+      taller than its content plus the bar) —
+      *Source code* always (the upstream repository at the build's commit, the repository root when
+      the build names no commit, or the operator's `RA_SOURCE_URL`), *Legal notice* and *Privacy
+      policy* only once filled in; two public pages `/legal-notice` and `/privacy` showing the
+      operator's text as plain text; the texts stored on the server in `legal-pages.json`
+      (`GET /api/settings/legal-pages` public, `PUT` admin-only, each text at most 20,000
+      characters); a Dev Screen section *Legal pages* in *Accounts and system* (admins) with an
+      *Insert template* button. Held by `server/src/routes/legalPages.test.js`,
+      `server/src/sourceUrl.test.js`, the component tests `LegalFooter.test.jsx`,
+      `LegalPage.test.jsx` and `LegalPagesSection.test.jsx`, the chapter guard (352 rows) and
+      `client/e2e/legal-pages.spec.js` (Browser gate). How-to: [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md),
+      *Legal pages and the source-code link*.
+      ★ **Found by this branch's premerge on 2026-10-18, fixed on it:** the client suite failed once
+      on an unhandled error — `SurfaceClassPreview.jsx` drew its first frame on a `null` 2D context
+      (jsdom has none) while `devScreenChapters.guard.test.jsx`, whose walk this branch lengthened by
+      one section, was still mounted. The preview now starts no loop without a context (no change in
+      a real browser); `SurfaceClassPreview.test.jsx` holds it, red without the guard.
+      ★ **The compact setup screen, decided 2026-10-18 before the merge** (the owner said that day he
+      did not need to look at it first): on a desktop window of about 1870x1000 the Settings tab still
+      scrolled and its bottom card sat partly behind the bar — the setup screen's own height, which
+      scrolled on master too at smaller heights. Vertical spacing only, in one block for widths above
+      900 px (`SetupScreen.module.css`): header, main, panel and bottom-card padding, the gaps between
+      them, and the player, group, track-card and track-option spacing; the track options' inline
+      style became the `.trackOptions` class with the same values so the block can reach it. No
+      content, font size, width or phone layout changed. Measured in the fullest state (eight players
+      — the list at its height cap —, a track selected, test aids on), the height each tab needs fell
+      Players 1024 -> 882, Track 1111 -> 895, Settings 754 -> 619 px, so every tab fits a 900 px
+      window with the bottom card above the bar (1920x1080, 1900x990, 1900x900, 1440x900 — held by
+      `client/e2e/legal-pages.spec.js`, red with the block switched off: Track at 1920x1080 31 px over).
+      **Accepted:** the owner accepted LEGAL-PAGES-1 on 2026-10-18 (the footer, the source link, the
+      legal pages and the template) and it was merged with the compact screen the same day.
+
+- [x] **The Browser gate's `socket hang up` on `GET /api/tracks` — CLOSED 2026-10-18 by a bounded
+      retry (branch `fix/appready-hangup`); the cause is still NOT proven.** Opened by the night chain of
+      2026-10-18: on master `1bbc3d33` (a docs-only merge) Browser gate run 39093148036 failed one spec,
+      `d11-ux-verification.spec.js` V8, with `apiRequestContext.get: socket hang up` at
+      `client/e2e/appReady.js`'s geometry-key read — the same spec and error as on 2026-10-01. **The server
+      side was looked for first** (the run's transcript and error context, attempt 1): no server line at
+      that moment, the server stayed up, and every later spec passed — nothing names a cause. A
+      candidate, not shown: a pooled keep-alive connection closed by the server (Node's default
+      `keepAliveTimeout`, 5 s; the server sets none) as the client reuses it. **What closed it:**
+      `client/e2e/requestRetry.js`, `getWithConnectionRetry` — up to 3 tries, 250 ms apart, ONLY when
+      the request rejected with a dropped-connection error (socket hang up, ECONNRESET, ECONNREFUSED,
+      EPIPE, ECONNABORTED), never on an HTTP status, which Playwright returns as a response and the
+      read still checks on its first answer; `appReady.js` uses it for that read.
+      `client/e2e/requestRetry.spec.js` (Browser gate fast set) drives it against a local server that
+      destroys the first connections: with no retry it fails with the gate's own error, with it the
+      next answer is returned; a 500 is one request; all dropped gives up after three. Broken once
+      (no retry): red with `apiRequestContext.get: socket hang up`.
+
+- [x] **Two Dev Screen tests failed at vitest's 5 s per-test limit under load — CLOSED 2026-10-18
+      (branch `fix/devscreen-test-timeouts`).** Opened by the night chain of 2026-10-18:
+      `DevScreen.a11yNames.test.jsx` › "names the ten fields by their visible labels …" and
+      `devScreenChapters.savedSettings.test.jsx` › "two parts of one stored block keep each other
+      edits" timed out at 5 s in client suites run beside other work and passed on a quiet machine;
+      both mount the whole Dev Screen, the work A4-02 had already given 60 s in the chapter walks'
+      `beforeAll` hooks. **What closed it:** the same 60 s, per test, for these two tests only —
+      `CHAPTER_WALK_TIMEOUT_MS` (the existing constant) on the second, `DEV_SCREEN_MOUNT_TIMEOUT_MS`
+      on the first — each with a comment saying why. The global limit is unchanged. Set to 1 ms for a
+      run, each test failed "timed out in 1ms", so the budget in force is the one written there.
+
+- [x] **`gracefulShutdown.test.js` waited a fixed 50 ms for its request — found and fixed 2026-10-18
+      (branch `fix/health-head`).** Its re-run premerge failed once on "a request that will not
+      finish: the exit is forced with 1 after the timeout": the signal was sent 50 ms after the
+      `fetch`, under load the request had not reached the server yet, the close found nothing in
+      flight and the exit read 0. The two tests that need a request in flight now send the signal once
+      the server has RECEIVED it (`slowArrived` in the harness), not after a pause. The test still
+      fails when the forced exit is broken (`exit(1)` → `exit(0)` in `gracefulShutdown.js`: red).
+      Test-only; the product code is unchanged.
+
+- [x] **`HEAD /api/health` answered `401`; only `GET` was public — CLOSED 2026-10-18 (branch
+      `fix/health-head`).** Found while writing the operator guide's monitoring section the same day:
+      the public allow-list matched the method exactly while `server/src/auth/guards.js` stated that
+      HEAD inherits GET's policy, which held for `ROUTE_POLICY` only — so `GET /api/health` answered
+      200 and `HEAD` 401, and an uptime checker sending HEAD saw a healthy server as down.
+      **What closed it:** one match for the allow-list, `matchesPublicPath`, judging HEAD as GET with
+      the existing `policyMethod` — used by `isPublicPath` and by `requireAuth`, which had each
+      carried a copy of the exact-method match. Every GET entry admits HEAD; POST entries admit
+      nothing else. Held by `guards.test.js` (HEAD on each entry kind) and
+      `authz.integration.test.js` (`GET 200`, `HEAD 200` with no body, `POST 401`), red with the
+      old exact match (`HEAD 401`). OPERATOR-GUIDE §2, AUTH.md and API.md updated; API.md's line
+      citations into `guards.js`, already about nine lines behind, re-pointed with the rest.
 
 - [x] **FULLSCREEN-USEFUL-1 — a fullscreen the race picture can use — ACCEPTED 2026-10-18 AND MERGED.**
       The owner looked at branch `feat/fullscreen-useful` (`b869a50e`) on 2026-10-18 and accepted it. The facts of 2026-10-17: in the race
@@ -2864,7 +2964,7 @@ proposal arriving again in six months looking new.
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
       `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
-      (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
+      (`guards.js:181-185`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**
       **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
 

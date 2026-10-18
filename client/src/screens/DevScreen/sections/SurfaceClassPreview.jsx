@@ -8,6 +8,7 @@
 //              (no camera zoom applied — effZoom=1 for preview simplicity).
 //              Config changes are reflected live without restarting the loop.
 //              rAF loop starts on mount, stops on unmount (no memory leak).
+//              No 2D context (jsdom) → no loop at all, so no frame can throw.
 // ============================================================
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
@@ -40,6 +41,11 @@ export function SurfaceClassPreview({ generatorId, config }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    // No 2D context — jsdom without a canvas package returns null. Without this the first frame
+    // threw "Cannot set properties of null (setting 'fillStyle')" whenever a test that mounts the
+    // Dev Screen was still mounted when that frame fired (seen 2026-10-18 in
+    // devScreenChapters.guard.test.jsx). A real browser always has one, so nothing changes there.
+    if (!ctx) return;
 
     const gen = GENERATORS[generatorId];
     if (!gen) return;

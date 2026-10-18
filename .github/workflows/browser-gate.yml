@@ -43,9 +43,9 @@
 # old set that do NOT wait for a real race, measured one by one in BROWSER-GATE-COVERAGE-1, so they
 # cost like the set's other specs cost — 10 specs, 110 tests, 3.8 min on Windows against the old
 # 7 / 82 / 3.1. Since then `delivery-test-aids`, `csp-no-violations`, `devscreen-narrow`,
-# `race-fullscreen` and `result-landscape` joined: 15 specs, 119 tests (counted 2026-10-18 with
-# `--list`), about five to ten minutes on Windows (4.6–9.2 min, 2026-10-12/13, before
-# `race-fullscreen`).
+# `race-fullscreen`, `requestRetry`, `legal-pages` and `result-landscape` joined: 17 specs, 126 tests
+# (counted 2026-10-18 with `--list`), about five to ten minutes on Windows (4.6–9.2 min, 2026-10-12/13,
+# before `race-fullscreen`).
 # STILL ONE LIST: widening it widens this gate and nothing else, and there is no second "wider" set
 # to keep in step.
 # ★ The three prod-arm specs that FAIL today — `arrival-shape`, `comeback-precedence`,

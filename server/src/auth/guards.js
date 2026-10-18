@@ -10,12 +10,17 @@ import defaultStore from './usersStore.js';
 import { routingPath, isApiPath } from '../../utils/apiPath.js';
 
 // ── Allow-list (no auth required) ────────────────────────────────────────────
+// Each GET entry admits HEAD as well (`matchesPublicPath` below): `HEAD /api/health` is public.
 
 export const PUBLIC_PATHS = [
   { method: 'GET', path: '/api/health' },
   { method: 'GET', path: '/api/auth/setup-needed' },
   { method: 'POST', path: '/api/auth/setup' },
   { method: 'POST', path: '/api/auth/login' },
+  // LEGAL-PAGES-1 (the owner's decision of 2026-10-18): the operator's legal notice and privacy
+  // policy, and the source-code link, are shown BEFORE anyone signs in — the start screen's footer
+  // and the two public pages read them. GET only; setting them is admin-only (ROUTE_POLICY below).
+  { method: 'GET', path: '/api/settings/legal-pages' },
 ];
 
 // ── Role-elevation policy (operator+ by default; explicit entries raise to admin) ─
@@ -86,6 +91,14 @@ const ROUTE_POLICY = [
     role: 'admin',
     desc: 'the test-aids switch — admin sets, everyone reads (TEST-AIDS-1)',
   },
+  // LEGAL-PAGES-1 (2026-10-18): the operator's legal texts are PUBLIC to read (PUBLIC_PATHS above)
+  // and set by an admin only, beside the test-aids switch.
+  {
+    methods: ['PUT'],
+    test: (p) => /^\/api\/settings\/legal-pages$/.test(p),
+    role: 'admin',
+    desc: 'the legal pages — admin sets, anyone reads (LEGAL-PAGES-1)',
+  },
   // AUDIT-1 D2: the admin status box (`GET /api/admin/status`) reports paths, free disk, backup
   // ages and the build — install facts an operator has no business reading. The WHOLE namespace,
   // every method, so a later route under /api/admin is admin-only before anyone thinks about it.
@@ -112,7 +125,8 @@ function normalizePath(p) {
 }
 
 // HEAD → GET: Express routes HEAD requests to the matching GET handler, so HEAD
-// must inherit the same role policy as GET. All other methods pass through as-is.
+// must inherit the same policy as GET — the role policy AND the public allow-list
+// (`matchesPublicPath`, since 2026-10-18). All other methods pass through as-is.
 function policyMethod(m) {
   const upper = normalizeMethod(m);
   return upper === 'HEAD' ? 'GET' : upper;
@@ -126,10 +140,20 @@ function findPolicyEntry(routePolicy, method, path) {
   return routePolicy.find((e) => e.methods.map(normalizeMethod).includes(m) && e.test(p));
 }
 
-export function isPublicPath(method, path) {
-  const m = normalizeMethod(method);
+// THE ONE MATCH for the public allow-list, used by `isPublicPath` and by `requireAuth`. HEAD is
+// judged as GET here too (`policyMethod`), so every GET entry also admits HEAD — the statement above
+// `policyMethod` now holds for the allow-list as it already did for ROUTE_POLICY. Until 2026-10-18
+// the allow-list matched the method exactly, and `HEAD /api/health` answered 401 while `GET`
+// answered 200, so an uptime checker sending HEAD saw a healthy server as down. POST entries are
+// untouched: HEAD maps to GET, never to POST.
+function matchesPublicPath(publicPaths, method, path) {
+  const m = policyMethod(method);
   const p = normalizePath(path);
-  return PUBLIC_PATHS.some((e) => normalizeMethod(e.method) === m && normalizePath(e.path) === p);
+  return publicPaths.some((e) => normalizeMethod(e.method) === m && normalizePath(e.path) === p);
+}
+
+export function isPublicPath(method, path) {
+  return matchesPublicPath(PUBLIC_PATHS, method, path);
 }
 
 export function requiredRole(method, path) {
@@ -142,20 +166,13 @@ export function requiredRole(method, path) {
 export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultStore } = {}) {
   return function requireAuth(req, res, next) {
     const path = normalizePath(req.path);
-    const method = normalizeMethod(req.method);
 
     // Scope: this guard only governs /api/*. Non-/api requests pass through.
-    // This is scoping, NOT an auth wildcard — the allowlist is still exact-match.
+    // This is scoping, NOT an auth wildcard — the allowlist is still exact-match on the path.
     // In ANY letter case: `/API/users` is routed to the users router too (AUDIT-1 A5M-01).
     if (!isApiPath(path)) return next();
 
-    if (
-      publicPaths.some(
-        (e) => normalizeMethod(e.method) === method && normalizePath(e.path) === path
-      )
-    ) {
-      return next();
-    }
+    if (matchesPublicPath(publicPaths, req.method, req.path)) return next();
 
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'not authenticated' });
