@@ -1829,19 +1829,6 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
-## Found while writing the operator guide's monitoring section (2026-10-18)
-
-- [ ] **`HEAD /api/health` answers `401`; only `GET` is public.** The public allow-list matches the
-      method exactly (`server/src/auth/guards.js:14-19`, compared at `:152-158`), while the same
-      file states that HEAD must inherit GET's policy (`:114-119`) — which holds for `ROUTE_POLICY`
-      and not for `PUBLIC_PATHS`. Checked 2026-10-18 by running the real `createRequireAuth` with a
-      request of each method: `GET 200`, `HEAD 401`. An uptime checker that sends `HEAD` (some do
-      unless told otherwise) reports a healthy server as failing. Documented for operators in
-      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2, *Watching it from outside* ("configure the check as a
-      `GET` request"). Not changed: it touches the auth guard, and whether HEAD joins the allow-list
-      is a decision. *(verify: either `HEAD /api/health` answers 200 with a test pinning it, or the
-      guide's GET instruction is the accepted answer and this row closes on that)*
-
 ## Found during the night chain of 2026-10-18
 
 - [ ] **Two Dev Screen tests still fail at vitest's 5 s per-test limit under load.** A4-02 (PART TWO)
@@ -1900,6 +1887,19 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **`HEAD /api/health` answered `401`; only `GET` was public — CLOSED 2026-10-18 (branch
+      `fix/health-head`).** Found while writing the operator guide's monitoring section the same day:
+      the public allow-list matched the method exactly while `server/src/auth/guards.js` stated that
+      HEAD inherits GET's policy, which held for `ROUTE_POLICY` only — so `GET /api/health` answered
+      200 and `HEAD` 401, and an uptime checker sending HEAD saw a healthy server as down.
+      **What closed it:** one match for the allow-list, `matchesPublicPath`, judging HEAD as GET with
+      the existing `policyMethod` — used by `isPublicPath` and by `requireAuth`, which had each
+      carried a copy of the exact-method match. Every GET entry admits HEAD; POST entries admit
+      nothing else. Held by `guards.test.js` (HEAD on each entry kind) and
+      `authz.integration.test.js` (`GET 200`, `HEAD 200` with no body, `POST 401`), red with the
+      old exact match (`HEAD 401`). OPERATOR-GUIDE §2, AUTH.md and API.md updated; API.md's line
+      citations into `guards.js`, already about nine lines behind, re-pointed with the rest.
 
 - [x] **FULLSCREEN-USEFUL-1 — a fullscreen the race picture can use — ACCEPTED 2026-10-18 AND MERGED.**
       The owner looked at branch `feat/fullscreen-useful` (`b869a50e`) on 2026-10-18 and accepted it. The facts of 2026-10-17: in the race
@@ -2867,7 +2867,7 @@ proposal arriving again in six months looking new.
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
       `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
-      (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
+      (`guards.js:169-173`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**
       **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
 
