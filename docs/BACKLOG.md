@@ -1831,20 +1831,6 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ## Found during the night chain of 2026-10-18
 
-- [ ] **Two Dev Screen tests still fail at vitest's 5 s per-test limit under load.** A4-02 (PART TWO)
-      gave the two chapter walks' `beforeAll` hooks 60 s; the per-test limit stayed at vitest's 5 s.
-      On 2026-10-18, with parallel builds on the machine: `DevScreen.a11yNames.test.jsx` › "names the
-      ten fields by their visible labels …" timed out at 5000 ms in a premerge client suite that took
-      755 s (normally ~310 s), and `devScreenChapters.savedSettings.test.jsx` › "two parts of one
-      stored block keep each other edits" timed out (5052 ms and 5074 ms) in client-suite runs; each
-      passed when re-run on a quiet machine. The second one's passing runs took between 1.4 s and
-      4.8 s, so it sits close to the budget even unloaded. Neither change on the branches involved touched those
-      files. Both are load-sensitive budgets, not defects in the code under test. Not changed tonight
-      (the rule against raising timeouts blindly applies; whether to give these tests headroom, as
-      A4-02 did for the hooks, is a small decision). *(verify: both files pass inside a premerge
-      client suite run with a parallel build, or the per-test budget is raised with a comment saying
-      why and broken once to prove it fires)*
-
 - [ ] **The Browser gate's `socket hang up` on `GET /api/tracks` came back.** On master `1bbc3d33`
       (a docs-only merge, 2026-10-18), Browser gate run 39093148036: 1 failed, 117 passed — the
       failure was `client/e2e/d11-ux-verification.spec.js` V8 "race with 5 racers and behavior enabled
@@ -1900,6 +1886,17 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **Two Dev Screen tests failed at vitest's 5 s per-test limit under load — CLOSED 2026-10-18
+      (branch `fix/devscreen-test-timeouts`).** Opened by the night chain of 2026-10-18:
+      `DevScreen.a11yNames.test.jsx` › "names the ten fields by their visible labels …" and
+      `devScreenChapters.savedSettings.test.jsx` › "two parts of one stored block keep each other
+      edits" timed out at 5 s in client suites run beside other work and passed on a quiet machine;
+      both mount the whole Dev Screen, the work A4-02 had already given 60 s in the chapter walks'
+      `beforeAll` hooks. **What closed it:** the same 60 s, per test, for these two tests only —
+      `CHAPTER_WALK_TIMEOUT_MS` (the existing constant) on the second, `DEV_SCREEN_MOUNT_TIMEOUT_MS`
+      on the first — each with a comment saying why. The global limit is unchanged. Set to 1 ms for a
+      run, each test failed "timed out in 1ms", so the budget in force is the one written there.
 
 - [x] **`gracefulShutdown.test.js` waited a fixed 50 ms for its request — found and fixed 2026-10-18
       (branch `fix/health-head`).** Its re-run premerge failed once on "a request that will not

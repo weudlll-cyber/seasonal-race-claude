@@ -207,35 +207,46 @@ describe('DEVSCREEN-CHAPTERS-1 — a saved configuration survives the chapter la
     expect(readStored()).toEqual(before);
   });
 
-  it('two parts of one stored block keep each other edits', async () => {
-    storeSavedConfiguration();
-    render(
-      <MemoryRouter>
-        <DevScreen />
-      </MemoryRouter>
-    );
-    openChapter('Look, labels and effects');
-    await act(async () => {});
-    fireEvent.change(field('SpriteSizeRangeSection:maxTargetScreenPx'), {
-      target: { value: '132' },
-    });
-    fireEvent.change(screen.getByTestId('nametag-margin-px'), { target: { value: '11' } });
-    const camera = JSON.parse(localStorage.getItem(KEYS.CAMERA_CONFIG));
-    expect([camera.maxTargetScreenPx, camera.nameTagMarginPx, camera.battleWeight]).toEqual([
-      132, 11, 0.35,
-    ]);
+  // This test mounts the whole Dev Screen and opens two chapters itself, so it carries the same
+  // budget A4-02 gave the walk above (CHAPTER_WALK_TIMEOUT_MS), for this test only. Its passing
+  // runs took 1.4–4.8 s against vitest's 5 s per-test limit, and on 2026-10-18 it failed at
+  // 5052 ms and 5074 ms in client suites run beside other work — while passing on a quiet machine.
+  // A genuinely hung test still fails, at 60 s.
+  it(
+    'two parts of one stored block keep each other edits',
+    async () => {
+      storeSavedConfiguration();
+      render(
+        <MemoryRouter>
+          <DevScreen />
+        </MemoryRouter>
+      );
+      openChapter('Look, labels and effects');
+      await act(async () => {});
+      fireEvent.change(field('SpriteSizeRangeSection:maxTargetScreenPx'), {
+        target: { value: '132' },
+      });
+      fireEvent.change(screen.getByTestId('nametag-margin-px'), { target: { value: '11' } });
+      const camera = JSON.parse(localStorage.getItem(KEYS.CAMERA_CONFIG));
+      expect([camera.maxTargetScreenPx, camera.nameTagMarginPx, camera.battleWeight]).toEqual([
+        132, 11, 0.35,
+      ]);
 
-    openChapter('The race');
-    await act(async () => {});
-    fireEvent.change(field('DynamicsTuningSection:reRollVariationPercent'), {
-      target: { value: '65' },
-    });
-    fireEvent.change(field('DynamicsTuningSection:pulkLeaderBrake'), { target: { value: '0.05' } });
-    const dynamics = JSON.parse(localStorage.getItem(KEYS.RACE_DYNAMICS_CONFIG));
-    expect([
-      dynamics.reRollVariationPercent,
-      dynamics.pulkLeaderBrake,
-      dynamics.gapRerollMode,
-    ]).toEqual([65, 0.05, 'down']);
-  });
+      openChapter('The race');
+      await act(async () => {});
+      fireEvent.change(field('DynamicsTuningSection:reRollVariationPercent'), {
+        target: { value: '65' },
+      });
+      fireEvent.change(field('DynamicsTuningSection:pulkLeaderBrake'), {
+        target: { value: '0.05' },
+      });
+      const dynamics = JSON.parse(localStorage.getItem(KEYS.RACE_DYNAMICS_CONFIG));
+      expect([
+        dynamics.reRollVariationPercent,
+        dynamics.pulkLeaderBrake,
+        dynamics.gapRerollMode,
+      ]).toEqual([65, 0.05, 'down']);
+    },
+    CHAPTER_WALK_TIMEOUT_MS
+  );
 });
