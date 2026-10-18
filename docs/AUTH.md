@@ -200,9 +200,16 @@ notice and privacy policy are read before anyone signs in. Setting them is admin
 
 Everything else needs a session; an unauthenticated request gets **`401`**. A second layer,
 `requireAdmin`, raises specific routes to admin via one central policy: all of `/api/users`, the
-mutating `/api/surface-classes` routes, and the `set-default` / `clear-default` / `export-seed`
-sub-paths of player-groups, brands and tracks. An authenticated operator hitting one of those gets
-**`403`**.
+mutating `/api/surface-classes` routes, the `set-default` / `clear-default` / `export-seed`
+sub-paths of player-groups, brands and tracks, re-checking a stored race (`POST
+/api/races/:shortKey/verify`), setting the period evaluation's points rule and the test-aids switch
+(`PUT`; reading both stays operator+), and all of `/api/admin` (the admin status box). An
+authenticated operator hitting one of those gets **`403`**. The list is `ROUTE_POLICY` in
+`server/src/auth/guards.js`.
+
+**The public allow-list matches the method exactly**: `HEAD /api/health` is not on it and answers
+`401` (checked 2026-10-18; open as a row in [BACKLOG.md](BACKLOG.md) PART ONE). Inside
+`ROUTE_POLICY`, by contrast, `HEAD` is judged as `GET`.
 
 **Client — every screen except the two gates and the two legal pages.** `/login`, `/setup-admin`,
 `/legal-notice` and `/privacy` are open. Everything else

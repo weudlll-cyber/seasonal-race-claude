@@ -534,7 +534,9 @@ the Dockerfile could reach `shared/nameLimits.mjs`; `server/Dockerfile`'s own he
   and answers the API — PUBLISH-STEPS-1.)*
 
 **This section covers BUILDING the image, not running an install with it.** Running it needs two
-decisions made elsewhere, and a stranger who stops here has neither:
+decisions made elsewhere, and a stranger who stops here has neither. *(Updating and rolling back such
+an install: [Update and roll back with Docker](#update-and-roll-back-with-docker--run-as-a-whole-on-2026-10-18)
+below.)*
 
 - **The settings come from `docker-compose.override.yml`, which the repository does not ship.**
   Copy `docker-compose.override.yml.example` and set the session secret and the rest in it. What goes
@@ -568,6 +570,104 @@ decisions made elsewhere, and a stranger who stops here has neither:
 
 *(Added by PROBE-INSTALL-1, 2026-10-03: following this guide literally, `docker compose build`
 succeeded and the image ran healthy with no mounts, but nothing here leads to the next step.)*
+
+### Update and roll back with Docker — run as a whole on 2026-10-18
+
+With the shipped `docker-compose.yml` the install **is a checkout of the repository**: the image is
+built from it, `server/src` is mounted from it, and the data is its `server/data`. So an update is
+"move the checkout to the new version and rebuild", and a rollback is "move it back and restore the
+backup taken before the update". Every command below runs in the checkout's folder.
+
+★★ **Stop the container BEFORE you change the checkout.** Compose mounts `./server/src` into the
+running container and starts it with `node --watch`, so the moment the checkout changes, the
+container's next start runs the NEW code on the OLD image. In the run below that was fatal: the new
+`server/src` imports a file only the new image carries, and the server stopped with
+`Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/shared/statusChecks.mjs'` and then
+`Waiting for file changes before restarting...`. On Docker Desktop for Windows the watcher did not
+notice the checkout and the old process kept answering until the next restart; a host whose watcher
+does notice it would fail at once. Either way the API is down until the new image is built.
+
+**Update**
+
+```sh
+OLD=$(git rev-parse HEAD)          # write it down: it is the way back
+NEW=<new tag or commit>
+
+# 1 · back up (the databases are copied online, so the container may still run)
+npm ci --prefix server             # once per checkout version; the host tools load server/node_modules
+RA_DATA_DIR=server/data RA_BACKUP_DIR=<your backup folder> node scripts/backup.mjs
+
+# 2 · stop, THEN move the checkout
+docker compose stop
+git fetch origin
+git checkout "$NEW"
+
+# 3 · the NEW version's dependencies and migrations, with the container stopped
+npm ci --prefix server
+RA_DATA_DIR=server/data node scripts/migrate.mjs --dry-run
+RA_DATA_DIR=server/data node scripts/migrate.mjs
+
+# 4 · build and start the new image
+docker compose build
+docker compose up -d
+```
+
+Note the archive name the backup prints and check its size ([OPERATOR-GUIDE.md](OPERATOR-GUIDE.md)
+§2, *Backups*). **Check it worked:** `docker compose ps` shows the
+container `(healthy)`; `curl -s http://127.0.0.1:4000/api/health` answers `200` with
+`"status":"ok"`; sign in, and Race History lists your races.
+
+**Roll back**
+
+```sh
+# 1 · stop, and move the checkout back
+docker compose stop
+git checkout "$OLD"
+
+# 2 · set the current data aside and restore the pre-update backup into an EMPTY server/data
+mv server/data "server/data.after-failed-update-$(date +%Y%m%d%H%M%S)"
+npm ci --prefix server
+node scripts/backup.mjs --restore <your backup folder>/<the archive from update step 1> --into server/data
+
+# 3 · build and start the old image
+docker compose build
+docker compose up -d
+```
+
+Check it the same way. **Why an empty folder and not `--force`:** see *Roll back a bad update* above —
+in the run below the update's migrations wrote `server/data/migrations.json`, which the pre-update
+backup did not hold, and `--force` would have left it in place; an empty folder holds exactly the
+backup. **The set-aside folder is not deleted**, and anything
+created between the update and the rollback is in it, not in the restored data. ★ It sits inside the
+checkout and is **not ignored by git** (only `server/data/` is), so `git status` lists it and
+`git clean` would delete it — move it out of the checkout if you clean checkouts.
+
+**What was run, on 2026-10-18, with throwaway data** (Docker Desktop on Windows 11, Docker Compose
+5.1.4, Node 24 and npm 11.19 on the host):
+
+- **Installed `e77e2773`** — the last `master` before the merge of 2026-10-12 that changed the image
+  (`server/Dockerfile` and `.dockerignore` gained two `shared/` files; `server/src` gained the
+  Content-Security-Policy and the admin status route; `scripts/backup.mjs` changed), with the same
+  `docker-compose.yml` as today. `npm run configure -- --origin=<address>` wrote the override file;
+  the first admin was created with the setup request (`201`); the token was taken out and
+  `docker compose up -d` run again; one race was stored through `POST /api/races` (`201`).
+- **Backup** with the old checkout's tool while the container ran: an archive of 30 items.
+- **Update to `57c2ca45`** (`master` that day) exactly as above. The migration runner applied
+  `race-source-1` and `client-id-per-team-1` and recorded `teams-1` as already done. After
+  `docker compose up -d`: `(healthy)`, `/api/health` `200`, sign-in `200`, the race listed, and the
+  new version answering (`/api/admin/status` `200`, the page sent with a Content-Security-Policy).
+  A second race was stored on the new version.
+- **Rollback** exactly as above: `(healthy)`, `/api/health` `200`, sign-in `200`, the first race
+  listed and the second one not (it is in the set-aside folder), and the old version answering
+  (`/api/admin/status` `404`, no Content-Security-Policy).
+- **Also run, to see it:** moving the checkout to the new version while the container ran, then
+  `docker compose restart server` — the `ERR_MODULE_NOT_FOUND` above.
+- The drill's own override file also set `name:` and `ports: !override` so that it ran beside other
+  installs on one machine; nothing else differed from the commands above. npm 11.19 printed that the
+  install scripts of `bcrypt` and `better-sqlite3` are "not yet covered by allowScripts"; the backup,
+  the migration and the restore worked regardless.
+- **Not tested:** a Linux host, where restored files readable by their owner only may not be readable
+  by the container's user (uid 1000) — the same open point as the restore above.
 
 ## Notes
 
