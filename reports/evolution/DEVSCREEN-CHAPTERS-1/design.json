@@ -4208,12 +4208,24 @@
     "id": "privacy-policy-text",
     "idKind": "testId",
     "tier": "advanced",
-    "infoText": "The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. There is no template: describe how you run the game. Stored on the server when you save.",
+    "infoText": "The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. Insert template below it fills in a starting text; describe how you run the game. Stored on the server when you save.",
     "textStatus": "NEW"
   },
   {
     "chapter": "Accounts and system",
     "position": 28,
+    "subgroup": "Legal pages",
+    "section": "sections/LegalPagesSection.jsx",
+    "label": "Insert template",
+    "id": "privacy-policy-template",
+    "idKind": "testId",
+    "tier": "advanced",
+    "infoText": "Fills in a country-neutral privacy policy template, written from what this application actually stores. Replace the bracketed parts and check which details apply where you operate.",
+    "textStatus": "NEW"
+  },
+  {
+    "chapter": "Accounts and system",
+    "position": 29,
     "subgroup": "Legal pages",
     "section": "sections/LegalPagesSection.jsx",
     "label": "Save legal pages",

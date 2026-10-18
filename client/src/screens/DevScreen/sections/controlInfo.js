@@ -660,7 +660,9 @@ export const CONTROL_INFO = {
   'LegalPagesSection:legal-notice-template':
     'Fills in a country-neutral legal notice template. Replace the bracketed fields with your details and check which details apply where you operate.',
   'LegalPagesSection:privacy-policy-text':
-    'The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. There is no template: describe how you run the game. Stored on the server when you save.',
+    'The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. Insert template below it fills in a starting text; describe how you run the game. Stored on the server when you save.',
+  'LegalPagesSection:privacy-policy-template':
+    'Fills in a country-neutral privacy policy template, written from what this application actually stores. Replace the bracketed parts and check which details apply where you operate.',
   'LegalPagesSection:legal-pages-save':
     'Stores both texts on the server, for every visitor at once. Each text has a length limit; the count under each field shows how much of it is used. Nothing is stored until you press this — Insert template does not save.',
 };

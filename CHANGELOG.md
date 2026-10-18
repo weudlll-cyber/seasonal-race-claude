@@ -15,6 +15,11 @@ is.
 
 ### Added
 
+- A country-neutral privacy-policy template on the Dev Screen (*Accounts and system*, *Legal pages*):
+  an "Insert template" button under the privacy-policy field, like the legal notice's — it fills an
+  empty field, asks before replacing text, and saves nothing by itself. The template is written from
+  what this application actually stores; the operator fills in the bracketed parts and checks which
+  details apply where they operate. *(on `master`, 2026-10-18)*
 - When the venue's connection to the server drops: a short note in the race screen's standings
   column, "Server not reachable — results are kept and sent later" (in the drawer in fullscreen);
   once the server is back, the red banner clears and the waiting result is sent by themselves within
