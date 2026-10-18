@@ -19,6 +19,7 @@
 
 import { test, expect } from '@playwright/test';
 import { E2E } from './e2e-env.js';
+import { ensureTrackGeometriesCached } from './appReady.js';
 
 const NOTICE = 'LEGAL NOTICE\n\nOperator\nE2E Operator <b>not bold</b>\nSomewhere 1';
 
@@ -256,5 +257,66 @@ test('the footer is visible without scrolling and covers nothing — sign-in and
   } finally {
     await visitor.close();
     expect(await putLegalPages(page, { legalNotice: '', privacyPolicy: '' })).toBe(200);
+  }
+});
+
+// COMPACT SETUP SCREEN (decided 2026-10-18): on a desktop window of 900 px or more, each setup tab
+// fits WITHOUT SCROLLING, its bottom card ("Start Race") fully above the footer bar — measured in
+// the fullest state the tabs reach: the player list at its height cap (eight players), a track
+// selected (its racer, surface and laps rows shown), and this run's test aids on (Quick Test in the
+// bottom card). The phone layout is not affected and is checked by the test above.
+const COMPACT_SIZES = [
+  { width: 1920, height: 1080 },
+  { width: 1900, height: 990 },
+  { width: 1900, height: 900 },
+  { width: 1440, height: 900 },
+];
+
+test('the setup screen fits a 900 px desktop window on every tab, bottom card above the bar', async ({
+  page,
+}) => {
+  await page.setViewportSize(COMPACT_SIZES[0]);
+  await page.goto('/setup');
+  await ensureTrackGeometriesCached(page);
+  for (const name of ['Anna', 'Ben', 'Cleo', 'Dan', 'Eva', 'Finn', 'Gina', 'Hugo']) {
+    await page.getByPlaceholder(/player name/i).fill(name);
+    await page.getByRole('button', { name: /^Add$/ }).click();
+  }
+  await page.getByRole('tab', { name: /^Track/ }).click();
+  await page.locator('main section button[title="City Circuit"]').click();
+  await expect(page.getByTestId('racer-type-select')).toBeVisible();
+
+  for (const size of COMPACT_SIZES) {
+    await page.setViewportSize(size);
+    for (const tab of ['Players', 'Track', 'Settings']) {
+      await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const label = `${tab} at ${size.width}x${size.height}`;
+      // Polled, not read once: a resize and a tab switch settle over a few frames, and a single read
+      // straight after them caught a layout still in flux (920 px for one frame at 1440x900).
+      const measure = () =>
+        page.evaluate(() => {
+          const card = document.querySelector('main').lastElementChild.getBoundingClientRect();
+          const bar = document
+            .querySelector('[data-testid="legal-footer"]')
+            .getBoundingClientRect();
+          return {
+            overflow: document.documentElement.scrollHeight - window.innerHeight,
+            cardBelowBar: card.bottom - bar.top,
+          };
+        });
+      await expect
+        .poll(async () => (await measure()).overflow, {
+          message: `${label}: no scrollbar (px the page is taller than the window)`,
+          timeout: 3_000,
+        })
+        .toBeLessThanOrEqual(0);
+      await expect
+        .poll(async () => (await measure()).cardBelowBar, {
+          message: `${label}: bottom card fully above the bar (px it reaches below the bar's top)`,
+          timeout: 3_000,
+        })
+        .toBeLessThanOrEqual(0.5);
+    }
   }
 });

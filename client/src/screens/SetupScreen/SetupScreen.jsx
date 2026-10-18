@@ -1263,14 +1263,7 @@ function SetupScreen() {
                 onChange={setSelectedTrackId}
               />
               {selectedTrack && (
-                <div
-                  style={{
-                    marginTop: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
-                  }}
-                >
+                <div className={styles.trackOptions}>
                   <div>
                     <label
                       style={{
