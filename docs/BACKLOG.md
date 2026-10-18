@@ -3959,6 +3959,9 @@ proposal arriving again in six months looking new.
       ★ **Left on purpose:** the three MODERATE client advisories, one of which (`vitest`, `@vitest/mocker`) would
       need the vitest 4 → 5 major; the gate does not block moderate, and a major is its own decision. No allowlist
       entry was added — the advisories were FIXED, not waived.
+      ★ **2026-10-19 (A7-03 piece 2, vitest 5): the `undici` override is removed.** jsdom 30 asks for
+      `undici ^8.12.1`, past both advisories, and the override would have held it at 7; installed: `undici@8.12.2`,
+      `npm audit` 0. The vitest 4 → 5 major this entry left for later is the same piece.
 
 - [x] ★ **`scripts/fingerprint-default.test.mjs` went red ONCE in a premerge run.** Opened 2026-09-30 by
       PARTICLES-VISIBILITY-13 piece B, closed 2026-09-30 by FINGERPRINT-DEFAULT-FLAKE-1.
