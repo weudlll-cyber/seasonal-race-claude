@@ -54,7 +54,7 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–1879) holds exactly FIVE unchecked `- [ ]` rows** — two in *Delivering to someone
+(lines 15–1881) holds exactly FIVE unchecked `- [ ]` rows** — two in *Delivering to someone
 else*, one in *Found during the day chain of 2026-10-18*, two in *AUDIT-1 — what
 the audit of 2026-10-09 leaves open*.
 *(Re-counted 2026-10-18 after the socket-hang-up row closed.)* Every current count on this page says five.
@@ -99,7 +99,8 @@ because nobody looked.**
    stops. The owner decided that day to fix all three findings; built on branch `fix/offline-1`,
    unmerged, his eye owed — the track picture comes back without a reload, the banner clears on its
    own (a light health check every ~10 s, only while the server is not answering), and a note in
-   the standings column during an outage. Report: `reports/release/OFFLINE-1.md`.
+   the standings column during an outage. An outage that begins mid-race is noticed when the race
+   ends — sufficient, the owner decided on 2026-10-18. Report: `reports/release/OFFLINE-1.md`.
 
 *(`HEAD /api/health` answering `401` left this list on 2026-10-18: HEAD is judged as GET on the
 public allow-list now, branch `fix/health-head` — BACKLOG PART TWO.)*

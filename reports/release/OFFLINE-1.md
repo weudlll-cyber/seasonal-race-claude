@@ -181,8 +181,9 @@ blocked in the browser), on `fix/offline-1`'s production build, throwaway data, 
   column says so from the race's start. **Not changed, and said plainly:** an outage that begins
   after the race's background has loaded (cases b and c) is still noticed only when the race ends,
   because a running race makes no request — the probe runs only once the app knows the server is
-  gone, which is the decided scope. Whether the race screen should also ask while the server is
-  thought to be answering is the owner's call.
+  gone, which is the decided scope. **Decided by the owner on 2026-10-18:** for an outage that
+  begins mid-race, the note appearing only after the race is sufficient; the race screen does not
+  ask the server while it seems to be answering.
 - **Cost while the server is gone:** one `GET /api/health` and, while a race is drawn without its
   background, one background request, every 10 s (case a: 12 and 11 over 110 s). None while it answers.
 - In every run: no page error, the result screen reached, the race kept locally first.

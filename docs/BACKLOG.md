@@ -831,6 +831,8 @@ are in PART TWO with what closed them; these are the ones still standing.
       scenario: 12 s after recovery, with nothing clicked, the banner was gone and the race stored
       once in all four; an outage that begins after the background has loaded is still noticed only
       at the race's end (a running race makes no request) — the report's *After the fix* says so.
+      The owner decided on 2026-10-18 that this is sufficient: the race screen does not ask the
+      server while it seems to be answering.
       Held by `bgImageCache.test.js`, `serverRecoveryProbe.test.js`, `RaceServerNote.test.jsx` and
       `client/e2e/offline-recovery.spec.js` (not in the Browser gate's fast set: two real races,
       about 4.5 min), each broken once on purpose.
