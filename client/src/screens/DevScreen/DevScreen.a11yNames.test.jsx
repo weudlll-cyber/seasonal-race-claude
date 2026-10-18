@@ -55,19 +55,30 @@ const nameOf = (input) =>
   input.getAttribute('aria-labelledby') ||
   [...(input.labels ?? [])].map((l) => l.textContent).join(' ');
 
+// The test mounts the whole Dev Screen, the same work A4-02 budgeted at 60 s for the chapter walks'
+// hooks (devScreenChapters.guard / .savedSettings, CHAPTER_WALK_TIMEOUT_MS) — so the same budget,
+// for this test only. On 2026-10-18 it failed at vitest's 5 s per-test limit in a premerge client
+// suite that took 755 s (normally ~310 s, other builds running beside it) and passed when re-run on
+// a quiet machine. A genuinely hung mount still fails, at 60 s.
+const DEV_SCREEN_MOUNT_TIMEOUT_MS = 60_000;
+
 describe('Dev Screen — number fields have accessible names (AUDIT-1 A8-01)', () => {
   // One render for both checks: the testing library unmounts after every test.
-  it('names the ten fields by their visible labels and leaves none in the chapter unnamed', async () => {
-    localStorage.clear();
-    render(
-      <MemoryRouter>
-        <DevScreen />
-      </MemoryRouter>
-    );
-    await act(async () => {});
-    const fields = [...document.querySelectorAll('input[type="number"]')];
-    const names = fields.map(nameOf);
-    for (const name of NAMED) expect(names).toContain(name);
-    expect(fields.filter((f, i) => !names[i].trim())).toEqual([]);
-  });
+  it(
+    'names the ten fields by their visible labels and leaves none in the chapter unnamed',
+    async () => {
+      localStorage.clear();
+      render(
+        <MemoryRouter>
+          <DevScreen />
+        </MemoryRouter>
+      );
+      await act(async () => {});
+      const fields = [...document.querySelectorAll('input[type="number"]')];
+      const names = fields.map(nameOf);
+      for (const name of NAMED) expect(names).toContain(name);
+      expect(fields.filter((f, i) => !names[i].trim())).toEqual([]);
+    },
+    DEV_SCREEN_MOUNT_TIMEOUT_MS
+  );
 });
