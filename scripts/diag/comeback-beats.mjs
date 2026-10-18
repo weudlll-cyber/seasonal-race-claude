@@ -70,7 +70,7 @@
 // below is the record of the gap as it stood.
 //
 // `raceDriver.mjs` handed the director `isOutcomePhase: false` — a hard-coded literal. The
-// browser hands it `diagDataRef.current.rpPhase === 'OUTCOME'` (`RaceScreen/index.jsx:1310`), and
+// browser hands it `diagDataRef.current.rpPhase === 'OUTCOME'` (`RaceScreen/index.jsx:1313`), and
 // that field is written on every physics frame the plan is on: the guard above it is
 // `if (racePlanController)` (`:1239`, around the `recordRacePlanStepDiag` call that writes it),
 // not a diagnostics flag.
@@ -446,7 +446,7 @@ for (const geo of tracks) {
     // measured, not authored — and the report says which of the two it is showing.
     // ★ WHEN THE CAMERA IS FIRST ALLOWED TO LOOK AT ALL, which is NOT a constant. The director's
     // test is an OR: the external `isOutcomePhase` the product supplies from the race plan's phase
-    // (`RaceScreen/index.jsx:1310`), or the internal fallback `leaderProgress > outcomePhaseThreshold`
+    // (`RaceScreen/index.jsx:1313`), or the internal fallback `leaderProgress > outcomePhaseThreshold`
     // (0.75 shipped). The browser arm above supplies the first, so on this harness the window opens
     // at whichever comes first — and the plan's OUTCOME normally comes first. Recording it is the
     // only way a reader can tell "the camera was not allowed to look" from "it was allowed and did

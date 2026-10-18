@@ -196,7 +196,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A12. BATTLE slowmo — global time scaling (not per-racer)
 
-- **Code**: [`battleSlowmo.js` → `advanceSlowmo`](../client/src/screens/RaceScreen/battleSlowmo.js#L37), called from [`index.jsx:1034`](../client/src/screens/RaceScreen/index.jsx#L1034).
+- **Code**: [`battleSlowmo.js` → `advanceSlowmo`](../client/src/screens/RaceScreen/battleSlowmo.js#L37), called from [`index.jsx:1037`](../client/src/screens/RaceScreen/index.jsx#L1037).
 - **What**: during `BATTLE_ZOOM` the **physics clock** (not an individual force) is scaled, slowing _all_ racers uniformly for cinematic effect. Affects `rawDt` feeding the step, with fade in/out.
 - **Magnitude**: `battleSlowmoFactor` **0.5** (half speed), `battleSlowmoFadeDuration` 0.3 s, min hold 2.0 s.
 - **Note**: a global multiplier on the step clock — it does not change relative ordering, so it is fairness-neutral but it does change every racer's instantaneous `t`-rate.
@@ -466,7 +466,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | A9  | rubberBandMult (cap-the-lead brake)                                   | **REMOVED** (raceRubberBand.js deleted)                              | —                                       | —                   |
 | A10 | zoneMult (race zone)                                                  | **REMOVED** (raceZones.js deleted)                                   | —                                       | —                   |
 | A11 | runoutDecay                                                           | ×0.97/frame                                                          | after finish                            | raceCore.js:716     |
-| A12 | BATTLE slowmo (global clock)                                          | 0.5                                                                  | BATTLE_ZOOM                             | index.jsx:1034 (`advanceSlowmo`) |
+| A12 | BATTLE slowmo (global clock)                                          | 0.5                                                                  | BATTLE_ZOOM                             | index.jsx:1037 (`advanceSlowmo`) |
 | A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost `pulkChallengerBoost` / leader brake `pulkLeaderBrake`, envelope `pulkEnvelopeMaxEffect` (values in `defaults.js`), ceiling `NATURALNESS_CEILING` | PULK [pulkStart, choreoOutcomeStart), faded→1.0 at corrStart | raceGovernor.js:247 |
 | A14 | gapBrakeStrength — the GAP leader brake (**shipped ON 2026-09-17**)   | bounded by `gapBrakeMaxAuthority`; silent below `gapBrakeAllowedGapPx` | [choreoOutcomeStart, `gapBrakeWindowEnd`], leader only | racePlanner.js:_computeGapLeaderBrake |
 
