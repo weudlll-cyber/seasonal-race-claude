@@ -1858,6 +1858,18 @@ owner's hand**: parked here with enough context to be actionable months from now
       client suite run with a parallel build, or the per-test budget is raised with a comment saying
       why and broken once to prove it fires)*
 
+- [ ] **The Browser gate's `socket hang up` on `GET /api/tracks` came back.** On master `1bbc3d33`
+      (a docs-only merge, 2026-10-18), Browser gate run 39093148036: 1 failed, 117 passed — the
+      failure was `client/e2e/d11-ux-verification.spec.js` V8 "race with 5 racers and behavior enabled
+      produces no errors", `apiRequestContext.get: socket hang up` at `client/e2e/appReady.js:80` (the
+      geometry-key read inside `ensureTrackGeometriesCached`). The same spec failed with the same error on
+      2026-10-01 and was recorded then as an intermittent, cause not proven (PART TWO, *The Browser gate
+      was RED on master*). A docs-only commit cannot have caused it; the server dropped the connection
+      during the request. The failed job was re-run the same night. *(verify: the cause is named
+      from the server side of a failing run — e.g. the server log in the run's transcript at that
+      moment — or the read in `appReady.js` is shown to need a retry and gets one, broken once to prove
+      it)*
+
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
