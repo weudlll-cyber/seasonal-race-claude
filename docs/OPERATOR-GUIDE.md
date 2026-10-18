@@ -428,6 +428,25 @@ reads (measured: about 20 ms). It is off by default because it keeps two more fi
 `races.sqlite` while the server runs (`-wal`, `-shm`); do not put the data folder in a synced folder
 (OneDrive, Dropbox) with it on. Backups and restores work in both modes ([ENVIRONMENT.md](ENVIRONMENT.md)).
 
+### If the venue's internet drops
+
+**Measured on 2026-10-18** on the production build with throwaway data, the connection blocked and,
+separately, the server stopped — on the setup screen, in the countdown, mid-race and as the last
+racer crossed ([OFFLINE-1.md](../reports/release/OFFLINE-1.md)):
+
+- **The race goes on and nothing is lost.** Every race ran to the result screen, the result was kept
+  in that browser's race history as waiting to be sent, and once the server could be reached again it
+  was stored on the server exactly once. No reload is needed.
+- **Keep the page open; do not reload it while the connection is down.** A reload is the one step
+  that was not measured, and when the server itself is gone the app is not served at all.
+- **The red banner** (*"The server is not answering"*) first appears on the result screen, not
+  during the race. **After the connection is back it stays until the app next asks the server for
+  something** — pressing **← Back to Setup** did it in every run, and the waiting race was sent at
+  that moment.
+- **A race started while the connection is down is drawn without its track picture** (racers,
+  track markers and standings are all there), and the picture stays missing on that page until it
+  is reloaded once the connection is back. A race whose picture had loaded before the drop keeps it.
+
 ---
 
 ## 7. Uninstalling
