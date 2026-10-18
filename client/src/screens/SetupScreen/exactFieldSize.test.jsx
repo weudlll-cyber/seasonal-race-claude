@@ -22,6 +22,9 @@ import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 import { CACHE_KEY } from '../../modules/storage/trackLoader.js';
 import { playerNameKey } from '../../../../shared/playerNames.mjs';
 
+// LEGAL-PAGES-1: the setup screen's legal footer asks the server for the legal pages; a screen
+// test talks to no server (forbidNetwork), so the footer gets no answer — only its Source code link.
+vi.mock('../../modules/legal/useLegalPages.js', () => ({ useLegalPages: () => null }));
 vi.mock('../../modules/storage/useServerTracks.js', async () => {
   const { serverTracksMock } = await import('../../test/mockServerTracks.js');
   return serverTracksMock();

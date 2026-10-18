@@ -47,7 +47,15 @@ test('no Content-Security-Policy violation on any main screen or during a race',
     seen.push(...v.map((x) => `${where}: ${x}`));
   };
 
-  for (const path of ['/setup', '/dev', '/track-editor', '/racer-editor']) {
+  // LEGAL-PAGES-1: the two public legal pages are main screens too.
+  for (const path of [
+    '/setup',
+    '/dev',
+    '/track-editor',
+    '/racer-editor',
+    '/legal-notice',
+    '/privacy',
+  ]) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');
     await collect(path);

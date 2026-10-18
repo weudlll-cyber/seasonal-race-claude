@@ -20,6 +20,17 @@ is.
   once the server is back, the red banner clears and the waiting result is sent by themselves within
   about ten seconds, with nothing clicked; and a track picture that could not load during the
   outage comes back without a reload. *(branch `fix/offline-1`)*
+- A "Source code" link in a slim bar along the bottom of the sign-in screen and the setup screen,
+  visible without scrolling, pointing at the source of the
+  running version; an operator who runs a modified copy points it at their own source with the
+  server setting `RA_SOURCE_URL`. Beside it, "Legal notice" and "Privacy policy" — two pages anyone
+  can open without signing in — once an admin has filled them in on the Dev Screen (*Accounts and
+  system*, *Legal pages*), where an "Insert template" button offers a country-neutral legal-notice
+  template to edit. The texts are stored on the server and travel with its backups.
+  *(on `master`, 2026-10-18)*
+- A more compact setup screen on desktop windows: less vertical spacing, so the Players, Track and
+  Settings tabs each fit a window about 900 px high without scrolling, the bottom card with
+  "Start Race" fully visible. Nothing removed; phones and tablets unchanged. *(on `master`, 2026-10-18)*
 - Pause and resume a running race: a Pause/Resume button under Cancel Race on the race screen, and
   the Space key, in the countdown and during the race. While paused everything stands still — the
   racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the
@@ -61,6 +72,11 @@ is.
 
 ### Changed
 
+- The result screen fits a phone held sideways: when the window is too short for the results card,
+  the card is held to the window with its title at the top, and what does not fit scrolls inside the
+  card. On a window 500 px high or less the card is compact: the title, the brand logo (smaller) and
+  the whole podium stay in view and only the Final Rankings list scrolls. Where the card already
+  fits, the result screen is unchanged. *(on `master`, 2026-10-18)*
 - The race screen's own fullscreen (its fullscreen button) now uses the whole screen: the race
   picture is as large as the screen allows, centred, with black around it, and the standings column
   is hidden off the right edge — move the mouse to the right edge to slide it in over the picture

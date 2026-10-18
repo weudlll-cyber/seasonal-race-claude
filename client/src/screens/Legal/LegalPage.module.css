@@ -1,0 +1,51 @@
+/* ============================================================
+   File:        LegalPage.module.css
+   Path:        client/src/screens/Legal/LegalPage.module.css
+   Project:     RaceArena — LEGAL-PAGES-1
+   Description: The public legal pages: one readable column on the app's dark background. The
+                operator's text keeps its line breaks (`pre-wrap`) and wraps long words on a phone.
+   ============================================================ */
+
+.screen {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 1.5rem 1rem;
+}
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.back {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.title {
+  font-size: 1.3rem;
+  margin: 0.75rem 0 1rem;
+}
+
+/* ★ pre-wrap keeps the operator's line breaks; the text is a React text node, never markup. */
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.muted {
+  color: var(--color-muted);
+}

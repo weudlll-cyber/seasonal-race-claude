@@ -17,6 +17,7 @@ import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
 import DistributionDiagnostics from './screens/DistributionDiagnostics/DistributionDiagnostics.jsx';
 import LoginScreen from './screens/Auth/LoginScreen.jsx';
 import SetupAdminScreen from './screens/Auth/SetupAdminScreen.jsx';
+import LegalPage from './screens/Legal/LegalPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
@@ -153,6 +154,10 @@ function App() {
             />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/setup-admin" element={<SetupAdminScreen />} />
+            {/* LEGAL-PAGES-1: PUBLIC — no ProtectedRoute. The operator's legal notice and privacy
+                policy are read before anyone signs in (footer: components/LegalFooter). */}
+            <Route path="/legal-notice" element={<LegalPage kind="legalNotice" />} />
+            <Route path="/privacy" element={<LegalPage kind="privacyPolicy" />} />
           </Routes>
         </TransitionProvider>
       </AuthProvider>

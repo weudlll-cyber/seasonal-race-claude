@@ -192,7 +192,11 @@ GET  /api/health
 GET  /api/auth/setup-needed
 POST /api/auth/setup
 POST /api/auth/login
+GET  /api/settings/legal-pages
 ```
+
+`GET /api/settings/legal-pages` joined the list on 2026-10-18 (LEGAL-PAGES-1): the operator's legal
+notice and privacy policy are read before anyone signs in. Setting them is admin-only.
 
 Everything else needs a session; an unauthenticated request gets **`401`**. A second layer,
 `requireAdmin`, raises specific routes to admin via one central policy: all of `/api/users`, the
@@ -208,7 +212,8 @@ admits `HEAD` too: `HEAD /api/health` answers `200`. Until 2026-10-18 the allow-
 method exactly and `HEAD /api/health` answered `401` (closed that day; BACKLOG PART TWO). `POST`
 entries admit nothing else.
 
-**Client — every screen except the two gates.** `/login` and `/setup-admin` are open. Everything else
+**Client — every screen except the two gates and the two legal pages.** `/login`, `/setup-admin`,
+`/legal-notice` and `/privacy` are open. Everything else
 is wrapped in `ProtectedRoute`: `/setup`, **`/race`**, `/results`, `/dev`, `/track-editor`,
 `/racer-editor`, and `/diagnose-verteilung` (admin only).
 

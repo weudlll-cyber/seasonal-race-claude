@@ -1844,19 +1844,6 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
-## Found during the day chain of 2026-10-18
-
-- [ ] **`sessionInvalidation.test.js` times out at 5 s in premerge's server suite — twice on
-      2026-10-18.** PART TWO D9 (2026-08-23) made the bcrypt-heavy auth timeouts a WATCH that "closes
-      when it happens a third time and is diagnosed". On 2026-10-18 it happened twice, each time with
-      the server suite running ALONE inside premerge: on `feat/legal-pages` ("still ends every OTHER
-      session of that same user", "leaves an unrelated user untouched", after a client suite of
-      478 s) and on `fix/health-head` ("leaves an unrelated user untouched", "a role-only update does
-      not touch sessions", server suite 223 s; normally ~95–130 s). Each re-run passed it. Neither
-      branch touches the file or the session code. Not diagnosed; the 5 s limit is NOT raised (the
-      rule of the bcrypt fix). *(verify: the cause is named — what holds those tests past 5 s when
-      the suite runs alone — or the tests are shown to need a budget and get one, broken once)*
-
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
@@ -1887,6 +1874,109 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **RESULT-LANDSCAPE-1 — the result screen on a phone held sideways — ACCEPTED 2026-10-18 AND
+      MERGED.** The facts
+      (BRAND-LOGO-SCALE-1, PART TWO): at an 844x390 window the results card is taller than the
+      window, and because the screen centres it (`.screen--result`, `align-items: center`, overflow
+      hidden) its title sat above the top edge. The owner decided on 2026-10-18 to have it fixed.
+      **Built:** the screen measures whether the card is taller than the room it has
+      (`cardIsTooTall` in `ResultScreen/index.jsx`, re-measured by a `ResizeObserver` on the screen
+      and the card) and only then gives the card `results-container--short` (`ResultScreen.css`:
+      `max-height: 100%`, `overflow-y: auto`) — the card is held to the window, its title at the top,
+      and its content scrolls inside it. Nothing is rescaled. Only when needed, because a scroll box
+      clips: on a card that fits it would cut off the title's glow and the Back button's shadow
+      (measured: 2,992 differing pixels at 1280x720 when the rule applied always). **Measured** in
+      headless Chromium on the production build, a 20-racer result with no brand: at 844x390 the
+      title's top goes from y = -75 to y = 28, the card from 556 px tall (top at -83) to 350 px (top
+      at 20) scrolling 554 px of content; at 667x375 from -75.5 to 37, 560 px to 335 px scrolling
+      558 px. Where the card fits nothing changes: 0 differing pixels at 1920x1080, 1280x720,
+      1024x768, 820x1180 and 390x844, master build against this branch's, same payload, animations
+      disabled. Held by `ResultScreen.landscape.test.jsx` (component) and
+      `client/e2e/result-landscape.spec.js` (Browser gate).
+      ★ **Short windows, 2026-10-18.** On 4173 at `98aa5f3c` (Edge device mode, 800x350) the logo
+      and the podium medals were cut off at the top, the logo was large beside the podium and the
+      rankings ran off the bottom. Measured in headless Chromium with the seeded brand active, 20
+      racers: the 210 px logo overlapped the podium at 800x350, the medals stood above their slots
+      (fixed slot heights, content taller), and the whole card scrolled so the list and Back ran off
+      the bottom. **Built:** on a window of 500 px or less (`SHORT_WINDOW_MAX_PX`) a too-tall card is
+      also `results-container--compact`: a column that does not scroll, the Final Rankings list
+      taking the height left and scrolling, Back to Setup in the window; vertical spacing tightened
+      (screen and card padding, podium-slot padding and heights, the gap above the podium), the
+      title at the 22 px the phone layout uses, names, times and places unchanged; the logo scaled
+      by `brandLogoMaxHeightPx` (RaceScreen/brandLogoSize.js, reused: the window's shorter side,
+      full size at 540 px) — 136 px at 800x350, 152 px at 844x390. Title / logo / 1st medal top,
+      before -> after: 800x350 28/47/125 -> 16/35/82, 844x390 28/47/124 -> 16/35/81, 667x375 37/—/129
+      -> 25/—/92, 740x360 37/—/129 -> 25/—/92 (no logo at 768 px wide and below, unchanged); the
+      podium fully inside and the logo clear of it at all four, so the logo did not need hiding at
+      any height measured. A card that fits gets neither class: 0 differing pixels at 1920x1080,
+      1280x720, 1024x768 and 820x1180, and 6 at 390x844 — the same 6 between two runs of one build.
+      The Browser-gate check covers the four sizes and is red with the compact layout switched off
+      (logo over the podium, Back outside the window).
+      **Accepted:** the owner looked at it on 2026-10-18 at 800x350 (100 % zoom) on the production
+      preview and accepted it; merged the same day.
+
+- [x] **`sessionInvalidation.test.js` timed out at 5 s in premerge's server suite — CLOSED 2026-10-18
+      (branch `fix/session-test-timeout`).** Twice on 2026-10-18 two of its tests crossed vitest's 5 s
+      limit with the server suite running alone (on `feat/legal-pages` and `fix/health-head`); PART
+      TWO D9 (2026-08-23) had made these bcrypt timeouts a watch that closes "when it happens a third
+      time and is diagnosed". **Diagnosed, measured alone:** each test took 1.0–2.6 s, almost all of
+      it bcrypt at the production cost of 12 (`usersStore.js` `BCRYPT_COST`, ~247 ms a call): six to
+      ten hashes and compares per test as it creates users, logs in and changes passwords — so the
+      contention of a loaded machine pushed the slowest two past 5 s. There is no test-cost setting.
+      **What closed it:** the file mocks `bcrypt` for itself only, so `hash` runs at cost 4
+      (`compare` follows the hash's own cost) — the tests took 52–125 ms each. The production cost is
+      untouched, and what the file proves (a password change ends sessions; guards.js's epoch check)
+      does not depend on hash strength, which `usersStore.test.js` holds at the real cost. Still red
+      when the epoch check is switched off (three tests: 200 instead of 401). The global limit stays.
+      `changePassword.test.js` and `changePasswordContract.test.js` keep their own 30 s budget for
+      the same cause (noticed, left as they are). D9's watch is answered for this file.
+
+- [x] **LEGAL-PAGES-1 — a source-code link, two public legal pages and a legal-notice template —
+      ACCEPTED 2026-10-18 AND MERGED, with the compact setup screen.** The facts of
+      2026-10-18: the project is AGPL-3.0-or-later and the client had no link to its source code (no
+      "source code" or repository link anywhere in `client/src`). The owner decided on 2026-10-18 to
+      add a source-code link and to provide a legal notice, English and country-neutral, because many
+      operators in different countries run the game; each operator's own details are operator data,
+      entered on their install. **Built:** a slim footer bar on the sign-in and setup screens, fixed
+      to the window's bottom edge so it is visible without scrolling (the owner decided that on
+      2026-10-18 after seeing it reachable only by scrolling; a spacer of the bar's height keeps
+      the page's last content clear of it; on 2026-10-18 the setup screen showed a scrollbar of a few
+      pixels although its content fitted, and the owner decided there must be none — measured, the
+      spacer had been ADDED to the main area's 2rem bottom padding (1280x720 Players: 743 px on master,
+      775 px on the branch), so the main area now has no bottom padding and the spacer is the page's
+      bottom space; the page heights are master's again and the Browser-gate check asserts no page is
+      taller than its content plus the bar) —
+      *Source code* always (the upstream repository at the build's commit, the repository root when
+      the build names no commit, or the operator's `RA_SOURCE_URL`), *Legal notice* and *Privacy
+      policy* only once filled in; two public pages `/legal-notice` and `/privacy` showing the
+      operator's text as plain text; the texts stored on the server in `legal-pages.json`
+      (`GET /api/settings/legal-pages` public, `PUT` admin-only, each text at most 20,000
+      characters); a Dev Screen section *Legal pages* in *Accounts and system* (admins) with an
+      *Insert template* button. Held by `server/src/routes/legalPages.test.js`,
+      `server/src/sourceUrl.test.js`, the component tests `LegalFooter.test.jsx`,
+      `LegalPage.test.jsx` and `LegalPagesSection.test.jsx`, the chapter guard (352 rows) and
+      `client/e2e/legal-pages.spec.js` (Browser gate). How-to: [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md),
+      *Legal pages and the source-code link*.
+      ★ **Found by this branch's premerge on 2026-10-18, fixed on it:** the client suite failed once
+      on an unhandled error — `SurfaceClassPreview.jsx` drew its first frame on a `null` 2D context
+      (jsdom has none) while `devScreenChapters.guard.test.jsx`, whose walk this branch lengthened by
+      one section, was still mounted. The preview now starts no loop without a context (no change in
+      a real browser); `SurfaceClassPreview.test.jsx` holds it, red without the guard.
+      ★ **The compact setup screen, decided 2026-10-18 before the merge** (the owner said that day he
+      did not need to look at it first): on a desktop window of about 1870x1000 the Settings tab still
+      scrolled and its bottom card sat partly behind the bar — the setup screen's own height, which
+      scrolled on master too at smaller heights. Vertical spacing only, in one block for widths above
+      900 px (`SetupScreen.module.css`): header, main, panel and bottom-card padding, the gaps between
+      them, and the player, group, track-card and track-option spacing; the track options' inline
+      style became the `.trackOptions` class with the same values so the block can reach it. No
+      content, font size, width or phone layout changed. Measured in the fullest state (eight players
+      — the list at its height cap —, a track selected, test aids on), the height each tab needs fell
+      Players 1024 -> 882, Track 1111 -> 895, Settings 754 -> 619 px, so every tab fits a 900 px
+      window with the bottom card above the bar (1920x1080, 1900x990, 1900x900, 1440x900 — held by
+      `client/e2e/legal-pages.spec.js`, red with the block switched off: Track at 1920x1080 31 px over).
+      **Accepted:** the owner accepted LEGAL-PAGES-1 on 2026-10-18 (the footer, the source link, the
+      legal pages and the template) and it was merged with the compact screen the same day.
 
 - [x] **The Browser gate's `socket hang up` on `GET /api/tracks` — CLOSED 2026-10-18 by a bounded
       retry (branch `fix/appready-hangup`); the cause is still NOT proven.** Opened by the night chain of
@@ -2080,8 +2170,9 @@ proposal arriving again in six months looking new.
       proportionally smaller on a smaller one (`controlInfo.js`, with its DEVSCREEN-CHAPTERS-1 row).
       **Noticed, not built:** on a phone held sideways (844x390) the whole results card (583 px
       tall) does not fit the window and its title is clipped above the top edge — a layout question
-      for the result screen as a whole, not a logo-size one. *(verify: the owner's look in phone
-      mode and on a desktop window)*
+      for the result screen as a whole, not a logo-size one. *(Built 2026-10-18 as RESULT-LANDSCAPE-1,
+      PART ONE, after the owner decided that day to have it fixed.)* *(verify: the owner's look in
+      phone mode and on a desktop window)*
 
 - [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
       (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
@@ -2648,7 +2739,7 @@ proposal arriving again in six months looking new.
       (needs a machine where `npm install` upgrades); the breakpoints (a question about phone use). None
       is a defect with one obvious fix that he would not see.
       ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
-      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
+      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:504` (768px),
       `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed
       1280×720 field (`camera/projection.js:37-38`). **Whether phone use is a goal is
       unestablished**; the breakpoints and the fixed field are both facts and nothing in the
@@ -2905,7 +2996,7 @@ proposal arriving again in six months looking new.
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
       `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
-      (`guards.js:169-173`), and backups and exports have no retention. No email, no request log
+      (`guards.js:181-185`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**
       **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
 
