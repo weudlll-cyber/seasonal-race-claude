@@ -115,6 +115,9 @@ import {
 // RUNIN-ACCEPTED-1: the two named races whose picture was judged and accepted on 2026-09-14. The
 // list lives in its own file so it can be asserted on without running this guard — see its header.
 import { isAcceptedRunInCase } from "./lib/runinAccepted.mjs";
+// GATE-MEASURES-1: a case that measured nothing is a failure, not a pass — one refusal, shared with
+// `viewer-invariants.mjs`.
+import { unmeasured, refuseUnmeasured } from "./lib/measuredGate.mjs";
 
 export const GUARD = {
   id: "check-runin-frame",
@@ -188,6 +191,12 @@ const CH = 720;
 /** Track widths. See the header: a defect line, not a tuning knob. */
 const MAX_CENTRE_OFF_TW = 2;
 const SPINE_SAMPLES = 2000;
+// GATE-MEASURES-1 — the least each question needs to be able to fail at all, not a quality bar.
+// Question 2 (never empty) is asked of every frame of the race; question 1 (centre near the track)
+// only of the run-in, past the endgame threshold; question 3 (the line) only between the threshold
+// and the crossing.
+const CENTRE_NEED = { "race frames": 1, "run-in frames": 1 };
+const LINE_NEED = { "in-window frames": 1 };
 
 /** One open track and one closed one, at the races the defect was found on. */
 const CASES = [
@@ -204,6 +213,11 @@ const CASES = [
 ];
 
 let failures = 0;
+// GATE-MEASURES-1: what each case actually measured. Until 2026-10-12 a track that was not found,
+// a race with no run-in frames, or a line case with no frame between the threshold and the crossing
+// was printed as "skipped" / "not measured" and the guard still said PASS.
+const centreCases = [];
+const lineCases = [];
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 
 for (const c of CASES) {
@@ -216,7 +230,8 @@ for (const c of CASES) {
   });
   const geo = loadTracks({ only: c.track })[0];
   if (!geo) {
-    console.log(`check-runin-frame: track ${c.track} not found — skipped.`);
+    console.log(`check-runin-frame: track ${c.track} not found — not measured.`);
+    centreCases.push({ label: `${c.track} (centre, never empty)`, have: {}, need: CENTRE_NEED });
     continue;
   }
   const cameraConfig = CONTROL
@@ -292,6 +307,11 @@ for (const c of CASES) {
   const centreOk = worstOff.tw <= MAX_CENTRE_OFF_TW;
   const emptyOk = emptyFrames === 0;
   if (!centreOk || !emptyOk) failures++;
+  centreCases.push({
+    label: `${c.track} (centre, never empty)`,
+    have: { "race frames": totalFrames, "run-in frames": runInFrames },
+    need: CENTRE_NEED,
+  });
 
   console.log(
     `${c.track.padEnd(12)} ${(shape.isOpen ? "open" : "closed").padEnd(7)} ` +
@@ -525,6 +545,7 @@ for (const geo of loadTracks()) {
       `  ${geo.id.padEnd(15)} n=${String(LINE_RACERS).padStart(3)}  no frame between the threshold and a crossing — not measured`
     );
     lineRows.push({ id: geo.id, measured: false });
+    lineCases.push({ label: `${geo.id} (line)`, have: { "in-window frames": 0 }, need: LINE_NEED });
     continue;
   }
 
@@ -640,6 +661,11 @@ for (const geo of loadTracks()) {
     }
   }
   lineRows.push({ id: geo.id, measured: true, ok, accepted, worst, outFrames, samples, margins });
+  lineCases.push({
+    label: `${geo.id} (line)`,
+    have: { "in-window frames": samples.length },
+    need: LINE_NEED,
+  });
 }
 
 if (VERBOSE) {
@@ -662,6 +688,12 @@ if (VERBOSE) {
   }
 }
 
+// GATE-MEASURES-1: `unmeasured` is asked of the two lists separately, so an EMPTY line list (no
+// track loaded) is itself a shortfall rather than hidden behind the two centre cases.
+const notMeasured = refuseUnmeasured("check-runin-frame", [
+  ...unmeasured(centreCases),
+  ...unmeasured(lineCases),
+]);
 if (failures > 0) {
   console.log(
     `\ncheck-runin-frame: ${failures} case(s) failed. A camera pointed away from the race is a\n` +
@@ -671,6 +703,7 @@ if (failures > 0) {
   );
   process.exit(1);
 }
+if (notMeasured) process.exit(1);
 const acceptedRows = lineRows.filter((r) => r.accepted);
 console.log(
   "\ncheck-runin-frame: the camera is pointed at the race on both tracks, and the finish line is in\n" +

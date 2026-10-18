@@ -175,7 +175,6 @@ function StateProfileBlock({ stateName, profile, defaults, onChangeField, onRese
               fontSize: '0.68rem',
               cursor: 'pointer',
               padding: '0.1rem 0.2rem',
-              opacity: 0.7,
             }}
           >
             Reset state
@@ -1193,9 +1192,10 @@ function CameraAdvancedSection({ part }) {
             <p
               style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}
             >
-              Detects B1 racers (targetRank 1–5) actively gaining positions. Requires Race Plan
-              (open track ≥ 60 s only). Outcome phase activates internally above the leader-progress
-              threshold, independent of the external flag from RaceScreen.
+              Detects B1 racers (targetRank 1–5) actively gaining positions. Requires Race Plan,
+              which runs on every track when the race is at least the Race Plan min duration (The
+              race chapter). Outcome phase activates internally above the leader-progress threshold,
+              independent of the external flag from RaceScreen.
             </p>
             {/* COMEBACK-CONNECT-1 — the plan already writes when each comeback peaks, and the camera
             has been re-deriving that moment from rank history. OFF is today's behaviour exactly. */}

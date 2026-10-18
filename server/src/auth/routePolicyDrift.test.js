@@ -35,6 +35,7 @@ import brandsRouter from '../routes/brands.js';
 import racersRouter from '../routes/racers.js';
 import seedNoticesRouter from '../routes/seedNotices.js';
 import racesRouter from '../routes/races.js';
+import adminStatusRouter from '../routes/adminStatus.js';
 
 const MOUNT_MAP = [
   { prefix: '/api/auth', router: authRouter },
@@ -46,6 +47,7 @@ const MOUNT_MAP = [
   { prefix: '/api/racers', router: racersRouter },
   { prefix: '/api/seed-notices', router: seedNoticesRouter },
   { prefix: '/api/races', router: racesRouter },
+  { prefix: '/api/admin', router: adminStatusRouter },
 ];
 
 // ── Operator-plus allowlist (these do NOT require admin) ──────────────────────
@@ -188,5 +190,17 @@ describe('POST /api/races/:shortKey/verify is admin-only', () => {
   });
   it('and storing a race stays operator+', () => {
     expect(requiredRole('POST', '/api/races')).not.toBe('admin');
+  });
+});
+
+// AUDIT-1 D2: the admin status box. A GET, so the mutating-route walk above never sees it; this pins
+// it — and the namespace it sits in — to admin, so it cannot quietly become operator+.
+describe('GET /api/admin/status is admin-only', () => {
+  it('is classified admin by the route policy, and so is HEAD', () => {
+    expect(requiredRole('GET', '/api/admin/status')).toBe('admin');
+    expect(requiredRole('HEAD', '/api/admin/status')).toBe('admin');
+  });
+  it('in any letter case and with a trailing slash', () => {
+    expect(requiredRole('GET', '/API/Admin/Status/')).toBe('admin');
   });
 });

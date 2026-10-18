@@ -52,10 +52,10 @@ is inside them is arithmetic and nothing else. Regenerate with
 
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
-| files in the RACE HULL — `node scripts/engine-reach.mjs` | 227 |
+| files in the RACE HULL — `node scripts/engine-reach.mjs` | 230 |
 | tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 80 |
 | of those, files that CANNOT reach the engine | 24 |
-| hull files the folder rule never covered — listed in [SIM.md](SIM.md), not here | 171 |
+| hull files the folder rule never covered — listed in [SIM.md](SIM.md), not here | 174 |
 
 <!-- END GENERATED: engine-reach counts -->
 
@@ -769,8 +769,8 @@ went missing).
       > The old sentence had it exactly the wrong way round, and the conclusion drawn from it — that
       > extra races are cheap at the margin — does not follow from the fixed cost at all.
       >
-      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:849`
-      > runs races **six at a time** by default, and `:912` starts that many workers. Two races
+      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:902`
+      > runs races **six at a time** by default, and `:972` starts that many workers. Two races
       > therefore overlap: on the measured run one finished at 209.2 s and the other at 262.6 s, and
       > the run's wall clock is the SLOWER of them, not their sum.
       >
@@ -846,6 +846,14 @@ went missing).
       invariant — the leader arm displaces `LX/LY` at 2's check only, so 6's frame-fraction test
       still sees the real point. The default `--gate` still exits 0. Full write-up:
       [VIEWER-INVARIANT-SABOTAGE-1](../reports/evolution/VIEWER-INVARIANT-SABOTAGE-1.md).
+
+      ★★ **AND A RUN THAT MEASURED NOTHING NOW FAILS (GATE-MEASURES-1, 2026-10-12).** From the
+      test-aids switch (TEST-AIDS-1) until this date the gate opened `/race` before the switch's
+      answer arrived, the probe never started, and both races printed `0 frames clean` — and PASS.
+      The gate now enters `/race` only after the answer (`scripts/lib/measuredGate.mjs`), and fails
+      any race short of what its grading needs: the probe running, 2 frames, 2 in-window frames and
+      the crossing. Measured: clean, **6,128 and 5,190 frames, 356 and 275 in-window**, exit 0;
+      `--sabotage-unmeasured` (the old direct entry) — **0 frames, NOT MEASURED in 2 of 2, exit 1**.
 
       **What still remains a REGRESSION NET at this scope**, and is a narrower gap than before: at
       seed 9 on these two tracks the shipped world produces 0 events of any old-invariant kind

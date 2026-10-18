@@ -1,6 +1,7 @@
-# DEVSCREEN-CHAPTERS-1 — the Plan D design: 347 controls in seven chapters, each placed once, an info text each
+# DEVSCREEN-CHAPTERS-1 — the Plan D design: 348 rows (347 controls and one read-only box) in seven chapters, each placed once, an info text each
 
-*(348 as designed and merged. On 2026-10-06 the test-aids switch added one (TEST-AIDS-1) and two winners settings were removed (REMOVE-WINNERS-SETTING-1) — see the last two sections.)*
+*(348 as designed and merged. On 2026-10-06 the test-aids switch added one (TEST-AIDS-1) and two winners settings were removed (REMOVE-WINNERS-SETTING-1); on 2026-10-09 the read-only admin status box added a 348th row
+(AUDIT-1 D2) — see the last three sections.)*
 
 **Owns:** the design of the Dev Screen rebuilt as chapters — which chapter every control goes into,
 in which order, and the info text each one carries. **It is a design. Nothing in it is built**: no
@@ -169,9 +170,9 @@ intro text, written to sit at the top of the chapter on the rebuilt screen.
 | 4 | Tracks, racers, brands and groups | 68 | 62 (+6 for an admin) | records and per-type settings |
 | 5 | History and evaluation | 15 | 13 (+2 for an admin) | reads the record |
 | 6 | Diagnostics and verification | 18 | 0 | changes neither |
-| 7 | Accounts and system | 21 | 4 | changes neither |
+| 7 | Accounts and system | 22 | 4 | changes neither |
 | — | Sidebar (all chapters) | 3 | 2 (+1 for an admin) | the screen's frame |
-| | **Total** | **347** | **88** (+9 for an admin) | |
+| | **Total** | **348** | **88** (+9 for an admin) | |
 
 ### 1 · The race — 100
 
@@ -242,10 +243,11 @@ whether the overlays, the logs and every other test aid are shown at all.
 Advanced today, where they read as camera settings; Export Race Config is a card of its own. All of
 them serve someone checking the game, none someone running an event.
 
-### 7 · Accounts and system — 21
+### 7 · Accounts and system — 22
 
-*Intro:* Who may use the screen and what it keeps: your own password, the race directors of the
-server, and backups of everything this browser stores.
+*Intro:* Who may use the screen and what it keeps: for an admin, first a read-only status of the
+installation; then your own password, the race directors of the server, and backups of everything
+this browser stores. *(The status clause added 2026-10-09, AUDIT-1 D2.)*
 
 *Why one chapter.* Change Password, User Management and System are about access and storage, not
 racing.
@@ -283,7 +285,7 @@ specific fine mechanics. A reset button sits at the head of the values it resets
 | 4 · Things a race is made of | Player groups → Tracks → Racer types → Brands | The order Race Setup asks for them: who races, where, as what, under which look. Inside each: the editor link, New, per-entry actions, the form fields, Save, Cancel. |
 | 5 · History and evaluation | Race history → Period evaluation | General → specific: the full record before the summary built on it. Filters before the actions they feed. |
 | 6 · Diagnostics | On-screen diagnostics → Logs → Race configuration export | What you see on screen while racing before what is written out afterwards. |
-| 7 · Accounts and system | Your password → Race directors → Backup and reset | General → specific, with the destructive reset last. |
+| 7 · Accounts and system | Installation status → Your password → Race directors → Backup and reset | General → specific, with the destructive reset last. |
 
 ---
 
@@ -545,7 +547,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 3.10 | Overlay texts | `CameraAdvancedSection.jsx` | Enable overlay texts | `stateOverlayEnabled` (configKey) | advanced | Shows short overlay texts (e.g. 'Currently leading: Max') on entry into OVERVIEW, BATTLE and COMEBACK. | KEPT |
 | 3.11 | Overlay texts | `CameraAdvancedSection.jsx` | Overlay duration (ms) | `stateOverlayDurationMs` (configKey) | advanced | How long each overlay text stays on screen. | REWRITTEN |
 | 3.12 | Smoothness and live standings | `DynamicsTuningSection.jsx` | Reset (Frame Timing) | `reset-frame-timing` (testId) | advanced | Puts the three smoothness settings back to shipped. It is separate from the race reset on purpose: these change the picture, not the race. | NEW |
-| 3.13 | Smoothness and live standings | `DynamicsTuningSection.jsx` | dt-Smoothing (EMA-Alpha) | `dtSmoothingAlpha` (configKey) | advanced | Smooths uneven browser frame times before they move the camera and effects. Higher is a smoother camera that reacts later to real frame-rate changes; zero uses the raw timing. The race itself is not affected. | REWRITTEN |
+| 3.13 | Smoothness and live standings | `DynamicsTuningSection.jsx` | dt-Smoothing (EMA-Alpha) | `dtSmoothingAlpha` (configKey) | advanced | Smooths uneven browser frame times before they drive the track effects. Higher is steadier effects that react later to real frame-rate changes; zero uses the raw timing. The camera always follows the raw timing, and the race itself is not affected. | REWRITTEN |
 | 3.14 | Smoothness and live standings | `DynamicsTuningSection.jsx` | Render Interpolation | `renderInterpolation` (configKey) | advanced | Smooths racer and camera movement between the race’s fixed steps, removing rhythmic jitter on uneven frame rates. Off is the older look, kept for comparison. Takes effect at once. | REWRITTEN |
 | 3.15 | Smoothness and live standings | `DynamicsTuningSection.jsx` | Live Standings update every | `scoreboardIntervalMs` (configKey) | advanced | How often the standings list beside the race is rebuilt. Faster reacts sooner to an overtake; slower drops fewer frames with large fields. Choose the slowest that still feels live. Takes effect at the next race start. | REWRITTEN |
 | 3.16 | Sound | `RaceDefaults.jsx` | Sound effects | `soundEffects` (configKey) | operator | Reserved for race sounds. The switch is stored, but the game plays no sounds yet, so changing it has no effect today. | REWRITTEN |
@@ -640,7 +642,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 4.63 | Brands | `BrandingProfiles.jsx` | Sponsor Text | `sponsorText` (configKey) | operator | A short sponsor line shown in the race intro and on the result screen. Keep it short so it fits on one line. | REWRITTEN |
 | 4.64 | Brands | `BrandingProfiles.jsx` | Upload Logo | `fileRef.current?.click` (handler) | operator | Picks a logo image to show during races. A small image with a transparent background works best. | REWRITTEN |
 | 4.65 | Brands | `BrandingProfiles.jsx` | Remove logo (✕) | `handleRemoveLogo` (handler) | operator | Removes the logo from this brand. | NEW |
-| 4.66 | Brands | `BrandingProfiles.jsx` | Logo Size | `logoMaxHeight` (configKey) | operator | How tall the logo is drawn during races. | NEW |
+| 4.66 | Brands | `BrandingProfiles.jsx` | Logo Size | `logoMaxHeight` (configKey) | operator | How tall the logo is drawn during races on a desktop-size screen. On a smaller screen, such as a phone, it is drawn proportionally smaller. | NEW |
 | 4.67 | Brands | `BrandingProfiles.jsx` | Logo Opacity | `logoOpacity` (configKey) | operator | How see-through the logo is, from invisible to solid. | NEW |
 | 4.68 | Brands | `BrandingProfiles.jsx` | Create Profile / Save Changes | `handleSave` (handler) | operator | Stores the brand on the server. A headline and a name are required. | NEW |
 | 4.69 | Brands | `BrandingProfiles.jsx` | Cancel (brand form) | `handleCancel` (handler) | operator | Closes the form without saving. | NEW |
@@ -688,7 +690,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 6.16 | Race configuration export | `ConfigExportSection.jsx` | Export race config | `export-race-config` (testId) | advanced | Downloads world.json — the exact configuration the game reads when a race starts — so a simulator run can be checked against it, and copies it to the clipboard where it can. The hash beside it names that configuration. | REWRITTEN |
 | 6.17 | Race configuration export | `ConfigExportSection.jsx` | ↻ refresh | `refresh` (handler) | advanced | Recomputes the configuration hash and the list of changed settings after you have changed something. | REWRITTEN |
 
-### 7 · Accounts and system — 21 controls, and the sidebar's 3
+### 7 · Accounts and system — 22 rows, and the sidebar's 3
 
 Rows 7.1–7.3 are placed in **Sidebar (all chapters)** (the owner's decision of 2026-10-05); their
 numbers are kept so earlier references still find them.
@@ -698,6 +700,7 @@ numbers are kept so earlier references still find them.
 | 7.1 | Sidebar (all chapters) | `DevScreen.jsx` | View: All / Operator | `handleViewChange` (handler) | admin | Admin only. Operator shows only what is used on an event day; All adds every advanced setting. Your choice is remembered on this device. | REWRITTEN |
 | 7.2 | Sidebar (all chapters) | `DevScreen.jsx` | ← Back to Setup | `navigate('/setup')` (handler) | operator | Leaves the Dev Screen and returns to Race Setup. Settings are already saved. | NEW |
 | 7.3 | Sidebar (all chapters) | `DevScreen.jsx` | Log out | `logout` (handler) | operator | Signs you out of this browser. | NEW |
+| 7.0 | Installation status | `AdminStatusSection.jsx` | Installation status (read-only) | `admin-status-box` (testId) | advanced | Read-only, admins only; nothing here changes anything. Build: the commit and branch this server was built from, the same answer its health check gives, or unknown with the reason. Newest backup: when the newest backup in the backup directory was taken, or “not visible from the app” when this server cannot see where backups are kept. Status: the checks of npm run status that the server can run on itself — free disk space, a writable data folder and, when backups are visible, the newest backup’s age and checksum; OK only when every one of them passed. Newer release: whether GitHub has a release newer than this build, asked by the server at most once a day; “unknown” when it could not be asked, and no comparison when this build’s version is not known. | NEW |
 | 7.4 | Your password | `ChangePasswordSection.jsx` | Current password | `setCurrentPassword` (handler) | operator | Your existing password. Verified by the server; a wrong value returns the same error the login screen uses. | KEPT |
 | 7.5 | Your password | `ChangePasswordSection.jsx` | New password | `setNewPassword` (handler) | operator | The password you want. The rule the server applies is the same one that governs new accounts; no extra rule is invented here. | KEPT |
 | 7.6 | Your password | `ChangePasswordSection.jsx` | Repeat new password | `setConfirmPassword` (handler) | operator | Typo guard, checked in the browser only. The server has no concept of a confirmation; if these two do not match, the form refuses to submit. | KEPT |
@@ -715,10 +718,10 @@ numbers are kept so earlier references still find them.
 | 7.18 | Race directors | `UserManagementSection.jsx` | Team | `setNewTeam` (handler) | advanced | The team the new account joins. The picker only lists teams that already exist — pick 'New team…' to found one, which is the only way to type a name. Guards against a typo silently splitting a team in two. | KEPT |
 | 7.19 | Race directors | `UserManagementSection.jsx` | New team name | `setNewTeamName` (handler) | advanced | The name of the team you are founding. Only shown when you picked 'New team…'; the server tags this create request as an explicit new-team act so a typo cannot slip past. | KEPT |
 | 7.20 | Race directors | `UserManagementSection.jsx` | Add User | `handleCreate` (handler) | advanced | Creates the account on the server. | NEW |
-| 7.21 | Backup and reset | `SystemSettings.jsx` | ⬇ Export Settings JSON | `handleExport` (handler) | advanced | Downloads every setting this browser stores — tuning, camera, history and local overrides — as one file you can import later. | REWRITTEN |
-| 7.22 | Backup and reset | `SystemSettings.jsx` | ⬆ Import Settings JSON | `importRef.current?.click` (handler) | advanced | Restores settings from an exported file. Settings the file does not contain are left as they are. | REWRITTEN |
+| 7.21 | Backup and reset | `SystemSettings.jsx` | ⬇ Export Settings JSON | `handleExport` (handler) | advanced | Downloads the settings this browser stores — tuning, camera, race defaults, the race history list and racer-type settings — as one file you can import later. It is not a data backup: tracks, racers, player groups and brands live on the server and are backed up there with npm run backup (source install) or racearena backup (VPS install). | REWRITTEN |
+| 7.22 | Backup and reset | `SystemSettings.jsx` | ⬆ Import Settings JSON | `importRef.current?.click` (handler) | advanced | Restores settings from an exported file. Settings the file does not contain are left as they are. It does not bring back tracks, racers, player groups or brands — those come back only from a server backup. | REWRITTEN |
 | 7.23 | Backup and reset | `SystemSettings.jsx` | 🔬 Export Diagnostic Snapshot | `handleDiagnosticExport` (handler) | advanced | Downloads the browser’s complete stored state, to attach to a bug report so the problem can be reproduced elsewhere. | REWRITTEN |
-| 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, brands and player groups live on the server and are not deleted; only local overrides of them are cleared. | REWRITTEN |
+| 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared. | REWRITTEN |
 
 ---
 
@@ -828,7 +831,9 @@ Nothing below was changed; each is a wording or count matter the build will meet
 - **The System card's description says a reset restores the built-in tracks and racers**
   (`client/src/screens/DevScreen/sections/SystemSettings.jsx:154`), while its tooltip says tracks,
   brands and groups live on the server and are not re-seeded. The design's text for the reset
-  follows the tooltip.
+  follows the tooltip. *Corrected 2026-10-13 on branch `fix/backup-reset-texts`: the card texts and
+  the reset confirmation now say what the browser holds and point to the server backup; rows 7.21,
+  7.22 and 7.24 above carry that branch's info texts.*
 - **Sound effects is reserved**, stored and read by nothing (recorded in the inventory). Its old text
   promised sounds; the new one says plainly that it has no effect yet.
 - **The tooltip guard's narrow shapes miss many stated values.** Existing texts such as "40 is a safe
@@ -1088,3 +1093,110 @@ and the chapter guard holds the 346 rows.
 
 **Where the two meet** (`review/2026-10-06`): the switch's +1 and these −2 — **347 controls**, operator view 88 (+9 for an admin); `count-controls.mjs` prints 347 and the chapter guard holds the 347 rows.
 
+---
+
+## AUDIT-1 D2 — row 348, the admin status box (2026-10-09)
+
+The owner asked for an admin-only, read-only box at the top of *Accounts and system* showing the
+build identity, the newest backup time (or "not visible from the app"), the overall status by the
+existing status logic, and whether a newer release tag exists on GitHub, checked by the server at
+most once a day and "unknown" on any failure. Built on branch `feat/admin-status-box`; accepted by the
+owner on 2026-10-12 and merged with review/2026-10-12.
+
+**It is a row, not a control.** Nothing on it can be pressed or changed — it is a box of four lines
+from `GET /api/admin/status`. It is in `design.json` (row 7.0 above, position 0 so the chapter's
+other rows keep their numbers; sub-group *Installation status*, its own, first) because the owner
+asked for it to carry an info text and to be held by the chapter guard like every control, and the
+guard holds exactly the rows of the table. So the table and the guard hold **348 rows**, while
+`count-controls.mjs` — which counts things a person can change or trigger — still prints **347**.
+The difference is this one box, and it is deliberate.
+
+**Visibility.** Advanced tier, so only the All view (admins) shows it; the component also renders
+nothing for a non-admin, and the server refuses anyone but an admin (`ROUTE_POLICY`, the whole
+`/api/admin` namespace). The operator view is unchanged: 88 (+9 for an admin). The chapter's intro
+gained one clause naming the status.
+
+**Where its facts come from.** The build: `server/src/buildIdentity.js`, the same answer as
+`/api/health`. The backup and the status: `shared/statusChecks.mjs`, the checks `npm run status`
+runs (extracted from `scripts/status.mjs` so both import them), without the API check. The release:
+`server/src/releaseCheck.js`, only `v<major>.<minor>[.<patch>]` tags are releases.
+
+---
+
+## Phones and tablets — 2026-10-13 (DEVSCREEN-MOBILE-1)
+
+**The decision.** On 2026-10-12 the owner saw the Dev Screen's group cards cut off at the right in
+a narrow window, with no sideways scroll to reach the rest (chapter *Tracks, racers, brands and
+groups*, sub-group *Player groups*). On 2026-10-13 he decided that the Dev Screen must work on a
+smartphone, and therefore on a tablet. Built on branch `feat/devscreen-mobile`; accepted by the
+owner on 2026-10-13 and merged with review/2026-10-13.
+
+**Why the cards were cut off.** `.content` has `overflow-y: auto`, which makes its sideways overflow
+`auto` too: a list row wider than the column scrolled the whole chapter column sideways, and that
+scrollbar sat at the foot of the chapter, a whole chapter further down. List rows (`.row`) did not
+wrap. Measured on master with the 220 px sidebar: the race-director row needed a 1,056 px window,
+the brand row 928 px — rows were already cut off at 1,024 px, not only on a phone.
+
+**Two breakpoints, both below 1280 px** (all rules at the end of `DevScreen.module.css`):
+
+| below | what changes | why this number |
+| --- | --- | --- |
+| **1280 px** | every flex ROW in a chapter wraps (`.row`, `.colorRow`, and the sections' inline `display: flex` rows that are not columns); fields, pictures and canvases never exceed their column; `code` may break anywhere | 1280 px and wider must stay exactly as it was, so nothing applies there; below it the measured overflow above starts (1,056 px). Column boxes are left alone on purpose: a column told to wrap breaks into a second column wherever its height is bounded — the racer tuning dialog did exactly that while this was built |
+| **900 px** | the sidebar becomes a sticky top bar; one column; touch sizes | the sidebar plus the content padding take 220 + 64 = 284 px. The widest piece that cannot wrap is a camera slider row (label 14 rem + slider 8 rem + value 3.5 rem + info icon ≈ 450 px) in a card (+40 px); a two-column form grid needs about 300 px a field. Keeping the sidebar down to 900 px leaves a column of at least 616 px — two 300 px fields side by side. Below it the sidebar would squeeze the column under that, so the screen goes to one column. A tablet held upright (768 px) gets the top bar; one held across (1,024 px) keeps the sidebar |
+
+**The menu (below 900 px).** The top bar shows "⚙️ Dev Panel / Configuration" and a **☰ Menu**
+button (`aria-expanded`, `aria-controls="dev-screen-menu"`; it reads **✕ Close** while open). The
+menu opens under the bar and holds exactly what the sidebar holds, in the same order — the admin's
+*View: All / Operator* switch, the chapters, *← Back to Setup* and *Log out* — so all of it is
+reachable from every chapter, as decided on 2026-10-05. The bar stays at the top while a chapter
+scrolls; the menu scrolls by itself if it is taller than the screen. Choosing a chapter closes the
+menu and starts the chapter at its top. The markup is the sidebar's own: the items sit in one
+`#dev-screen-menu` box that is `display: contents` on a wide screen (it takes no part in the layout)
+and the toggle is `display: none` there — so the chapter guard, which reads `nav [data-control-id]`,
+sees the same three controls in the same place and is unchanged, and `design.json`'s placement is
+unchanged.
+
+**One column, tables, touch.** Below 900 px the content padding is 1 rem, cards 1 rem, every
+`.formGrid` one column, and the surface-class editor's list sits above the editor instead of beside
+it (`.classSplit` / `.classList` / `.classDetail`, the same values the inline styles had). The three
+`.table`s — race history, period evaluation, installation status — sit in a `.tableScroll` box that
+scrolls sideways by itself; a table that fits shows no scrollbar. Buttons, fields, option pills, the
+nav entries and the view switch are at least 44 px high, icon-only buttons and steppers 44 px
+square. The racer tuning dialog's sliders may shrink (`min-width: 0`), so their values stay inside
+the dialog at 390 px.
+
+**Desktop unchanged, measured.** Every chapter, All and Operator view, at 1280 and 1440 px, full-page
+screenshots of master's build and of this branch's build, compared pixel by pixel (threshold 0):
+**0 differing pixels** in every chapter except three places that also differ between two runs of
+master's own build — the *Installation status* clock time (Accounts and system), the animated
+surface-class *Live Preview* canvas (Look, labels and effects), and the view switch's colour
+transition (2 px). Screenshots stay outside the repository.
+
+**The browser check — `client/e2e/devscreen-narrow.spec.js`, in the Browser gate.** At 390 px
+(phone) and 768 px (tablet), in the All view and the Operator view: the menu holds the sidebar's
+controls; in every chapter the page does not scroll sideways, and every control of `design.json` for
+that chapter and view, brought into view, lies on the screen, is cut off by no clipping ancestor, and
+no box other than one around a table scrolls sideways. Forms are opened as a person would (the first
+group, track and brand in edit, an open track, the race director's reset form and "New team…", a new
+surface class through every generator, the racer tuning dialog). The design rows the e2e
+installation cannot show are listed in the spec with their reason (no race run yet, no custom racer
+type or surface class, no overrides, no brand logo); any other row not reached fails it. The Player
+groups cards are checked by name, before anything is scrolled: each card's right edge is on the
+screen. Sabotaged twice: the old fixed 220 px sidebar beside the content below 900 px — red at
+390 px in both views (413 and 32 unreachable controls, e.g. *"main … scrolls sideways (256 > 170)"*);
+rows not wrapping — red, *"Player groups card 1: right edge on the screen — Expected: <= 390,
+Received: 656.6"*, and at 768 px *"main … scrolls sideways (825 > 768)"* in Accounts and system.
+Restored: 6 of 6 green.
+
+**Accessibility (axe-core 4.10.2, WCAG 2.0/2.1 A and AA — the AUDIT-1 A8 tag set).** Run on
+`/dev` chapter by chapter, All and Operator view, at 390, 768 and 1280 px, on this branch and on
+master's build. *The race* — the chapter `/dev` opens on, which is what AUDIT-1 A8 measured — has
+**0 violations** at every width in both views, as on master. The other chapters carry violations
+that are **already on master at 1280 px, the same rules and the same counts** (label 23,
+nested-interactive 6 and select-name 1 in *Camera*; label 7 and colour contrast 2 in *Look*;
+colour contrast 19 in *Tracks, racers, brands and groups*; label 1, select-name 1 and colour
+contrast 1 in *History*; colour contrast 3 in *Accounts*). At 390 px this branch shows exactly
+the desktop counts, where master showed one colour-contrast finding fewer in three chapters —
+those elements were cut off the screen there, and axe does not judge text it cannot see. No rule
+is new. AUDIT-1 ran axe on the opening chapter only, so these were never recorded; they are
+**noticed and left** here (not this piece's scope) and named for the owner.

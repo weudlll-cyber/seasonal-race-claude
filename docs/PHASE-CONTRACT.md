@@ -135,7 +135,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 - **When it MOVES.** It moves with `choreoOutcomeStart` (§2) — earlier OUTCOME = more servo correction
   budget / more fairness authority, and a shorter PULK contest.
 - **DevScreen.** No independent control. The `racePlanCorridorStart` slider still renders
-  (DynamicsTuningSection.jsx:959-989, "P-Controller starts") but its value is overwritten by
+  (DynamicsTuningSection.jsx:963-992, "P-Controller starts") but its value is overwritten by
   `choreoOutcomeStart` at plan build, so the owned seam is the "PULK end / OUTCOME begins" control.
 - **Calibrated for it.** The phase-weight fade window is anchored on it (spans
   `max(corrStartFrac − pulkEndFrac, MIN_FADE_SPAN)` back from it, `raceGovernor.js` → `MIN_FADE_SPAN`; since it equals
@@ -148,7 +148,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 - **What it gates.** When the servo STOPS steering (raw physics after, in FINAL).
 - **When it MOVES.** The servo's steering-end moves; 1.0 = steer to the line; lower = a raw-physics tail.
 - **DevScreen.** `racePlanCorridorEnd` slider — "P-Controller ends (% race)"
-  (DynamicsTuningSection.jsx:990-1027), default 100%. LIVE (it is the OUTCOME end).
+  (DynamicsTuningSection.jsx:994-1032), default 100%. LIVE (it is the OUTCOME end).
 
 ## 5. `transitionEnd` = 0.75 — the areaBonus fade-end literal (config key `racePlanBonusTransitionEnd`) — **INERT**
 
@@ -162,7 +162,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   trigger inside the `else` branch — dead code because `_choreoEnabled` is always true, racePlanner.js:1002);
   :1858 (`getPhaseFractions` returns `transEndFrac`).
 - **DevScreen.** `racePlanBonusTransitionEnd` slider — "Bonus active until (% race)"
-  (DynamicsTuningSection.jsx:903-930, range 30–95%). Does NOTHING at the shipped model (no fade exists to
+  (DynamicsTuningSection.jsx:908-934, range 30–95%). Does NOTHING at the shipped model (no fade exists to
   bound).
 - **Naming trap.** `transitionEnd` (0.75) is NOT where any phase ends — there is no live TRANSITION phase.
   It is a misleadingly named, currently inert literal.

@@ -15,6 +15,11 @@ is.
 
 ### Added
 
+- Pause and resume a running race: a Pause/Resume button under Cancel Race on the race screen, and
+  the Space key, in the countdown and during the race. While paused everything stands still — the
+  racers, the camera, the effects and the race clock — under a large "PAUSED"; resuming continues the
+  same race, with the same result as if it had never paused, and the paused time is not counted in
+  the race's time. Not available once the last racer is home. *(on `master`, 2026-10-13)*
 - One-command install on a single rented server: one `install.sh` asks for the domain, an e-mail
   address and the first admin, then installs Docker, a firewall that lets in only SSH, HTTP and
   HTTPS, and automatic security updates. *(branch `feat/vps-install`)*
@@ -48,12 +53,39 @@ is.
   already stored keep theirs (audit finding A2-14). *(on `master`, 2026-10-12)*
 - An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
-  the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*
+  the server at most once a day; "unknown" when the check fails). *(on `master`, 2026-10-12)*
 
 ### Changed
 
+- The race screen's own fullscreen (its fullscreen button) now uses the whole screen: the race
+  picture is as large as the screen allows, centred, with black around it, and the standings column
+  is hidden off the right edge — move the mouse to the right edge to slide it in over the picture
+  (on a touch screen, tap the right edge; tap elsewhere to close it). Outside that fullscreen, and in
+  the browser's own fullscreen (F11), the race screen is unchanged. *(on `master`, 2026-10-18)*
 - A source install (the plain-Node path) needs Node 22 or newer; it said 20, which no longer
   receives security fixes. The Docker image already runs Node 24. *(on `master`, 2026-10-12)*
+- The Dev Screen is easier to read and to use with a screen reader: the active view toggle and the
+  reset buttons have enough contrast, and every number field in the first chapter and both Track
+  Editor dropdowns carry their label. The setup screen fits a 390 px phone; the three "cannot delete
+  a default" messages are in English; five Dev Screen help texts now match what ships.
+  *(on `master`, 2026-10-12)*
+- The Dev Screen works on a phone and a tablet. Below 900 px the sidebar becomes a top bar with a
+  Menu button holding the view switch, the chapters, Back to Setup and Log out; the chapter shows
+  in one column, wide tables scroll inside their own box, and buttons and fields are big enough for
+  a finger. Below 1280 px nothing in a chapter is cut off at the right any more — the Player groups
+  cards included. At 1280 px and wider the screen looks as before. *(on `master`, 2026-10-13)*
+- The Dev Screen's *Backup and reset* texts say what they really cover: the export, import and
+  reset act only on the settings stored in that browser; tracks, racers, player groups and brands
+  live on the server and are backed up with `npm run backup` (or `racearena backup` on the VPS
+  install), as the operator guide's *Backups* section describes. They used to claim the browser
+  file held tracks, racers, groups and branding, and that a reset restored built-in tracks and
+  racers. Text only. *(on `master`, 2026-10-13)*
+- The brand logo in the corner of the race picture is sized to the picture: on a phone it is
+  proportionally smaller instead of covering about a third of the race, and on a desktop window it
+  is exactly as large as before. The brand's logo size setting is still the logo's size on a
+  desktop and now also its upper limit, and its info text in the Dev Screen says so. The logo on
+  the result screen (hidden on a phone) and the large logo on the opening brand card (already
+  sized to the picture) were checked and are unchanged. *(on `master`, 2026-10-13)*
 
 ### Security
 
@@ -69,7 +101,7 @@ is.
   *(on `master`, 2026-10-12)*
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
-  keeps working. *(branch `feat/csp`)*
+  keeps working. *(on `master`, 2026-10-12)*
 - The data and backup folders on a single-server install are private to the app's own account
   (audit finding A5M-06), also after a restore. *(branch `feat/vps-install`)*
 - `SECURITY.md`: how to report a security problem privately (GitHub's "Report a vulnerability"),

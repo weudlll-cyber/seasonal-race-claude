@@ -95,6 +95,7 @@ process.on("exit", () => {
 });
 
 import { makeCameraPlanDelivery } from "./lib/cameraPlanDelivery.mjs";
+import { unmeasured, refuseUnmeasured } from "./lib/measuredGate.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 const SABOTAGE = process.argv.includes("--sabotage");
@@ -481,14 +482,26 @@ while (ts - endingStart <= WINDOW_MS) {
 
 // LOUD-FAILURE RULE (Lesson 187): a window that sampled nothing is not a pass. If the ending's
 // durations ever go to zero this guard must say so rather than print a confident green about no
-// frames at all.
-if (framesChecked === 0) {
-  console.log(
-    `FAIL: the ending window is ${WINDOW_MS} ms and NO frame was sampled. This guard checked ` +
-      `nothing, which is not a pass.`,
-  );
+// frames at all. ★ GATE-MEASURES-1 (2026-10-12): the frame count alone could never fire — the loop
+// samples elapsed 0 on its first pass — so the FILL count is asked too: a covering fill can only be
+// found among fills that were recorded, and a recording context that saw none checked nothing.
+// One refusal, shared with the other gates (`scripts/lib/measuredGate.mjs`).
+if (
+  refuseUnmeasured(
+    "check-ending-frame",
+    unmeasured(
+      [
+        {
+          label: `${geo.id}, a ${WINDOW_MS} ms ending window`,
+          have: { "FINISHED frames": framesChecked, "fillRect calls": fillsSeen },
+          need: { "FINISHED frames": 1, "fillRect calls": 1 },
+        },
+      ],
+      { "fillRect calls": "a covering fill can only be found among recorded fills" },
+    ),
+  )
+)
   process.exit(1);
-}
 
 console.log(
   `check-ending-frame: ${geo.id}, ${framesChecked} FINISHED frame(s) across a ${WINDOW_MS} ms ` +

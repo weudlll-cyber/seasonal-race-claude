@@ -46,6 +46,17 @@
   margin-top: 0.1rem;
 }
 
+/* The phone/tablet menu (DEVSCREEN-MOBILE-1). On a wide screen the toggle is hidden and the menu
+   box takes no part in the layout — its items are the sidebar's own, exactly as before. The narrow
+   layout at the end of this file shows the toggle and folds the menu away until it is opened. */
+.menuToggle {
+  display: none;
+}
+
+.menu {
+  display: contents;
+}
+
 .navItem {
   display: flex;
   align-items: center;
@@ -123,8 +134,10 @@
   color: var(--color-text);
 }
 
+/* Not var(--color-primary): white on #e63946 is 4.2:1, short of WCAG AA's 4.5:1 for this
+   small text (AUDIT-1 A8-01). The same red, 5% darker, is 4.5:1. */
 .tierToggleBtnActive {
-  background: var(--color-primary);
+  background: #db3643;
   color: #fff;
 }
 
@@ -551,7 +564,37 @@
   border-radius: 4px;
 }
 
+/* ── Surface classes: the class list beside the editor (one above the other on a phone) ── */
+.classSplit {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.classList {
+  width: 210px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.classDetail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 /* ── History table ── */
+/* Every `.table` (race history, period evaluation, installation status) sits in this box: a table
+   wider than the screen scrolls inside it, never the page (DEVSCREEN-MOBILE-1). A table that fits
+   shows no scrollbar and looks as before. */
+.tableScroll {
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -615,4 +658,119 @@
   text-align: center;
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+/* ══ Narrower than a desktop (DEVSCREEN-MOBILE-1, decided 2026-10-13) ══════════════════════════
+   Two breakpoints, both BELOW 1280 px, so the desktop layout at 1280 px and wider is untouched.
+   Their derivation is in reports/evolution/DEVSCREEN-CHAPTERS-1.md, "Phones and tablets". */
+
+/* Below 1280 px: nothing in a chapter is cut off. A row of a list, a slider row, a form's buttons —
+   every flex ROW in the content wraps instead of running past the right edge, and a field or a
+   picture is never wider than its column. Rows only: the sections lay most rows out with an inline
+   `display: flex`, and a COLUMN box told to wrap breaks into a second column wherever its height is
+   bounded (the racer tuning dialog did exactly that). */
+@media (max-width: 1279.98px) {
+  .row,
+  .colorRow,
+  .content :where([style*='display: flex']:not([style*='flex-direction: column'])) {
+    flex-wrap: wrap;
+  }
+
+  .content :where(input, select, textarea, img, canvas) {
+    max-width: 100%;
+  }
+
+  .content :where(code) {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Below 900 px (a tablet held upright, a phone): one column under a top bar. The sidebar becomes
+   that bar; its menu holds the view switch, the chapters, Back to Setup and Log out, and stays at
+   the top of the screen in every chapter. Buttons and fields are at least 44 px high for a finger. */
+@media (max-width: 899.98px) {
+  .screen {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: auto;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 0;
+    border-right: none;
+    border-bottom: 1px solid #2a2a35;
+  }
+
+  .sidebarHeader {
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0;
+    border-bottom: none;
+  }
+
+  .menuToggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 1rem;
+    background: #2a2a35;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .menu {
+    display: none;
+  }
+
+  .menu.menuOpen {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    border-top: 1px solid #2a2a35;
+  }
+
+  .content {
+    padding: 1rem;
+    gap: 1.25rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .classSplit {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .classList {
+    width: auto;
+  }
+
+  .menuToggle,
+  .navItem,
+  .backBtn,
+  .tierToggleBtn,
+  .btn,
+  .optionPill,
+  .input,
+  .select {
+    min-height: 44px;
+  }
+
+  .btnIconOnly,
+  .stepperBtn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

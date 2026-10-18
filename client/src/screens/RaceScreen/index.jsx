@@ -6,6 +6,9 @@
 // Description: Live race canvas with scrolling camera (open tracks),
 //              TV camera director (closed tracks), multi-lap support,
 //              fullscreen toggle, and fade-to-black navigation.
+//              FULLSCREEN-USEFUL-1 (2026-10-17): in the app's fullscreen the picture is the
+//              largest 16:9 box that fits and the standings column becomes a drawer off the
+//              right edge (see "FULLSCREEN-USEFUL-1" below and RaceScreen.css).
 //
 // ★ WHAT THIS FILE OWNS SINCE P4-RACESCREEN-SPLIT-1 (2026-10-02). The React component — its state,
 //   refs and effects, the race-init effect that wires one race together, the rAF loop (phase
@@ -25,6 +28,14 @@
 //     stateOverlaySelection.js which narrative line the state overlay shows
 //     viewerFrameProbe.js      the per-frame viewer-probe payload
 //   reports/evolution/P4-RACESCREEN-SPLIT-1.md has the map and what stayed here, and why.
+//   Added since: raceClock.js (PAUSE-RESUME-1) — the pause-aware clock every wall-clock site here
+//   reads; see "PAUSE-RESUME-1" below.
+//
+// ★ PAUSE-RESUME-1 (the owner's decision, 2026-10-13): a Pause/Resume control beside Cancel Race,
+//   and the Space key. While paused the frame loop does nothing — no physics step, no camera, no
+//   effects, no draw — so the last picture stands, and `raceClock` stops the time every clock on
+//   this screen reads. Available from the countdown until the last racer crosses (PHASE.FINISHED);
+//   not during the ending that follows, and not on the result screen.
 //
 // ★ STAY-ON-THE-FINISH-1 (the owner's decision, 2026-09-25): THE HAND-OVER TO THE RESULTS IS NOW A
 //   CHOICE. `autoAdvance` on — today's behaviour, the screen hands over when the camera ending
@@ -41,6 +52,7 @@ import { createLabelFormHold } from './labelFormHold.js';
 import { frameCameraInputs } from './frameCameraInputs.js';
 import { attachRenderState, attachRacerRenderState } from './renderState.js';
 import { advanceSlowmo } from './battleSlowmo.js';
+import { createRaceClock } from './raceClock.js';
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
@@ -139,6 +151,21 @@ const CANVAS_H = 720;
 // when rAF alternates between 16ms and 33ms frames.
 const FIXED_DT = 16;
 
+// ── FULLSCREEN-USEFUL-1 (built 2026-10-17): the standings drawer in the app's fullscreen ─────────
+// In the app's own fullscreen the picture takes the largest 16:9 box the screen allows and the
+// standings column (`.race-hud`) leaves the layout: it waits off the right edge and slides in OVER
+// the picture when the pointer reaches that edge. These three numbers are UI chrome, not race
+// settings, so they are constants here and not Dev Screen keys.
+//   FS_HUD_STRIP_PX       the invisible hot strip along the right edge that opens the column.
+//                         Wide enough to hit with a flung mouse, narrow enough not to cover the
+//                         picture's last column of pixels noticeably.
+//   FS_HUD_SLIDE_MS       the slide in / out; handed to the CSS as `--fs-hud-slide`.
+//   FS_HUD_CLOSE_DELAY_MS how long the column stays after the pointer leaves it, so a pointer that
+//                         slips off the edge for a moment does not make it flap.
+const FS_HUD_STRIP_PX = 16;
+const FS_HUD_SLIDE_MS = 200;
+const FS_HUD_CLOSE_DELAY_MS = 800;
+
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
   const fadeNavRef = useRef(fadeNavigate);
@@ -235,6 +262,20 @@ export default function RaceScreen() {
     []
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // FULLSCREEN-USEFUL-1: whether the standings drawer is out. Only ever read through `hudDrawerOpen`
+  // below, which also requires fullscreen, so a stale `true` can never show outside it.
+  const [hudOpen, setHudOpen] = useState(false);
+  const hudRef = useRef(null);
+  const hudStripRef = useRef(null);
+  // The close delay is a plain timeout, NOT the race clock: `raceClock` is race time and stops while
+  // the race is paused, and the drawer must still close on a paused race — this is UI chrome on the
+  // wall clock, like the button hover transitions.
+  const hudCloseTimerRef = useRef(null);
+  // PAUSE-RESUME-1: the race screen's clock, one per mount — `raceClock.paused` is THE paused flag.
+  // `paused` below only mirrors it for the render (the button's label and the overlay); both are
+  // set by `togglePause` and nowhere else.
+  const [raceClock] = useState(() => createRaceClock());
+  const [paused, setPaused] = useState(false);
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
   const [camAnchor, setCamAnchor] = useState(null); // CAMERA-FOCUS-1: dev-HUD pan-anchor racer label
@@ -332,7 +373,7 @@ export default function RaceScreen() {
   // COUNTDOWN→RACING transition even when camState is already 'OVERVIEW'
   // (CameraDirector starts in OVERVIEW before the race begins).
   useEffect(() => {
-    clearTimeout(overlayTimerRef.current);
+    raceClock.clearTimeout(overlayTimerRef.current);
     setOverlayText(null);
 
     // Never show text outside of the active race
@@ -356,10 +397,11 @@ export default function RaceScreen() {
     setOverlayText(result.text);
 
     const duration = cfg.stateOverlayDurationMs ?? DEFAULT_CAMERA_CONFIG.stateOverlayDurationMs;
-    overlayTimerRef.current = setTimeout(() => setOverlayText(null), duration);
+    // PAUSE-RESUME-1: a pause-aware timer — the line stays up for its full duration of RACE time.
+    overlayTimerRef.current = raceClock.setTimeout(() => setOverlayText(null), duration);
 
-    return () => clearTimeout(overlayTimerRef.current);
-  }, [camState, phase]);
+    return () => raceClock.clearTimeout(overlayTimerRef.current);
+  }, [camState, phase, raceClock]);
 
   // 15a-predictive: the persistent winner text survives FINISH_OVERVIEW (still RACING) and is
   // cleared only when the race phase ends (leaderboard / navigation) — never by the effect above.
@@ -370,12 +412,113 @@ export default function RaceScreen() {
     }
   }, [phase]);
 
-  // ── Fullscreen listener ──────────────────────────────────────────────────
-  useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  // ── FULLSCREEN-USEFUL-1: the standings drawer ────────────────────────────
+  // Open on the hot strip, stay open while the pointer is over the column, close a short delay after
+  // it leaves. Touch has no hover, so a tap on the strip opens it and a tap outside the column closes
+  // it (the effect after the fullscreen listener); a touch's own `pointerleave` is ignored.
+  const cancelHudClose = useCallback(() => {
+    clearTimeout(hudCloseTimerRef.current);
+    hudCloseTimerRef.current = null;
   }, []);
+  const openHud = useCallback(() => {
+    cancelHudClose();
+    setHudOpen(true);
+  }, [cancelHudClose]);
+  const closeHudNow = useCallback(() => {
+    cancelHudClose();
+    setHudOpen(false);
+  }, [cancelHudClose]);
+  const onHudPointerLeave = (e) => {
+    if (!isFullscreen || e.pointerType === 'touch') return;
+    cancelHudClose();
+    hudCloseTimerRef.current = setTimeout(() => {
+      hudCloseTimerRef.current = null;
+      setHudOpen(false);
+    }, FS_HUD_CLOSE_DELAY_MS);
+  };
+  const hudDrawerOpen = isFullscreen && hudOpen;
+
+  // ── Fullscreen listener ──────────────────────────────────────────────────
+  // FULLSCREEN-USEFUL-1: leaving fullscreen by ANY door (the button, Esc, Cancel Race, the race end)
+  // arrives here, and it closes the drawer and drops its timer in the same breath — so the next
+  // fullscreen starts with the column hidden and never half-open. The cleanup does the same for an
+  // unmount.
+  useEffect(() => {
+    const onFsChange = () => {
+      const on = !!document.fullscreenElement;
+      setIsFullscreen(on);
+      if (!on) closeHudNow();
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      cancelHudClose();
+    };
+  }, [closeHudNow, cancelHudClose]);
+
+  // FULLSCREEN-USEFUL-1: a tap (or click) anywhere outside the open column closes it at once. Only
+  // listened for while the drawer is out; the strip is excluded so the tap that opened it does not
+  // close it again.
+  useEffect(() => {
+    if (!hudDrawerOpen) return undefined;
+    const onDown = (e) => {
+      if (hudRef.current?.contains(e.target) || hudStripRef.current?.contains(e.target)) return;
+      closeHudNow();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [hudDrawerOpen, closeHudNow]);
+
+  // ── PAUSE-RESUME-1: pause and resume ─────────────────────────────────────
+  //
+  // THE BOUNDARY. A pause can be taken from the moment the race is built (the countdown included)
+  // until the last racer crosses — the frame that sets PHASE.FINISHED. From then on the outcome is
+  // written, the ending runs to the result screen and the control is gone. The test is the LOOP's
+  // phase (`g.current.phase`), not the React mirror, which can trail it by a render.
+  //
+  // A pause cannot change the race: physics steps only inside the frame loop, and the loop does
+  // nothing while paused. On resume the race clock hands the next frame the time the first skipped
+  // frame would have had, so the race goes on from the exact state it stopped in.
+  const togglePause = useCallback(() => {
+    const st = g.current;
+    if (!st || st.phase === PHASE.FINISHED) return false;
+    if (raceClock.paused) raceClock.resume();
+    else raceClock.pause();
+    setPaused(raceClock.paused);
+    return true;
+  }, [raceClock]);
+
+  // Space toggles the pause, fullscreen included (the listener is on the window). It must not also
+  // scroll the page or activate a focused button — the button would toggle a second time, or a
+  // focused Cancel Race would end the race — so both halves of the key are swallowed while the
+  // pause is available. A held key toggles once. Space in a text field is left alone.
+  useEffect(() => {
+    const isSpace = (e) => e.code === 'Space' || e.key === ' ';
+    const typing = (el) =>
+      el?.tagName === 'INPUT' ||
+      el?.tagName === 'TEXTAREA' ||
+      el?.tagName === 'SELECT' ||
+      !!el?.isContentEditable;
+    let swallowKeyUp = false;
+    const onKeyDown = (e) => {
+      if (!isSpace(e) || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
+      if (!g.current || g.current.phase === PHASE.FINISHED) return;
+      e.preventDefault();
+      swallowKeyUp = true;
+      if (!e.repeat) togglePause();
+    };
+    const onKeyUp = (e) => {
+      if (!isSpace(e) || !swallowKeyUp) return;
+      swallowKeyUp = false;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, [togglePause]);
 
   // ── Load race session data ───────────────────────────────────────────────
   useEffect(() => {
@@ -655,7 +798,7 @@ export default function RaceScreen() {
     setWinnerOverlayText(null);
     // WINNER-CARD-1: and the closing card, which must not survive into the next race. Its timers go
     // first — a pending hide from the previous race would otherwise put the new card away early.
-    winnerCardTimersRef.current.forEach(clearTimeout);
+    winnerCardTimersRef.current.forEach(raceClock.clearTimeout);
     winnerCardTimersRef.current.length = 0;
     setWinnerCardUp(false);
     setWinnerCard(null);
@@ -773,8 +916,25 @@ export default function RaceScreen() {
     initProbe();
 
     // ── rAF loop ─────────────────────────────────────────────────────────────
-    function loop(ts) {
+    function loop(rawTs) {
       if (cancelled) return;
+      // ── PAUSE-RESUME-1: the frame's time comes from the race clock, never straight from rAF ──
+      // `ts` is the browser's frame time minus the time spent paused, and EVERY wall-clock site
+      // below reads it — the ceremony clock, the race start stamp and everything that subtracts
+      // from it (the camera's raceElapsed, the drawn race timer, the result's elapsedTime), the
+      // camera's own clock, the slow-motion release, the final-lap stamp, the dust and the track
+      // lights. A race that never pauses gets `ts === rawTs`. While paused the frame does NOTHING:
+      // no physics step, no camera, no effects, no draw, so the canvas keeps the last picture.
+      //
+      // THE HIDDEN-TAB PATH IS NOT THE MECHANISM, and that was checked first: a hidden tab stops
+      // only the physics (the catch-up cap below swallows the gap), while the stamps above go on
+      // running on the wall clock. A pause has to stop all of them, so the frame is skipped here
+      // and the time is taken out of the clock instead; the cap is untouched.
+      const ts = raceClock.frameTime(rawTs);
+      if (ts === null) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
       recordFrame(ts);
       const st = g.current;
       const shape = shapeRef.current;
@@ -792,7 +952,9 @@ export default function RaceScreen() {
       // first, and it is the half of `other` that no change to our draw code can shorten. One
       // subtraction, only when the log is on. Clamped at 0 because the two clocks are the same
       // clock but a browser may hand in a timestamp fractionally ahead of the callback.
-      const rafLate = enablePerfLog ? Math.max(0, t0 - ts) : 0;
+      // PAUSE-RESUME-1: `rawTs`, not `ts` — `t0` is the wall clock, and after a pause `ts` is behind
+      // it by the paused time.
+      const rafLate = enablePerfLog ? Math.max(0, t0 - rawTs) : 0;
       // tPhys starts at t0 so physMs = 0 on non-RACING frames (no physics while-loop ran).
       let tPhys = t0;
       // Perf-log pace counters for this frame (read-only mirrors of the physics
@@ -1019,8 +1181,12 @@ export default function RaceScreen() {
             // settled finish shot exactly as it does for the seconds before the hand-over, because
             // nothing about the ending changed. The operator moves on by clicking the picture
             // (`onFinishClick` below).
+            // PAUSE-RESUME-1: this timer and the card's below go through the race clock like the
+            // overlay's. A pause cannot be taken once this block has run (the boundary is
+            // PHASE.FINISHED), so today they never meet one; they are on the clock so that moving
+            // the boundary later cannot leave a wall-clock timer behind.
             if (autoAdvanceRef.current) {
-              finishNavTimerRef.current = setTimeout(
+              finishNavTimerRef.current = raceClock.setTimeout(
                 // PARTICLES-VISIBILITY-12: a test race goes back to the Track Editor, not to results.
                 () =>
                   raceData.testRace
@@ -1054,7 +1220,7 @@ export default function RaceScreen() {
                 });
                 setWinnerCardUp(true);
                 winnerCardTimers.push(
-                  setTimeout(
+                  raceClock.setTimeout(
                     () => setWinnerCardUp(false),
                     Math.max(0, cardMs - WINNER_CARD_FADE_MS)
                   )
@@ -1378,9 +1544,9 @@ export default function RaceScreen() {
       stopLongTaskObserver(perfLogRef.current); // FRAME-GAP-1: never outlive the race
       markerBuildRef.current = null; // CAMERA-REPRO-1: no markers from a torn-down race
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      clearTimeout(finishNavTimerRef.current);
+      raceClock.clearTimeout(finishNavTimerRef.current);
       // WINNER-CARD-1: the card's hide timer belongs to the race, exactly like the nav timer above.
-      winnerCardTimers.forEach(clearTimeout);
+      winnerCardTimers.forEach(raceClock.clearTimeout);
       winnerCardTimers.length = 0;
       for (const inst of effectsRef.current) inst.destroy?.();
       effectsRef.current = [];
@@ -1416,7 +1582,8 @@ export default function RaceScreen() {
   //     camera markers and the effect instances — all released by the animation effect's own
   //     cleanup on unmount (the race-loop effect's `return () => {…}`), which navigating away runs. Nothing to do here, and doing
   //     it here as well would be a second owner for state that already has one.
-  //   * the `fullscreenchange` listener — removed by its own effect cleanup.
+  //   * the `fullscreenchange` listener — removed by its own effect cleanup, which also drops the
+  //     standings drawer's close timer (FULLSCREEN-USEFUL-1); leaving fullscreen closes the drawer.
   //   * ★ FULLSCREEN ITSELF — nobody unwound this, and it is the whole reason this function exists.
   //     `toggleFullscreen` above puts the document into fullscreen on `screenRef`; leaving the
   //     screen does not take it out, so the operator landed back on Setup with the browser still
@@ -1496,12 +1663,15 @@ export default function RaceScreen() {
   const onCeremonyClick = (e) => {
     if (!ceremonySkipOnClick) return;
     if (e.button !== 0) return; // left click only
+    // PAUSE-RESUME-1: a paused picture does not move, a click on it included.
+    if (raceClock.paused) return;
     const st = g.current;
     if (!st || st.phase !== PHASE.COUNTDOWN || st.countdownStart == null) return;
     const cam = camDirRef.current;
     if (!cam) return;
     const sched = cam.ceremonySchedule(st.racers);
-    const now = performance.now();
+    // PAUSE-RESUME-1: the same clock the frame loop reads — `countdownStart` is in race-clock time.
+    const now = raceClock.timeNow();
     const next = nextBeatStart(now - st.countdownStart, sched);
     // Backwards by the remainder: elapsed becomes exactly `next` on the following frame.
     st.countdownStart = now - next;
@@ -1538,8 +1708,17 @@ export default function RaceScreen() {
   };
 
   return (
-    <div ref={screenRef} className="screen screen--race">
-      <div className="race-layout">
+    <div ref={screenRef} className={`screen screen--race${paused ? ' race-is-paused' : ''}`}>
+      {/* FULLSCREEN-USEFUL-1: the fullscreen layout is driven by these CLASSES, set from
+          `isFullscreen`, not by the `:fullscreen` pseudo-class alone — so it is testable, and so
+          outside the app's fullscreen the element is exactly what it was (no class, no style). */}
+      <div
+        className={`race-layout${isFullscreen ? ' race-layout--fullscreen' : ''}${
+          hudDrawerOpen ? ' race-layout--hud-open' : ''
+        }`}
+        data-testid="race-layout"
+        style={isFullscreen ? { '--fs-hud-slide': `${FS_HUD_SLIDE_MS}ms` } : undefined}
+      >
         <div
           className="race-canvas-wrapper"
           onMouseDown={onCanvasMouseDown}
@@ -1617,9 +1796,35 @@ export default function RaceScreen() {
             accentColor={activeBrand?.primaryColor ?? null}
             visible={winnerCardUp}
           />
+          {/* PAUSE-RESUME-1: over the whole picture while paused, and only then. Inside the wrapper
+              like the cards above, so it covers the race and never the standings. */}
+          {paused && (
+            <div className="race-paused-overlay" data-testid="race-paused-overlay" role="status">
+              PAUSED
+            </div>
+          )}
         </div>
 
-        <aside className="race-hud">
+        {/* FULLSCREEN-USEFUL-1: the invisible hot strip along the right edge. Rendered only in the
+            app's fullscreen; a pointer entering it, or a tap on it, brings the column out. */}
+        {isFullscreen && (
+          <div
+            ref={hudStripRef}
+            className="race-fs-hud-strip"
+            data-testid="race-fs-hud-strip"
+            style={{ width: FS_HUD_STRIP_PX }}
+            onPointerEnter={openHud}
+            onPointerDown={openHud}
+          />
+        )}
+
+        <aside
+          ref={hudRef}
+          className="race-hud"
+          data-testid="race-hud"
+          onPointerEnter={isFullscreen ? cancelHudClose : undefined}
+          onPointerLeave={isFullscreen ? onHudPointerLeave : undefined}
+        >
           {/* The SAME control and the same one effect throughout; only its name follows what it is
               doing. While the race is running it cancels one, and saying "← Setup" was the reason
               the fullscreen leak went unnoticed — it read as navigation. Once every racer is home
@@ -1627,6 +1832,19 @@ export default function RaceScreen() {
           <button className="race-back-btn" data-testid="cancel-race" onClick={cancelRace}>
             {phase === PHASE.FINISHED ? '← Setup' : 'Cancel Race'}
           </button>
+          {/* PAUSE-RESUME-1: the same styling as the control above, and gone once the last racer
+              is home — the boundary `togglePause` holds. Space does the same. */}
+          {phase !== PHASE.FINISHED && (
+            <button
+              className="race-back-btn race-pause-btn"
+              data-testid="pause-race"
+              aria-pressed={paused}
+              onClick={togglePause}
+              title={paused ? 'Resume the race (Space)' : 'Pause the race (Space)'}
+            >
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+          )}
 
           {/* STANDINGS-RULE: the panel's composition lives in Scoreboard.jsx, so the guard that
               holds the two-layer rule can mount THE REAL arrangement rather than a copy of it.

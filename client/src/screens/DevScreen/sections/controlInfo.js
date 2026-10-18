@@ -393,7 +393,7 @@ export const CONTROL_INFO = {
   'DynamicsTuningSection:reset-frame-timing':
     'Puts the three smoothness settings back to shipped. It is separate from the race reset on purpose: these change the picture, not the race.',
   'DynamicsTuningSection:dtSmoothingAlpha':
-    'Smooths uneven browser frame times before they move the camera and effects. Higher is a smoother camera that reacts later to real frame-rate changes; zero uses the raw timing. The race itself is not affected.',
+    'Smooths uneven browser frame times before they drive the track effects. Higher is steadier effects that react later to real frame-rate changes; zero uses the raw timing. The camera always follows the raw timing, and the race itself is not affected.',
   'DynamicsTuningSection:renderInterpolation':
     'Smooths racer and camera movement between the race’s fixed steps, removing rhythmic jitter on uneven frame rates. Off is the older look, kept for comparison. Takes effect at once.',
   'DynamicsTuningSection:scoreboardIntervalMs':
@@ -544,7 +544,8 @@ export const CONTROL_INFO = {
   'BrandingProfiles:fileRef.current?.click':
     'Picks a logo image to show during races. A small image with a transparent background works best.',
   'BrandingProfiles:handleRemoveLogo': 'Removes the logo from this brand.',
-  'BrandingProfiles:logoMaxHeight': 'How tall the logo is drawn during races.',
+  'BrandingProfiles:logoMaxHeight':
+    'How tall the logo is drawn during races on a desktop-size screen. On a smaller screen, such as a phone, it is drawn proportionally smaller.',
   'BrandingProfiles:logoOpacity': 'How see-through the logo is, from invisible to solid.',
   'BrandingProfiles:handleSave':
     'Stores the brand on the server. A headline and a name are required.',
@@ -615,6 +616,8 @@ export const CONTROL_INFO = {
   "DevScreen:navigate('/setup')":
     'Leaves the Dev Screen and returns to Race Setup. Settings are already saved.',
   'DevScreen:logout': 'Signs you out of this browser.',
+  'AdminStatusSection:admin-status-box':
+    'Read-only, admins only; nothing here changes anything. Build: the commit and branch this server was built from, the same answer its health check gives, or unknown with the reason. Newest backup: when the newest backup in the backup directory was taken, or “not visible from the app” when this server cannot see where backups are kept. Status: the checks of npm run status that the server can run on itself — free disk space, a writable data folder and, when backups are visible, the newest backup’s age and checksum; OK only when every one of them passed. Newer release: whether GitHub has a release newer than this build, asked by the server at most once a day; “unknown” when it could not be asked, and no comparison when this build’s version is not known.',
   'ChangePasswordSection:setCurrentPassword':
     'Your existing password. Verified by the server; a wrong value returns the same error the login screen uses.',
   'ChangePasswordSection:setNewPassword':
@@ -645,11 +648,11 @@ export const CONTROL_INFO = {
     "The name of the team you are founding. Only shown when you picked 'New team…'; the server tags this create request as an explicit new-team act so a typo cannot slip past.",
   'UserManagementSection:handleCreate': 'Creates the account on the server.',
   'SystemSettings:handleExport':
-    'Downloads every setting this browser stores — tuning, camera, history and local overrides — as one file you can import later.',
+    'Downloads the settings this browser stores — tuning, camera, race defaults, the race history list and racer-type settings — as one file you can import later. It is not a data backup: tracks, racers, player groups and brands live on the server and are backed up there with npm run backup (source install) or racearena backup (VPS install).',
   'SystemSettings:importRef.current?.click':
-    'Restores settings from an exported file. Settings the file does not contain are left as they are.',
+    'Restores settings from an exported file. Settings the file does not contain are left as they are. It does not bring back tracks, racers, player groups or brands — those come back only from a server backup.',
   'SystemSettings:handleDiagnosticExport':
     'Downloads the browser’s complete stored state, to attach to a bug report so the problem can be reproduced elsewhere.',
   'SystemSettings:handleReset':
-    'Wipes every setting this browser stores and starts again from shipped values. Tracks, brands and player groups live on the server and are not deleted; only local overrides of them are cleared.',
+    'Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared.',
 };

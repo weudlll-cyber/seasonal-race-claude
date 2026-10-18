@@ -36,6 +36,7 @@ import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import UserManagementSection from './sections/UserManagementSection.jsx';
 import ConfigExportSection from './sections/ConfigExportSection.jsx';
 import TestAidsSection from './sections/TestAidsSection.jsx';
+import AdminStatusSection from './sections/AdminStatusSection.jsx';
 
 const OP = 'operator';
 const ADV = 'advanced';
@@ -236,8 +237,11 @@ export const CHAPTERS = [
     icon: '👤',
     title: 'Accounts and system',
     intro:
-      'Who may use the screen and what it keeps: your own password, the race directors of the server, and backups of everything this browser stores.',
+      'Who may use the screen and what it keeps: for an admin, first a read-only status of the installation; then your own password, the race directors of the server, and backups of everything this browser stores.',
     subgroups: [
+      // AUDIT-1 D2: the read-only status box, first — admin only (advanced tier, and the box itself
+      // renders nothing for anyone else).
+      { title: 'Installation status', parts: [{ component: AdminStatusSection, tier: ADV }] },
       { title: 'Your password', parts: [{ component: ChangePasswordSection, tier: OP }] },
       { title: 'Race directors', parts: [{ component: UserManagementSection, tier: ADV }] },
       { title: 'Backup and reset', parts: [{ component: SystemSettings, tier: ADV }] },

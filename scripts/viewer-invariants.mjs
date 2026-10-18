@@ -40,6 +40,11 @@
 //   node scripts/viewer-invariants.mjs --gate --after-crossing    # + the frames AFTER the crossing
 //   node scripts/viewer-invariants.mjs --gate                     # the SHIP gate: 2 races, 337-369 s
 //   npm run verify -- --premerge                                  # the same two races, from verify
+//   node scripts/viewer-invariants.mjs --gate --sabotage-unmeasured  # must FAIL: records nothing
+//
+// A RACE THAT MEASURED TOO LITTLE FAILS THE RUN (GATE-MEASURES-1, 2026-10-12): the probe must have
+// run, and each race must carry the frames, in-window frames and crossing its grading needs — see
+// NEED below and `scripts/lib/measuredGate.mjs`. Before that, a run that recorded 0 frames said PASS.
 //
 // THE 337-369 s CARRIES ITS METHOD (GATE-WIRED-AND-CAUSED-1, 2026-09-05): TWO runs, each timed by
 // `verify` around the child process on this machine with the gate as the only thing running —
@@ -99,6 +104,10 @@ const SAB_LEADER = process.argv.includes("--sabotage-leader");
 const SAB_LINE = process.argv.includes("--sabotage-line");
 const SAB_PANSTEP = process.argv.includes("--sabotage-panstep");
 const SAB_TOOWIDE = process.argv.includes("--sabotage-toowide");
+// GATE-MEASURES-1: open `/race` DIRECTLY, without waiting for the test-aids answer — the entry this
+// harness used until 2026-10-12, under which the probe records nothing. It proves the gate FAILS on
+// a run that measured nothing (see `scripts/lib/measuredGate.mjs`); it can only make the gate red.
+const SAB_UNMEASURED = process.argv.includes("--sabotage-unmeasured");
 // RACE-JUDDER-1: measure DELIVERY instead of framing. Defaults off; the gate and the sweep are
 // unaffected, and the two arms' camera numbers are not comparable — see REAL_CLOCK's header.
 const REAL = process.argv.includes("--real-clock");
@@ -137,6 +146,7 @@ const SEEDS =
 // NUMBERS rather than as an error.
 import { HIS, setPath } from "./lib/hisArm.mjs";
 import { resolveTrackScope } from "./lib/trackScope.mjs";
+import { enterWithTestAidsOn, unmeasured, refuseUnmeasured } from "./lib/measuredGate.mjs";
 // `--set=key=value`, applied after the arm, so one build can be measured with a switch on and
 // off without rebuilding. Values parse as boolean, number or string, in that order.
 const CLI_SET = process.argv
@@ -480,7 +490,12 @@ async function runOne(page, geo, seed, arm, N) {
     }
   );
 
-  await page.goto(`${BASE}/race`, { waitUntil: "domcontentloaded" });
+  // GATE-MEASURES-1: the probe runs only while the test-aids switch is ON in THIS document, and the
+  // client holds it OFF until the server has answered. Opening `/race` directly mounted the race
+  // before the answer, so the gate recorded 0 frames and printed PASS (2026-10-12). The init script
+  // above runs on the `/` load too; the clock does not start until `__vStart` below.
+  if (SAB_UNMEASURED) await page.goto(`${BASE}/race`, { waitUntil: "domcontentloaded" });
+  else await enterWithTestAidsOn(page, { base: BASE, route: "/race" });
   await page.evaluate(() => window.__vStart && window.__vStart());
 
   // Run until the race has crossed the line, or the frame cap is hit.
@@ -821,6 +836,43 @@ const allEvents = [];
 const DUMPS = [];
 let hardErrors = 0;
 
+// ── WHAT ONE RACE MUST HAVE MEASURED BEFORE ITS "clean" MEANS ANYTHING (GATE-MEASURES-1) ────────
+//
+// On 2026-10-12 this gate printed `0 frames clean` for both races and then PASS. Each minimum below
+// is the least the gate's OWN grading needs to be able to fail at all — none is a quality bar:
+//   probe runs        the probe reports `active` only when a run started (`beginViewerProbe`); with
+//                     it off every count below is zero by construction.
+//   frames 2          invariant 4 is a step BETWEEN two consecutive frames.
+//   in-window 2       invariants 2, 3 and 6-leaderedge are graded only inside the run-in window, and
+//                     the acceptance sheet prints NOT SCORABLE without one; its worst-step item
+//                     again needs a pair.
+//   crossing 1        invariant 6's line half is graded on the crossing frame and skipped without it.
+const NEED = { "probe runs": 1, frames: 2, "in-window frames": 2, crossings: 1 };
+const NEED_WHY = {
+  "probe runs": "the viewer probe never started, so nothing below could be recorded",
+  frames: "invariant 4 compares two consecutive frames",
+  "in-window frames": "invariants 2, 3 and 6 are graded only between the endgame threshold and the crossing",
+  crossings: "invariant 6's line half is graded on the winner's crossing frame",
+};
+const unmeasuredRaces = [];
+/** One race's shortfalls against NEED, as plain sentences (none when it measured enough). */
+const shortOf = ({ track, seed, arm, p }) =>
+  unmeasured(
+    [
+      {
+        label: `${arm}/${track} seed ${seed}`,
+        have: {
+          "probe runs": p.active === true ? 1 : 0,
+          frames: p.frames,
+          "in-window frames": p.sheet?.win?.length ?? 0,
+          crossings: p.crossing ? 1 : 0,
+        },
+        need: NEED,
+      },
+    ],
+    NEED_WHY
+  );
+
 // ── THE WORK LIST, AND WHY IT CAN BE RUN IN PARALLEL ──────────────────────────────────────────
 //
 // Each page owns its OWN virtual clock, so N pages running at once cost wall-clock and nothing else:
@@ -892,8 +944,12 @@ async function worker() {
     if (PACE_OUT && r.pace)
       writeFileSync(PACE_OUT, JSON.stringify({ track: geo.id, seed, arm, pace: r.pace }, null, 1));
     for (const e of p.events) allEvents.push({ ...e, track: geo.id, seed, arm, n: N });
+    const short = shortOf({ track: geo.id, seed, arm, p });
+    if (short.length) unmeasuredRaces.push(...short);
     rows.push({
       track: geo.id, seed, arm, n: N, frames: p.frames,
+      probeActive: p.active === true,
+      windowFrames: p.sheet?.win?.length ?? 0,
       events: p.events.length, byInvariant: p.byInvariant,
       widest: p.widestCorridors, tightest: p.tightestCorridors,
       windowStates: p.windowStates ?? {},
@@ -905,7 +961,10 @@ async function worker() {
     if (JSON_OUT) flush();
     console.log(
       `${pos} ${geo.id.padEnd(15)} seed ${String(seed).padStart(3)} ${arm.padEnd(8)} n=${String(N).padStart(3)} ` +
-        `${String(p.frames).padStart(5)} frames  ${p.events.length ? `${p.events.length} VIOLATION(S)` : "clean"}` +
+        `${String(p.frames).padStart(5)} frames  ` +
+        (short.length ? "NOT MEASURED"
+        : p.events.length ? `${p.events.length} VIOLATION(S)`
+        : "clean") +
         (p.events.length ? `  [${Object.entries(p.byInvariant).map(([a, b]) => `${a} ${b}`).join(", ")}]` : "")
     );
   }
@@ -1210,10 +1269,14 @@ if (JSON_OUT) {
 }
 
 const dirtyRaces = new Set(allEvents.map((e) => `${e.arm}/${e.track}/${e.seed}`)).size;
+// GATE-MEASURES-1: a race that measured too little to judge is a failure, never a clean race.
+const notMeasured = refuseUnmeasured("viewer-invariants", unmeasuredRaces);
 console.log(
   `\nviewer-invariants: ${rows.length} race(s) in ${secs}s — ${allEvents.length} window violation(s) in ${dirtyRaces} race(s), ${crossEvents.length} crossing violation(s)` +
-    (hardErrors ? `, ${hardErrors} race(s) failed to run` : "")
+    (hardErrors ? `, ${hardErrors} race(s) failed to run` : "") +
+    (notMeasured ? `, ${new Set(unmeasuredRaces.map((s) => s.split(":")[0])).size} race(s) NOT MEASURED` : "")
 );
+if (notMeasured) process.exit(1);
 if (allEvents.length || crossEvents.length || hardErrors) {
   console.log(
     "A single catastrophic frame fails this guard. That is deliberate: a share cannot say which."

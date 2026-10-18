@@ -191,7 +191,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A12. BATTLE slowmo — global time scaling (not per-racer)
 
-- **Code**: [`battleSlowmo.js` → `advanceSlowmo`](../client/src/screens/RaceScreen/battleSlowmo.js#L37), called from [`index.jsx:859`](../client/src/screens/RaceScreen/index.jsx#L859).
+- **Code**: [`battleSlowmo.js` → `advanceSlowmo`](../client/src/screens/RaceScreen/battleSlowmo.js#L37), called from [`index.jsx:1034`](../client/src/screens/RaceScreen/index.jsx#L1034).
 - **What**: during `BATTLE_ZOOM` the **physics clock** (not an individual force) is scaled, slowing _all_ racers uniformly for cinematic effect. Affects `rawDt` feeding the step, with fade in/out.
 - **Magnitude**: `battleSlowmoFactor` **0.5** (half speed), `battleSlowmoFadeDuration` 0.3 s, min hold 2.0 s.
 - **Note**: a global multiplier on the step clock — it does not change relative ordering, so it is fairness-neutral but it does change every racer's instantaneous `t`-rate.

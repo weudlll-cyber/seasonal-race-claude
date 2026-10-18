@@ -805,6 +805,54 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 
 **React StrictMode rAF guard (2026-05-28):** React StrictMode double-mounts effects in development (mount → cleanup → mount). Without a cleanup guard, two concurrent rAF loops can run until the ref is overwritten on the second mount. Fix: `cancelled` flag set to `true` in the `useEffect` cleanup; the rAF callback checks `cancelled` before calling `requestAnimationFrame` again. See also Lesson 58.
 
+### Pause and resume (PAUSE-RESUME-1, 2026-10-13)
+
+The owner decided on 2026-10-13 that a running race can be paused and resumed — a Pause/Resume
+button under Cancel Race on the race screen, and the Space key — with everything standing still while
+paused and the race's outcome exactly the same as without the pause. It is a product feature, not a
+test aid.
+
+**One flag, one clock.** `client/src/screens/RaceScreen/raceClock.js` holds THE paused flag and turns
+the browser's frame time into race-screen time: `frameTime(rawTs)` returns `rawTs − pausedTotal`, or
+`null` while paused. The rAF loop reads its `ts` from it and does nothing at all on a `null` frame —
+no physics step, no camera, no effects, no draw — so the last picture stays on the canvas. Every
+wall-clock site on the screen reads that `ts` and is pause-aware without being touched: the ceremony
+clock, the race start stamp (and everything that subtracts from it — the camera's `raceElapsed`, the
+drawn race timer, the result's `elapsedTime`), the camera's own clock, the battle slow-motion release,
+the final-lap stamp, the dust and the track lights. The three `setTimeout`s (the state-overlay line,
+the finish hand-over and the winner card) go through the clock's pause-aware `setTimeout`, and the
+ceremony skip reads `timeNow()`. A race that never pauses has `pausedTotal = 0` and sees exactly the
+timestamps it saw before.
+
+**The physics is untouched.** It steps only inside the loop, in fixed `FIXED_DT` steps, so a pause
+cannot change a finish order or a finish time; and because the paused time is taken out of the clock,
+`elapsedTime` (stored as the history's `duration`) does not include it either. The hidden-tab path
+(the 50 ms catch-up cap above) stops only the physics, so it is not the mechanism.
+
+**The boundary.** Available from the countdown until the last racer crosses (`PHASE.FINISHED`); the
+ending after that and the result screen have no pause. The owner decided on 2026-10-13, when he
+accepted it, that this scope stays: pause does not need to work in the ending.
+
+### The app's fullscreen (FULLSCREEN-USEFUL-1, built 2026-10-17, accepted by the owner and merged 2026-10-18)
+
+The race screen's fullscreen button (`toggleFullscreen`) puts the screen element into the browser's
+fullscreen. Until 2026-10-17 that changed only the padding, so the picture — a fixed 16:9 canvas sized
+by width, beside the 210 px standings column — gained only height it could not use. The owner decided
+on 2026-10-17 to try a different fullscreen, and it is built (unmerged, his eye owed — the
+FULLSCREEN-USEFUL-1 row in BACKLOG.md PART ONE):
+
+- **The picture** is the largest 16:9 box that fits inside the 6 px fullscreen padding, centred both
+  ways, black around it. Only the wrapper's CSS width changes; the canvas store and the
+  one-coordinate rule are untouched, so everything inside the wrapper scales with it.
+- **The standings column** leaves the layout, waits off the right edge at full height, and slides in
+  over the picture when the pointer reaches a thin strip along the right edge; it closes a short delay
+  after the pointer leaves it. By touch, a tap on the strip opens it and a tap outside closes it.
+- It is driven by the `race-layout--fullscreen` / `race-layout--hud-open` classes from the component's
+  `isFullscreen` state, not by `:fullscreen` alone; outside the app's fullscreen nothing changes, and
+  leaving fullscreen by any door closes the drawer. The browser's own fullscreen (F11) is not the
+  app's fullscreen and keeps the normal layout. The strip width, slide time and close delay are
+  constants in `RaceScreen/index.jsx` (`FS_HUD_*`), not settings; the CSS is `RaceScreen.css`.
+
 ## Camera System
 
 Canonical reference: **[CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md)**. The description that used to sit
@@ -906,7 +954,7 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 | Sub-PR                         | Scope                                                                                                                                                                                                                                                                                                                         |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ✅ VRE-1 — Foundation          | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration.                                                                                                                                                                                                             |
-| ✅ VRE-2 — Class Editor        | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`.                               |
+| ✅ VRE-2 — Class Editor        | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right (one above the other below 900 px, DEVSCREEN-MOBILE-1). `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`.                               |
 | ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 20 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
 | ✅ VRE-4 — Race Integration    | `trailResolver.js` resolves per-racer emitter at race start. RaceScreen rAF loop drives spawn/update/render via emitter; native trail fallback (trailFactory) when no class matches. `trackSurfaceClasses` added to raceData in SetupScreen.                                                                                  |
 

@@ -333,3 +333,12 @@
   border-color: #4a4a5a;
   color: var(--color-text);
 }
+
+/* A phone (DEVSCREEN-MOBILE-1): the dialog is narrower than its sliders' natural width, so a
+   slider gives up width instead of pushing its value past the dialog's right edge. Same breakpoint
+   as the Dev Screen's narrow layout (DevScreen.module.css). */
+@media (max-width: 899.98px) {
+  .slider {
+    min-width: 0;
+  }
+}

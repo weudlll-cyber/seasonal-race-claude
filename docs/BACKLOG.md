@@ -434,7 +434,7 @@ in the reports named; this is the map, not a second home.
 
 | what | where it stands, at source |
 | --- | --- |
-| **Cancel Race** — the open half of PR-G | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** ★ **This row was half wrong and the correction is the finding:** there is no `cancelRace` symbol (0 hits, all spellings), but a control that ends the race and returns to Setup ALREADY existed in the race HUD. What it did not do was leave FULLSCREEN, and it is the only screen that can. The fullscreen half is wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`, re-verified 2026-09-05. |
+| **Cancel Race** — the open half of PR-G | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** ★ **This row was half wrong and the correction is the finding:** there is no `cancelRace` symbol (0 hits, all spellings), but a control that ends the race and returns to Setup ALREADY existed in the race HUD. What it did not do was leave FULLSCREEN, and it is the only screen that can. The fullscreen half is wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`, re-verified 2026-09-05 *(on 2026-10-17 at `:1486` and `:1488`, inside `toggleFullscreen`; since FULLSCREEN-USEFUL-1, 2026-10-17, at `:1563` and `:1565`)*. |
 | **TLH-3** — offline fallback + status banner | **BANNER BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** `defaultTracks.js` still does not exist and was not created. ★ **The FALLBACK was already in the tree** — the track list falls back to `getCachedServerTracks()`, the geometry comes from localStorage, results come from sessionStorage, and the built-in racer types are static exports. What was missing was the TELLING: every failure was announced to the CONSOLE. So only the banner was built, per the brief's own rule against inventing work to fill a piece. |
 | **A short race identifier to replace the seed** | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed, AND ONE DECISION IS HIS.** All three addresses re-verified: `SetupScreen.jsx:533` fixes the plan; `RaceScreen/index.jsx:476` and `:483` gathered config from the HOST'S storage, which is why one seed on two machines was two races. The identifier encodes all nine engine inputs EXACTLY — the config as a diff against the shipped defaults, which is lossless because those defaults are in the build, with a build stamp that REFUSES a foreign build rather than reproducing it wrongly. ★ **IT IS NOT TYPABLE, and that is his call, not a defect to fix by making it lossy:** measured at **210 characters for 4 racers, 450 for 20, 743 for 40** on shipped defaults. |
 | **The comeback BEATS reaching the camera** | **MEASURED 2026-09-05 — D33's "measure first" is DONE and the decision is now his.** `comebackDetector.js:64-75` still keeps `role === 'comebacker'` and drops the `beats` array, and the beats were deliberately NOT passed through. Over N=40 the plan wrote 74 comebackers and the camera showed 11: it never names the wrong racer (0 of 11) and is early EVERY time (11 of 11, median 9.90 s before the resolve beat). The beats die in the DIRECTOR'S weighted contest, not in the detector. [COMEBACK-BEATS-1](../reports/night/COMEBACK-BEATS-1.md). |
@@ -782,8 +782,9 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★★ **THE AUTH QUESTION, NARROWED TO TWO FALSIFIABLE ITEMS.** "Admin auth hardened for
       public-facing use" was an open row with no bar, which is why it could not be settled. The
       decisions behind it are settled; what is measurable is exactly two things:
-      **(1) CSP is switched off** — `server/src/app.js:37` runs
-      `helmet({ contentSecurityPolicy: false })`; **(2) no written pre-exposure bar exists** anywhere
+      **(1) ~~CSP is switched off~~ — ANSWERED 2026-10-12:** the Content-Security-Policy is on
+      (`server/src/csp.js`, AUDIT-1 D1, accepted by the owner and merged with review/2026-10-12;
+      PART TWO); **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
       **His word plus a purchase, and then four build items.**
@@ -827,7 +828,7 @@ are in PART TWO with what closed them; these are the ones still standing.
       - the first run on the VPS with the owner, which tests what a local Docker cannot (system
         detection, Docker install, ufw, unattended-upgrades, the DNS check, the real certificate,
         the systemd timers, alert e-mails);
-      - the two auth items above (CSP off; no written pre-exposure bar).
+      - the written pre-exposure bar (auth item 2 above; item 1, the CSP, is on since 2026-10-12).
 - [ ] ★ **COPY THE BACKUPS OFF THE SERVER (VPS-INSTALL-1, 2026-10-07).** The install makes a backup
       every day into `/var/backups/racearena` on the SAME disk as the data, keeping 14 days. A copy
       on the same disk does not survive losing the disk. Nothing copies them elsewhere yet. The
@@ -844,6 +845,23 @@ are in PART TWO with what closed them; these are the ones still standing.
 
       **verify:** on the VPS, `sshd -T | grep -E 'passwordauthentication|permitrootlogin'` prints
       `passwordauthentication no` and `permitrootlogin no`.
+- [ ] **OFFLINE-1 — when the venue's connection drops, three things a viewer or operator notices
+      (opened 2026-10-18).** Measured on the production build with throwaway data
+      ([reports/release/OFFLINE-1.md](../reports/release/OFFLINE-1.md)): **no result was lost and no
+      race stopped** in eight runs (setup, countdown, mid-race, last crossing; the connection blocked
+      and the server killed), and every race was stored once after recovery without a reload — the
+      local-first rule (`client/src/modules/raceHistory.js:9-14`) holds. What is open, report only,
+      nothing built:
+      **F1** a race started while the server is unreachable is drawn without its track background,
+      and `client/src/modules/track-effects/bgImageCache.js` keeps the failed load for the life of
+      the page, so later races on that track stay without it until a reload.
+      **F2** after the server is back, the red banner and the pending race wait for the app's next
+      request (no polling, by design); the result screen goes on saying the server is not answering.
+      **F3** during an outage nothing is shown until the race ends; the banner first appears on the
+      result screen.
+      Which of these, if any, should change is the owner's call.
+      *(verify: decided per finding; for F1, a race started offline then another after recovery on
+      the same page, with the background on the second)*
 
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
@@ -1063,7 +1081,7 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765` *(as of 2026-09-02; on 2026-10-17 they are at `:1486` and `:1488`, inside `toggleFullscreen`, and since FULLSCREEN-USEFUL-1 the same day at `:1563` and `:1565`)*; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
 
 ---
 
@@ -1306,12 +1324,9 @@ already-settled questions.
 
 ### Phase B (Wiring Gaps + UX Improvements)
 
-- **B-UX-Pause** — Pause + resume race
-  - During a running race, pause button → freeze rAF loop, resume → continue
-  - Explicitly NOT part of the camera phase (PR-G only implements Cancel Race with confirm dialog)
-  - Priority: after camera phase
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
+- ~~**B-UX-Pause** — Pause + resume race~~ — **BUILT 2026-10-13 on branch `feat/pause-resume`,
+  accepted by the owner the same day and merged with review/2026-10-13.** Moved to PART TWO, *Pause and resume a running race*, with its
+  original description.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
   **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
@@ -1344,7 +1359,9 @@ already-settled questions.
 
 **Refactor chunks (high structural debt — addressed in upcoming phases):**
 
-- **Q-19 — `TrackEditor.effects.test.jsx` flaky** — ★★ **MEASURED 2026-09-24: 0 failures in 20 full
+- ~~**Q-19 — `TrackEditor.effects.test.jsx` flaky**~~ — ✅ **CLOSED 2026-10-13 AS FIXED, by the owner's
+  decision on the history in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §3** (PART TWO has the
+  closing entry). Before that: ★★ **MEASURED 2026-09-24: 0 failures in 20 full
   parallel suite runs. NARROWED, NOT CLOSED.**
   The measurement this item has been waiting on since 2026-08-23 has been taken: twenty full client
   suite runs against an unchanged tree, counting, no retries. **20 GREEN, and the suspect file did
@@ -1477,7 +1494,14 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "RangeSliderSection" -- client/src` still returns nothing.
 
-- **V-1** — PlayerSetup B-1 loading-saved-lists bug. **ITS BLOCKER IS GONE — B-1 SHIPPED** in the
+★ **2026-10-13 — the owner closed V-1, V-2, V-6, V-7 and V-8 as obsolete or covered, and kept V-5 and
+V-9 as one short sitting with him** (row *Owner sitting: V-5 backup/restore/reset and V-9
+fullscreen*, held and closed 2026-10-17 — PART TWO; the reasons for each id are in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2).
+Each entry below is marked with its fate; the text under it is the history.
+
+- ~~**V-1**~~ — ✅ **CLOSED 2026-10-13, obsolete:** the code it checks is gone — saved player lists
+  became server-side player groups (`999f45ed`, `aea89b22`), covered by `playerGroups.test.jsx`.
+  PlayerSetup B-1 loading-saved-lists bug. **ITS BLOCKER IS GONE — B-1 SHIPPED** in the
   B-Wave (PR #25, master `697e081`), recorded in *Completed Items* above. **So this is no longer
   "cannot start"; it is an unperformed verification of shipped work**, which is a different and much
   cheaper thing. Re-sorted 2026-08-23 (BACKLOG-SORT-42).
@@ -1485,7 +1509,8 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** it is a manual UI check of shipped work. Waiting on somebody performing it.
 
-- **V-2** — TrackSelector B-2 custom track behavior. **ITS BLOCKER IS GONE — B-2 IS CLOSED**
+- ~~**V-2**~~ — ✅ **CLOSED 2026-10-13, covered:** `SetupScreen.test.jsx` checks the refusal of a track
+  whose geometry is missing. TrackSelector B-2 custom track behavior. **ITS BLOCKER IS GONE — B-2 IS CLOSED**
   (`5bde5a94`, QUIET-FAILURES-1); see the struck entry above. **This is now an unperformed
   verification of shipped work:** select a track whose geometry is missing and confirm Start is
   refused with a reason rather than starting the wrong race mode. Re-sorted 2026-08-23
@@ -1503,21 +1528,28 @@ already-settled questions.
   setting; the podium is three places everywhere (`PODIUM_PLACES`, `shared/podium.mjs`). The verify
   above now finds nothing, which is the point.
 
-- **V-5** — System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
+- ~~**V-5**~~ — ✅ **CLOSED 2026-10-17 by the owner sitting** (PART TWO, *Owner sitting: V-5 and V-9*):
+  backup, import and reset were performed on the production preview at `78f1860e` and did what their
+  texts say. System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
   downstream of B-5** above. *(Its "data loss risk" note still stands as the REASON B-5 is worth
   doing, which is why this line is kept rather than struck.)*
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** not independently open — it lives or dies with B-5 above.
 
-- **V-6** — Multiple dev panel sections — visual verification
+- ~~**V-6**~~ — ✅ **CLOSED 2026-10-13, obsolete:** the Dev Screen was rebuilt (DEVSCREEN-CHAPTERS-1), the
+  owner looked at it and accepted it on 2026-10-05, and `devScreenChapters.guard.test.jsx` holds every
+  control in place. Multiple dev panel sections — visual verification
 
-- **V-7** — Physics + collision behavior — smoke test
+- ~~**V-7**~~ — ✅ **CLOSED 2026-10-13, covered:** `goldenRealArm`, `repeatRace`, `raceStep`, the avoidance
+  tests and the fingerprint record. Physics + collision behavior — smoke test
 
-- **V-8** — localStorage persistence edge cases — stress test
+- ~~**V-8**~~ — ✅ **CLOSED 2026-10-13, obsolete as written:** it names no specific edge case;
+  `storage.test.js` covers quota and corrupt JSON. localStorage persistence edge cases — stress test
 
-- **V-9** — Fullscreen toggle — functionally unverified
+- ~~**V-9**~~ — ✅ **CLOSED 2026-10-17 by the owner sitting** (PART TWO, *Owner sitting: V-5 and V-9*):
+  pause works in fullscreen, and Cancel Race leaves the app's own fullscreen. Fullscreen toggle — functionally unverified
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired at `RaceScreen/index.jsx:1763` and `:1765`, so what is unverified is the behaviour, not the existence.)*
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired — in `toggleFullscreen`, `RaceScreen/index.jsx:1561`, at `:1563` and `:1565`, re-cited 2026-10-17 after FULLSCREEN-USEFUL-1 (`:1484`, `:1486`, `:1488` before it); the verdict named `:1763` and `:1765`, which moved — so what is unverified is the behaviour, not the existence.)* ★ **All four are closed:** V-6 on 2026-10-13, V-9 by the owner sitting of 2026-10-17.
 
 ### Phase T (Tooltip Retrofit)
 
@@ -1753,7 +1785,7 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 
 - Strecken-Wähler (track-picker diagnose tool) Phase 2 — optional extension of the completed Phase 1 (closed-track selection with per-track caps from finish math); scope undefined, non-mandatory
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (all five):** the scope of each is undecided, which is the section's own name. Waiting on somebody deciding the scope. *(Phase 5, i18n, multi-tenant and mobile tuning are duplicated as planned work in Phases 5–7 above; that overlap is recorded, not resolved here.)*
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (all five):** the scope of each is undecided, which is the section's own name. Waiting on somebody deciding the scope. *(Phase 5, i18n, multi-tenant and mobile tuning are duplicated as planned work in Phases 5–7 above; that overlap is recorded, not resolved here.)* *(i18n: decided 2026-10-18 — the owner decided that the whole game stays English-only, so there is nothing to plan; see the closed i18n entry in PART TWO.)*
 
 ---
 
@@ -1836,6 +1868,19 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
+## Found while writing the operator guide's monitoring section (2026-10-18)
+
+- [ ] **`HEAD /api/health` answers `401`; only `GET` is public.** The public allow-list matches the
+      method exactly (`server/src/auth/guards.js:14-19`, compared at `:152-158`), while the same
+      file states that HEAD must inherit GET's policy (`:114-119`) — which holds for `ROUTE_POLICY`
+      and not for `PUBLIC_PATHS`. Checked 2026-10-18 by running the real `createRequireAuth` with a
+      request of each method: `GET 200`, `HEAD 401`. An uptime checker that sends `HEAD` (some do
+      unless told otherwise) reports a healthy server as failing. Documented for operators in
+      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2, *Watching it from outside* ("configure the check as a
+      `GET` request"). Not changed: it touches the auth guard, and whether HEAD joins the allow-list
+      is a decision. *(verify: either `HEAD /api/health` answers 200 with a test pinning it, or the
+      guide's GET instruction is the accepted answer and this row closes on that)*
+
 ## AUDIT-1 — what the audit of 2026-10-09 leaves open
 
 ★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
@@ -1850,67 +1895,11 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       Until then it points to GitHub's private vulnerability reporting, which is switched on.
       *(verify: SECURITY.md names a contact address at the project's domain)*
 
-### Visible changes — his eye
-
-- [ ] **AUDIT-1 A8-01 · Dev Screen accessibility:** colour contrast fails on the active tier toggle
-      and the reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2).
-      *(verify: `browser-audit.mjs <clone> <out> a8` reports 0 rules on `/dev`)*
-- [ ] **AUDIT-1 A8-02 · Track Editor:** two `<select>` elements without an accessible name.
-      *(verify: the same run reports 0 on `/track-editor`)*
-- [ ] **AUDIT-1 A8-03 · the setup screen is 3 px wider than a 390 px phone.** *(verify: the same run
-      reports no overflow at 390)*
-- [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
-      TrackManager), frozen by the language allowlist. *(verify: `check-language-closed` allowlist
-      counts for the three files are 0)*
-- [ ] **AUDIT-1 A2 · Dev Screen info texts that contradict the shipped settings** — "shipped OFF"
-      for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
-      -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
-      *(verify: each text read against `defaults.js`)*
-
 ### Records and decisions
 
 - [ ] **AUDIT-1 A7-03 · major upgrades — after v1.0.0, one package at a time** (decided 2026-10-12):
       React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13 — each a migration, none a security
       fix today. *(verify: a decision per package)*
-
-### Found on 2026-10-12 while re-measuring A2-50
-
-- [ ] **The `viewer-invariants` gate records ZERO frames and still prints PASS.** Run as shipped
-      (`node scripts/viewer-invariants.mjs --gate`, in a fresh clone, isolated ports 4461/4462) it
-      printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, "no in-window frames
-      were recorded", both sheet rows NOT SCORABLE — and *"Every frame of every race swept satisfied
-      every invariant. PASS"*, exit 0. The cause, read from the code: the harness opens `/race`
-      directly, the race camera calls `beginViewerProbe` on mount, and at that moment the test-aids
-      answer has not arrived, so `testAidsOn()` is still false and the probe never runs — the switch
-      is OFF-until-answered by design (TEST-AIDS-1). Loading `/` first, waiting for the
-      `/api/settings/test-aids` answer and entering `/race` inside the same page recorded 6,128 and
-      5,190 frames (a scratch change, not committed). Two things are owed: the harness waits for the
-      answer, and **a run that records no frames FAILS** instead of passing. This gate runs inside
-      `npm run verify -- --premerge`. *(verify: `--gate` prints a non-zero frame count for both
-      races, and a run forced to record nothing exits non-zero)*
-
-### Carried over from OPEN.md §2-§5 (A3-25, 2026-10-12)
-
-Three items OPEN.md showed as open that no row backed. Each is still open at the tree, so each gets
-a row here; the detail stays where it already lives in this part.
-
-- [ ] **Pause and resume a running race (`B-UX-Pause`).** Unbuilt: there is no pause or resume path in
-      `client/src/screens/RaceScreen/` (searched 2026-10-12). Its description and priority are under
-      *Phase B* in this part. *(verify: in the browser, pausing freezes the race loop and resuming
-      continues the same race)*
-- [ ] **The Phase V verification sittings — his eye.** Manual checks of shipped work that nobody has
-      performed: loading a saved player list (`V-1`), a track with missing geometry being refused
-      (`V-2`), backup → restore → reset end to end (`V-5`/`B-5`), the Dev Screen sections (`V-6`),
-      physics and collisions (`V-7`), storage edge cases (`V-8`), fullscreen (`V-9`). Each entry is
-      in this part under its id. *(verify: each id recorded as performed, with the date and the
-      result)*
-- [ ] **`Q-19` — the `TrackEditor.effects.test.jsx` flake, NARROWED and not closed.** 0 failures in 20
-      local full-suite runs (2026-09-24), and 0 in the 62 CI runs since then in which the client suite
-      ran (all 62 green; the 4 red CI runs of that period failed in the audit gate or the script
-      suite, not here) — 0 in 82. A one-in-five flake is refuted; a one-in-fifty one would still be
-      missed 19% of the time (0.98^82). Its own rule stands: close it on a much larger N, or when the
-      file goes. The entry is under *Phase Q* in this part. *(verify: a recorded N at which a
-      one-in-fifty flake would be missed less than 5% of the time — 150 runs — with 0 failures)*
 
 ---
 
@@ -1923,6 +1912,258 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **FULLSCREEN-USEFUL-1 — a fullscreen the race picture can use — ACCEPTED 2026-10-18 AND MERGED.**
+      The owner looked at branch `feat/fullscreen-useful` (`b869a50e`) on 2026-10-18 and accepted it. The facts of 2026-10-17: in the race
+      screen's own fullscreen the race picture was exactly as large as outside it. The picture is a
+      fixed 16:9 canvas sized by WIDTH (`RaceScreen.css`, `.race-canvas` width 100% / height auto), the
+      grid kept the 210 px standings column (`.race-layout`, `1fr 210px`) and the screen is
+      top-aligned (`.screen--race`, `align-items: flex-start`); fullscreen changed only the padding
+      (`.screen--race:fullscreen`). So fullscreen gained only height, which the picture cannot use; on
+      the owner's window that left a dark band of roughly a quarter of the height below the picture.
+      The owner decided on 2026-10-17 to try this: in fullscreen the standings column is hidden off the
+      right edge and slides in when the mouse reaches the right edge.
+      **Built, only while the app's fullscreen is active** (the `isFullscreen` state of
+      `RaceScreen/index.jsx`, set by its `fullscreenchange` listener, puts `race-layout--fullscreen` on
+      the layout): the picture is the largest 16:9 box inside the 6 px fullscreen padding, centred,
+      black around it; the standings column is fixed to the right edge at full height, off-screen, and
+      slides in over the picture (`race-layout--hud-open`) when the pointer enters a 16 px strip along
+      the right edge, stays while the pointer is over it, and slides out 800 ms after the pointer
+      leaves it (slide 200 ms) — by touch, a tap on the strip opens it and a tap outside closes it.
+      Leaving fullscreen by any door closes it. Outside the app's fullscreen, and in F11, nothing
+      changes (0 differing pixels at 1280x720 and 1920x1080, frozen page). Measured in headless
+      Chromium in real fullscreen: at 1920x1080 the picture goes from 1678x945 CSS px (125 px empty
+      below) to 1897x1068; at 1909x1168 from 1667x939 (219 px empty below) to 1897x1068, 50 px black
+      above and below. Held by `fullscreenDrawer.test.jsx` (component) and
+      `client/e2e/race-fullscreen.spec.js` (Browser gate).
+      *(verify: the owner looks at the race in the app's fullscreen and accepts or rejects it — accepted 2026-10-18)*
+
+- [x] **Owner sitting: V-5 backup/restore/reset and V-9 fullscreen — HELD AND CLOSED 2026-10-17.**
+      The owner performed both on the production preview (4173) at `78f1860e`. **V-5:** "Export
+      Settings JSON" downloaded a backup file; he changed one value under *The race* → *Defaults for a
+      new race*, imported the file with "Import Settings JSON", and the old value was back. "Reset All
+      Settings to Defaults", in a separate private browser window, showed the confirmation dialog and
+      the done message (`SystemSettings.jsx`, `handleReset` at `:77`); after the reload, tracks and
+      racers were present and a race ran. **V-9:** pause works in fullscreen. Cancel Race while in the
+      app's own fullscreen (the race screen's fullscreen button, `toggleFullscreen`,
+      `RaceScreen/index.jsx:1561` since FULLSCREEN-USEFUL-1, `:1484` at the sitting) leaves fullscreen (`cancelRace`'s `exitFullscreen`). In the
+      browser's own fullscreen (F11) it stays in fullscreen — a page cannot leave browser fullscreen, so
+      this is expected and not a defect. The *Phase V* entries `V-5` and `V-9` in this part are marked
+      closed by this sitting. The row as it stood: *"Owner sitting: V-5 backup/restore/reset and V-9
+      fullscreen (about 15 minutes)"* — decided 2026-10-13, after `V-1`, `V-2`, `V-6`, `V-7` and `V-8`
+      were closed as obsolete or covered ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2).
+
+- [x] **Pause and resume a running race (`B-UX-Pause`) — BUILT 2026-10-13 on branch
+      `feat/pause-resume`; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged with
+      it.** ★ **Scope decided 2026-10-13:** pause does NOT need to work in the ending after the last
+      racer crosses; the built scope — from the countdown until the last crossing — stays. The owner decided on 2026-10-13 that he
+      wants it: a Pause/Resume button beside Cancel Race and Fullscreen, and the Space key; while
+      paused everything stands still (racers, camera, effects, the race clock) under a large
+      semi-transparent "PAUSED"; available in the countdown and the race, not on the result screen;
+      the outcome exactly the same as without the pause; a product feature, not behind the test-aids
+      switch. **Built:** one paused flag and one clock, `client/src/screens/RaceScreen/raceClock.js` —
+      the frame loop reads its time from it and does nothing while paused, so every wall-clock site
+      on the race screen stops with it, and the screen's three timers are its pause-aware ones
+      (docs/ARCHITECTURE.md, *Pause and resume*). Available until the last racer crosses; the ending
+      after that has no pause. **Measured:** twelve races on all ten shipped tracks, each paused four
+      times (countdown, early, mid-race, near the finish) through the real screen with an injected
+      frame clock, give the same finish order, finish times, `elapsedTime` and stored history entry
+      as the same race unpaused; on one closed and one open track every frame drawn after a resume
+      is the frame the unpaused race drew (`pauseDeterminismClosed.test.jsx`, `pauseDeterminismOpen.test.jsx`,
+      `pauseResume.test.jsx`, on the harness `client/src/test/pauseRaceHarness.jsx`). A race that never pauses is
+      byte-identical to before. *Its original Phase B entry (2026-05-03): "During a running race,
+      pause button → freeze rAF loop, resume → continue. Explicitly NOT part of the camera phase.
+      Priority: after camera phase." — with the BACKLOG-VERDICTS-1 verdict of 2026-09-02, unbuilt,
+      and the OLD-ITEMS-1 proposal of 2026-10-12 to ask him, which he answered on 2026-10-13.*
+      *(verify: in the browser, Pause or Space during a race freezes the picture and the race clock;
+      Resume continues the same race, and its result equals the same seed unpaused)*
+- [x] **`Q-19` — the `TrackEditor.effects.test.jsx` flake — CLOSED 2026-10-13 AS FIXED, by the owner's
+      decision on the history in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §3.** Both causes
+      ever named were fixed in code — `vi.unstubAllGlobals()` in `trackLoader.test.js` (`00e09ba0`,
+      2026-05-02) and the FileReader spy race (`ac8d50c5`, 2026-06-08); the last recorded failure is
+      2026-05-16; 0 failures in 102 runs since (20 full-suite runs 2026-09-24, 62 CI runs, 20 runs of
+      the file alone 2026-10-12). The row's own 150-run rule is set aside by that decision, not met.
+      The row as it stood: *"`Q-19` — the `TrackEditor.effects.test.jsx` flake, NARROWED and not
+      closed — 0 in 82 … close it on a much larger N, or when the file goes."*
+
+- [x] **The Phase V verification sittings — NARROWED 2026-10-13 by the owner's decision.** `V-1`
+      (obsolete: saved lists became server-side player groups), `V-2` (covered:
+      `SetupScreen.test.jsx`), `V-6` (obsolete: the Dev Screen was rebuilt and accepted on
+      2026-10-05, held by its chapter guard), `V-7` (covered: the golden, repeat, step and avoidance
+      tests and the fingerprint record) and `V-8` (obsolete as written; `storage.test.js` covers quota
+      and corrupt JSON) are closed — reasons in [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2.
+      `V-5` and `V-9` stay open as one PART ONE row, *Owner sitting: V-5 backup/restore/reset and V-9
+      fullscreen (about 15 minutes)*.
+- [x] **The Dev Screen cuts its group cards off on a narrow window — BUILT 2026-10-13 on branch
+      `feat/devscreen-mobile`; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged
+      with it.** Observed by the owner on 2026-10-12
+      while looking at review/2026-10-12: in a narrow window the Player groups cards were cut off at
+      the right, with no horizontal scroll to reach the rest. **Decided by the owner on 2026-10-13:
+      the Dev Screen must work on a smartphone, and therefore on a tablet.** The cause: list rows did
+      not wrap, and the chapter column (`overflow-y: auto`, so sideways `auto` too) scrolled sideways
+      with its scrollbar at the chapter's foot — measured on master, rows were cut off from a
+      1,056 px window down. **Built:** below 1280 px every flex row in a chapter wraps and tables
+      scroll inside their own box; below 900 px the sidebar is a sticky top bar whose Menu holds the
+      view switch, the chapters, Back to Setup and Log out, the chapter is one column, and buttons
+      and fields are at least 44 px high. At 1280 px and wider nothing changes (pixel compare of
+      every chapter, both views: 0, apart from three spots that also differ between two runs of
+      master). Held by `client/e2e/devscreen-narrow.spec.js` in the Browser gate (390 and 768 px,
+      All and Operator view, every design control reachable, each Player groups card on screen;
+      sabotaged red twice). Breakpoints, menu and measurements:
+      [DEVSCREEN-CHAPTERS-1](../reports/evolution/DEVSCREEN-CHAPTERS-1.md), "Phones and tablets".
+      *(verify: the owner's look on a phone or a narrow window — done 2026-10-13, accepted)*
+- [x] **Dev Screen backup and reset texts corrected — BUILT 2026-10-13 on branch
+      fix/backup-reset-texts; ACCEPTED by the owner on 2026-10-13 on review/2026-10-13, and merged
+      with it.** The owner decided on 2026-10-13 that the
+      *Backup and reset* texts state what the browser backup and the reset really cover and point
+      to the server backup. The card description, the reset card, the reset confirmation, the reset
+      alert and the export, import and reset info texts now say that the export holds only the
+      settings this browser stores (`exportAllStorage`, `client/src/modules/storage/storage.js`),
+      that the reset wipes those and writes back the race defaults and an empty race history list,
+      and that tracks, racers, player groups and brands live on the server and are backed up with
+      `npm run backup` (source install) or `racearena backup` (VPS install), naming
+      [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) §2 *Backups*. Text only; no behaviour moved. Pinned by
+      `SystemSettings.texts.test.jsx`. The `V-5` sitting in the Phase V row is unaffected — it is
+      still owed. Source: [OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md), the `V-5` finding.
+- [x] **Brand logo sized to the race picture — BUILT 2026-10-13 on branch fix/brand-logo-scale and
+      MERGED the same day (the owner asked that day for it to be finished and merged).** Observed by the owner on 2026-10-13: in phone mode (Chrome device
+      mode, iPhone 12 Pro) the race screen's brand logo was far too large, about a third of the race
+      picture. **The cause:** the corner logo (`BrandLogoOverlay.jsx`, a DOM `<img>` over the canvas,
+      not a canvas draw) took the profile's `logoMaxHeight` in CSS pixels at every size, while the
+      picture shrinks with the window — measured in Chromium at a 390 px window, a 90 px logo on a
+      370x209 picture, 43% of its height. **Built:** the logo's height is a proportion of the
+      picture's shorter side, capped at `logoMaxHeight`, so it is today's size on every desktop
+      picture and proportionally smaller below; the rule and its number live in
+      `client/src/screens/RaceScreen/brandLogoSize.js`, the picture is measured from the overlay's
+      parent and followed with a `ResizeObserver`. The corner and margin were already percentages of
+      the picture (COORD-SYSTEM-1) and stay so. No new setting. **Measured:** pixel compare of the
+      race picture with only the logo shown, before and after, at 1920 and 1280 px windows: 0
+      differing pixels (at 1280 the same tree also produced a second, 4,255-pixel variant inside the
+      logo between two runs, so that noise is not the change); at 390 px the logo goes from 90x90 to
+      34.5x34.5 CSS px, 43% to 17% of the picture's height. Held by `BrandLogoOverlay.test.jsx`
+      (sabotaged red) and an upper-bound assertion in `overlayGeometry.test.js`. All four
+      fingerprints reproduce their record. **The other two brand logos were checked and need no
+      change** (measured in Chromium, 2026-10-13): the result screen's top-left logo is hidden by
+      `ResultScreen.css`'s narrow-viewport media query, so at a 390x844 window there is no logo
+      (none at 768x1024 either); where it shows (820x1180, 844x390, 1024x768, 1280x720, 1920x1080)
+      it is 210x210 CSS px on a results card that is 583 px tall at every one of those sizes, so its
+      share of the card is the desktop share. The opening brand card's logo is sized in percentages
+      of the race picture: 86.9 px on a 370x209 picture at 390x844 (41.6%), 244.8 px on a
+      1038x585 picture at 1280x720 (41.9%) — already proportional. The Dev Screen's *Logo Size*
+      info text now says the size applies on a desktop-size screen and the logo is drawn
+      proportionally smaller on a smaller one (`controlInfo.js`, with its DEVSCREEN-CHAPTERS-1 row).
+      **Noticed, not built:** on a phone held sideways (844x390) the whole results card (583 px
+      tall) does not fit the window and its title is clipped above the top edge — a layout question
+      for the result screen as a whole, not a logo-size one. *(verify: the owner's look in phone
+      mode and on a desktop window)*
+
+- [x] **The `viewer-invariants` gate records ZERO frames and still prints PASS — CLOSED 2026-10-12
+      (fix/viewer-invariants-gate).** Found while re-measuring A2-50: run as shipped, `--gate`
+      printed `city-circuit … 0 frames clean`, `space-sprint … 0 frames clean`, both sheet rows NOT
+      SCORABLE, and PASS, exit 0 — the harness opened `/race` directly, `beginViewerProbe` ran on
+      mount before the `/api/settings/test-aids` answer, `testAidsOn()` was still false, and the
+      probe never started. **Both owed things are done, through one shared helper,
+      `scripts/lib/measuredGate.mjs`:** (a) `enterWithTestAidsOn` loads `/`, waits for the switch's
+      answer and for the page to show it applied (the Quick Test button), then enters `/race` by
+      client-side navigation in the same document — WAIT rather than SET, because the client has no
+      outside door to the switch and adding one would ship a test door; (b) `unmeasured` /
+      `refuseUnmeasured` fail any race short of what the gate's own grading needs — the probe
+      running, 2 frames (invariant 4 is a step), 2 in-window frames (invariants 2, 3, 6 and the
+      sheet), the crossing (invariant 6's line half). **Measured on master + the fix** (city-circuit
+      and space-sprint, seed 9, shipped arm): **6,128 and 5,190 frames, 356 and 275 in-window, both
+      crossings recorded, 0 violations of every invariant, PASS, exit 0** (429 s); the sheet as
+      A2-50 recorded it (items 2 and 9 ACC on city-circuit). **Forced to record nothing**
+      (`--sabotage-unmeasured`, the old direct entry): `0 frames  NOT MEASURED` on both races and
+      `viewer-invariants: 2 race(s) in 393s — … 2 race(s) NOT MEASURED`, exit 1. The helper's test,
+      `scripts/lib/measuredGate.test.mjs`, went red (3 of 4) with the minimum comparison broken and
+      green restored. ★ **The same blind spot in `check-runin-frame`**, which printed "skipped" /
+      "not measured" for a case and still PASS: it now refuses through the same helper (sabotaged
+      with an unknown track name: `luger-hil (centre, never empty): 0 race frames, needs at least
+      1`, exit 1; restored: PASS, every case measured, 169.5 s). **The other gates checked:** the
+      only other browser scripts, `audit-offline-render.mjs` (refuses zero font responses) and
+      `scoreboard-bench.mjs` (a bench, not a gate), and the Browser gate's specs (they enter the race
+      through the Quick Test button, which exists only once the switch is answered ON, and each
+      asserts a non-zero sample count) are not blind. The fingerprints compare a hash against
+      `docs/fingerprints.json`, which a zero-sample run cannot match; `check-golden-races`' empty
+      fixture is caught by its own suite test (one closed and one open race). **`check-ending-frame`
+      was blind too** — its zero-frame refusal could never fire (the first pass samples elapsed 0)
+      and it never checked that any fill was recorded; it now asks the same helper for at least one
+      FINISHED frame and one `fillRect` call (measured: 22 frames, 374 fills, PASS; with the fill
+      minimum forced past 374: NOT MEASURED, exit 1). It is a race driver, so the helper joined
+      the race hull (227 → 228; `docs/SIM.md` and SHIP-CEREMONY's counts regenerated) and the
+      world fingerprint was compared unchanged. Left: `camera-fingerprint.mjs`'s zero-ending
+      refusals are skipped under `--cheap`/`--ending-off`; it is a fingerprint instrument and its
+      `--check` run still compares against the record.
+
+- [x] **AUDIT-1 D1 and D2 · THE CONTENT-SECURITY-POLICY AND THE ADMIN STATUS BOX — BUILT AND
+      ACCEPTED 2026-10-12, merged with review/2026-10-12.** Both were built on 2026-10-09 (branches
+      `feat/csp` and `feat/admin-status-box`, reports/release/AUDIT-1.md pieces D1 and D2) and
+      held for the owner's look. On 2026-10-12 the owner looked at review/2026-10-12 on the
+      production preview and accepted it, the CSP and the status box with it. **D1:** every page
+      the server serves carries a Content-Security-Policy (`server/src/csp.js`): scripts only from
+      the server itself plus the one hashed runtime-configuration script, no inline or `eval`
+      scripts, no framing by other sites; a plain-HTTP install on a local network keeps working;
+      the browser spec `client/e2e/csp-no-violations.spec.js` runs in the Browser gate. **D2:** an
+      admin-only status box at the top of the Dev Screen's "Accounts and system" chapter — the
+      build, the newest backup, the overall status, and whether a newer release exists on GitHub
+      (`GET /api/admin/status`, `server/src/routes/adminStatus.js`; the release check runs at most
+      once a day and says "unknown" when it fails). The Going online row's "CSP is switched off"
+      item is answered by D1.
+
+- [x] **AUDIT-1 A2 · THE DEV SCREEN INFO TEXTS SAY WHAT SHIPS — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.** Each text
+      read against `defaults.js` and the code that consumes the value, and corrected without
+      stating a config value (the rule `check-tooltip-values` enforces): **A2-34** the Gap Leader
+      Brake card said "SHIPPED OFF" while `gapBrakeEnabled` ships true — it says "SHIPPED ON".
+      **A2-40** Phase-Split Bonuses called an area strength of 2.0 "full" and the shipped EARLY and
+      POST "full"; the engine divides the phase strength by Race Plan Bonus Strength, so the
+      shipped strengths give half — the note now explains the scale against that control and no
+      longer claims a shipped level. **A2-41** the Frame Timing subtitle, the smoothing control's
+      info text and its "very stable camera" read-out said the smoothing moves the camera; the
+      camera is fed the raw frame time and the smoothing reaches the track effects only — all
+      three now say so. **A2-42** the comeback card said the Race Plan needs an open track of at
+      least 60 s; the gate is the race's duration against Race Plan min duration, on every track —
+      the card now says that and points at the control. **A2-43** the Speed Brake subtitle
+      promised controls for how close, how directly behind and how strongly; the card has one, the
+      open-track warm-up, and now says so. Left: the matching comments inside `defaults.js` are in
+      the measured-stamp closure and are in the held-back patch (row "AUDIT-1 B · comment fixes
+      held back" above). The row as it stood: *"A2 · Dev Screen info texts that contradict the
+      shipped settings — "shipped OFF" for settings now ON, the camera-lerp help text, the
+      race-plan duration (A2-34, -40, -41, -42, -43)."*
+
+- [x] **AUDIT-1 A3-19 · THE THREE GERMAN ALERTS ARE ENGLISH — CLOSED 2026-10-12 (AUDIT-1 DECISIONS),
+      accepted by the owner on review/2026-10-12 the same day, and merged with it.** Deleting a default
+      record now says *"A default brand cannot be deleted. Remove its default status first."* (and
+      the same for a default group and a default track) in BrandingProfiles, PlayerGroupsManager
+      and TrackManager. Their three test files assert the English text, and their German test
+      names and comments are English too. All six files left `check-language-closed`'s allowlist
+      (27 files with German → 21; the guard passes, and its test's frozen record keeps the paths,
+      which is that list's rule). The row as it stood: *"A3-19 · three German alerts users see
+      (BrandingProfiles, PlayerGroupsManager, TrackManager), frozen by the language allowlist."*
+
+- [x] **AUDIT-1 A8-03 · THE SETUP SCREEN FITS A 390 PX PHONE — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.** The cause:
+      the header's branding dropdown is a flex item, and a flex item never shrinks below its content
+      by default — for a `<select>` that is its longest option ("Seasonal Entertainment"). Logo,
+      dropdown and gear needed 361 px inside a header with 2rem padding on each side, and the gear
+      ended at 393 px. The fix: the dropdown may shrink (`minWidth: 0`); at 390 px it is 137 px wide
+      instead of 172 px and still shows "Branding: None" whole; at 768 px and on a desktop nothing
+      moves. The audit's tool now reports no overflow at 390, 768 or desktop width. The row as it
+      stood: *"A8-03 · the setup screen is 3 px wider than a 390 px phone."*
+
+- [x] **AUDIT-1 A8-01 and A8-02 · DEV SCREEN AND TRACK EDITOR ACCESSIBILITY — CLOSED 2026-10-12
+      (AUDIT-1 DECISIONS), accepted by the owner on review/2026-10-12 the same day, and merged with it.**
+      Contrast: the active View toggle's red is darkened 5% in that one rule (`#e63946` → `#db3643`,
+      white text 4.2:1 → 4.5:1; the shared `--color-primary` is unchanged, because it colours every
+      primary button); the Reset buttons lose their 0.7 fade and show the full muted grey (3.1:1 →
+      4.9:1 on a card). Names: the ten number fields carry their visible label as `aria-label`, and
+      the editor's two dropdowns are "Track lights style" and "Load track". axe 4.10.2 now reports 0
+      rules on `/dev` (its first chapter, which is what the audit's tool sees) and on
+      `/track-editor`; pinned by `DevScreen.a11yNames.test.jsx` and the Track Lights test. **Not in
+      the audit's view and left as found:** the other six chapters still carry contrast and label
+      findings of the same kinds (the shared primary button among them). The rows as they stood:
+      *"A8-01 · Dev Screen accessibility: colour contrast fails on the active tier toggle and the
+      reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2)"* and *"A8-02 ·
+      Track Editor: two `<select>` elements without an accessible name."*
 - [x] **AUDIT-1 A2-50 · invariant 3 reads the finish band with the normalised lateral — CLOSED
       2026-10-12 (branch `chore/audit-1-decisions-repo`).** `client/src/modules/viewerProbe.js`
       invariant 3 now calls `getPosition(tAt, k / 40 - 0.5)`, as the file's own rule at `bandPct`
@@ -3995,7 +4236,8 @@ closes made a factual claim, what that claim really was when it was checked at t
       an engineering task's.** The row also asks to rebuild something this project deliberately
       removed. **A duplicate in the Parking Lot was deleted in the same commit.**
       ★ Nothing here says a second language is unwanted. It says the row cannot be worked as
-      written.
+      written. ★ **DECIDED 2026-10-18:** the owner decided on 2026-10-18 that the whole game stays
+      English-only; there is no second UI language to plan.
 
 - [x] ★ **INVITE FLOW — CLOSED: adding a person to a roster already works; only SELF-SERVICE is
       missing, and it needs something no package here has.** Closed 2026-09-25 (TRUTH-UP-1), verified at the tree before moving.

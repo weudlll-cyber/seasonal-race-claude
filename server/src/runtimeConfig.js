@@ -41,6 +41,8 @@
 // `API_BASE_URL` in `client/src/services/api.js` is a module-level constant evaluated at import.
 // ============================================================
 
+import { createHash } from 'node:crypto';
+
 /** The global the client reads. Must equal `RUNTIME_CONFIG_GLOBAL` in client/src/services/api.js. */
 export const RUNTIME_CONFIG_GLOBAL = '__RA_RUNTIME_CONFIG__';
 
@@ -153,6 +155,21 @@ export function runtimeConfigScript(origin) {
   // server" if our server says so, and this is it saying so.
   const payload = JSON.stringify({ apiBaseUrl: origin ?? '' }).replace(/</g, '\\u003c');
   return `<script>window.${RUNTIME_CONFIG_GLOBAL}=${payload};</script>`;
+}
+
+/**
+ * The CSP source expression that admits exactly the script `runtimeConfigScript(origin)` renders:
+ * `'sha256-…'` over the text BETWEEN the tags, which is what a browser hashes. Lives beside the
+ * script so the two cannot drift: change the script and the hash follows (AUDIT-1 D1, csp.js).
+ *
+ * @param {string|null} origin
+ * @returns {string}
+ */
+export function runtimeConfigScriptHash(origin) {
+  const body = runtimeConfigScript(origin)
+    .replace(/^<script>/, '')
+    .replace(/<\/script>$/, '');
+  return `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`;
 }
 
 /**
