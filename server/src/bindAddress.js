@@ -51,12 +51,20 @@ export function resolveBindAddress(env = process.env) {
  * The one `listen` call. With no address it passes NO host argument at all — not `undefined`,
  * not `'0.0.0.0'` — so the default is the exact call that existed before.
  *
+ * ★ A FAILED LISTEN REACHES `onError`, NEVER `onListening` (A7-03 piece 4, 2026-10-19). Express 5's
+ * `app.listen` registers its callback as the server's `error` listener too and calls it WITH the
+ * error (its migration guide, "app.listen"), where Express 4 let `EADDRINUSE` crash the process.
+ * Passed straight through, a taken port would have printed "server running" and kept the process
+ * alive serving nothing. This splits the one callback into the two outcomes.
+ *
  * @param {{ listen: Function }} app  an Express app (or anything with Node's `listen` signature)
  * @param {number|string} port
  * @param {string|null} address
- * @param {Function} onListening
+ * @param {() => void} onListening  called once the socket is bound
+ * @param {(err: Error) => void} onError  called instead when it could not be bound
  * @returns {import('node:http').Server}
  */
-export function listenOn(app, port, address, onListening) {
-  return address === null ? app.listen(port, onListening) : app.listen(port, address, onListening);
+export function listenOn(app, port, address, onListening, onError) {
+  const done = (err) => (err ? onError(err) : onListening());
+  return address === null ? app.listen(port, done) : app.listen(port, address, done);
 }

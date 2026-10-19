@@ -63,29 +63,41 @@ const app = createApp();
 const PORT = process.env.PORT || 4000;
 
 // Unset RA_BIND_ADDRESS → the same `listen(PORT, cb)` call as before; see bindAddress.js.
-const server = listenOn(app, PORT, bindAddress, () => {
-  // ★ STDOUT BY DECISION (the owner, 2026-09-06), not by oversight. This is the "it started" line,
-  // and normal output belongs on stdout; stderr is for what is wrong. This file already draws that
-  // line — `reportStartupReadiness` below defaults to `console.warn` (startupReadiness.js)
-  // precisely because it reports what this install CANNOT do. WHAT WAITS ON THIS LINE IS A PERSON,
-  // not a process: nothing in the tree parses it (Playwright waits on a URL —
-  // `webServer[].url` in client/playwright.config.js — and neither server/Dockerfile nor docker-compose.yml declares
-  // a HEALTHCHECK), while `.claude/skills/dev-start/SKILL.md:33` names it as the expected log line
-  // and the line after it names the warning that must NOT appear beside it. That reading only works
-  // while the go-ahead and the warnings are on different streams.
-  // eslint-disable-next-line no-console -- deliberate: the startup banner is normal output, above
-  console.log(
-    `RaceArena server running on port ${PORT}${bindAddress ? ` (bound to ${bindAddress})` : ''}`
-  );
-  // PUBLISH-STEPS-1: say what this install CANNOT do, while the operator is still looking at the
-  // terminal they started it in. It only warns — a same-origin install needs no RA_CLIENT_ORIGIN,
-  // so refusing to start without one would break the arrangement SERVE-SPA-1 moved towards. The
-  // reasoning is in startupReadiness.js; nothing here changes what the server does.
-  reportStartupReadiness({ env: process.env, servingClient: clientBuildExists() });
-  // AUDIT-1 A5M-07: one line recommending RA_TRUST_PROXY while it is unset; see trustProxy.js.
-  const trustNotice = trustProxyNotice(process.env);
-  if (trustNotice) console.warn(trustNotice);
-});
+// A port that cannot be bound (taken, not permitted) stops the start like a wrong setting above,
+// with exit 1 — under Express 4 the uncaught `EADDRINUSE` did that; under 5 it is handed to us.
+const refuseToStart = (err) => {
+  console.error(`RaceArena cannot start: ${err.message}`);
+  process.exit(1);
+};
+const server = listenOn(
+  app,
+  PORT,
+  bindAddress,
+  () => {
+    // ★ STDOUT BY DECISION (the owner, 2026-09-06), not by oversight. This is the "it started" line,
+    // and normal output belongs on stdout; stderr is for what is wrong. This file already draws that
+    // line — `reportStartupReadiness` below defaults to `console.warn` (startupReadiness.js)
+    // precisely because it reports what this install CANNOT do. WHAT WAITS ON THIS LINE IS A PERSON,
+    // not a process: nothing in the tree parses it (Playwright waits on a URL —
+    // `webServer[].url` in client/playwright.config.js — and neither server/Dockerfile nor docker-compose.yml declares
+    // a HEALTHCHECK), while `.claude/skills/dev-start/SKILL.md:33` names it as the expected log line
+    // and the line after it names the warning that must NOT appear beside it. That reading only works
+    // while the go-ahead and the warnings are on different streams.
+    // eslint-disable-next-line no-console -- deliberate: the startup banner is normal output, above
+    console.log(
+      `RaceArena server running on port ${PORT}${bindAddress ? ` (bound to ${bindAddress})` : ''}`
+    );
+    // PUBLISH-STEPS-1: say what this install CANNOT do, while the operator is still looking at the
+    // terminal they started it in. It only warns — a same-origin install needs no RA_CLIENT_ORIGIN,
+    // so refusing to start without one would break the arrangement SERVE-SPA-1 moved towards. The
+    // reasoning is in startupReadiness.js; nothing here changes what the server does.
+    reportStartupReadiness({ env: process.env, servingClient: clientBuildExists() });
+    // AUDIT-1 A5M-07: one line recommending RA_TRUST_PROXY while it is unset; see trustProxy.js.
+    const trustNotice = trustProxyNotice(process.env);
+    if (trustNotice) console.warn(trustNotice);
+  },
+  refuseToStart
+);
 
 // AUDIT-1 A10-01: a SIGTERM (docker stop, compose down, `racearena update`) or a Ctrl+C lets the
 // requests in flight finish and exits 0, instead of the container being SIGKILLed (exit 137) — node

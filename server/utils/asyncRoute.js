@@ -12,6 +12,12 @@
 // the API (TIDY-C-3, 2026-10-06): `POST /api/races/:shortKey/verify` rethrew any error that was not
 // a refusal.
 //
+// ★ KEPT UNDER EXPRESS 5 (A7-03 piece 4, 2026-10-19), deliberately. Express 5 forwards a rejected
+// handler to the error middleware by itself, so the request would no longer hang — but it would be
+// answered by `apiErrorHandler` as `{ error: 'HTTP 500' }`, not with this route's own wording, which
+// the client shows, and without this route's log label. Removing the wrapper would be a visible
+// change in an upgrade that is to make none.
+//
 // ── WHAT IT DOES ────────────────────────────────────────────────────────────────────────────────
 // Runs the handler and, if it fails, logs the error server-side with the route it came from and
 // answers `500 { error: 'internal error' }` — the wording every other 500 of this server uses — so
