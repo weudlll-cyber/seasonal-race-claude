@@ -61,7 +61,9 @@ const DIST = join(ROOT, arg('dist', 'client/dist'));
  * library hosts are inside ERROR-MESSAGE STRINGS in vendored dependencies — a person only ever sees
  * them by hitting the error — and no code fetches them. Their contexts, verbatim from the bundle:
  *
- *   reactjs.org      `https://reactjs.org/docs/error-decoder.html?invariant=` + code
+ *   react.dev        `https://react.dev/errors/` + code (React 19; React 18 wrote
+ *                    `https://reactjs.org/docs/error-decoder.html?invariant=` + code, and that
+ *                    host left the bundle with it — A7-03 piece 5, 2026-10-19)
  *   reactrouter.com  `${e} must be used within a data router. See https://reactrouter.com/…`
  *   github.com       `…we recommend you load a polyfill such as https://github.com/ungap/…`
  *
@@ -73,7 +75,7 @@ export const ALLOWED = [
   { host: 'localhost', why: 'the required fallback — today’s behaviour with nothing configured' },
   { host: '127.0.0.1', why: 'loopback, same reason as localhost' },
   { host: 'www.w3.org', why: 'XML namespace URI in inlined SVG — an identifier, never fetched' },
-  { host: 'reactjs.org', why: 'React error-decoder link inside a vendored error string' },
+  { host: 'react.dev', why: 'React error-decoder link inside a vendored error string' },
   { host: 'reactrouter.com', why: 'React Router docs link inside a vendored error string' },
   { host: 'github.com', why: 'polyfill suggestion inside a vendored React Router error string' },
 ];
