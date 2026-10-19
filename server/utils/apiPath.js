@@ -5,7 +5,9 @@
 // Description: The ONE answer to "is this request for the API?", as Express routes it.
 //
 // ── ★★ WHY THIS EXISTS: A CRITICAL BYPASS ─────────────────────────────────────────────────────────
-// Express 4 matches mount paths IGNORING CASE: `app.use('/api/users', …)` also serves `/API/users`.
+// Express matches mount paths IGNORING CASE: `app.use('/api/users', …)` also serves `/API/users`
+// (Express 4, and Express 5's router 2 the same — re-checked 2026-10-19, A7-03 piece 4:
+// `caseBypass.integration.test.js` shows an admin's `/API/users` is served).
 // The sign-in guard, the admin policy and the CSRF guard compared the path case-SENSITIVELY, so
 // `/API/users` was "not an API path" to them and reached the users router with no session at all
 // — an anonymous `POST /API/users` created an admin (AUDIT-1, reports/release/AUDIT-1.md, A5M-01).

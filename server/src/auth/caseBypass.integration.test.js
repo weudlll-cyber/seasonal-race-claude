@@ -74,6 +74,17 @@ describe('operator: no letter case reaches an admin-only route', () => {
   });
 });
 
+// WHY THE REFUSALS ABOVE MATTER: the router really serves the other spelling. Were it to stop doing
+// so (a router upgrade, `case sensitive routing` switched on), the refusals would still pass and
+// prove nothing; this pins the threat itself. Re-checked under Express 5 (A7-03 piece 4, 2026-10-19).
+describe('admin: the router serves /API/users as /api/users', () => {
+  it('GET /API/users → 200 with the user list', async () => {
+    const res = await adminApi.get('/API/users');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
 describe('isApiPath', () => {
   it('is true for /api and anything under it, in any case', () => {
     for (const p of ['/api', '/api/', '/API', '/Api/users', '/aPi/races/X/verify'])

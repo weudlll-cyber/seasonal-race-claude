@@ -16,10 +16,9 @@ afterEach(async () => {
   while (open.length) await new Promise((r) => open.pop().close(r));
 });
 
-function listen(address) {
+function listen(address, port = 0) {
   return new Promise((resolve, reject) => {
-    const server = listenOn(express(), 0, address, () => resolve(server));
-    server.on('error', reject);
+    const server = listenOn(express(), port, address, () => resolve(server), reject);
     open.push(server);
   });
 }
@@ -51,5 +50,19 @@ describe('listenOn — the socket actually bound', () => {
   it('RA_BIND_ADDRESS=127.0.0.1: listens on loopback only', async () => {
     const server = await listen(resolveBindAddress({ RA_BIND_ADDRESS: '127.0.0.1' }));
     expect(server.address().address).toBe('127.0.0.1');
+  });
+
+  // Express 5 hands a listen error to the callback instead of throwing (A7-03 piece 4): a taken
+  // port must reach onError, and must never be reported as listening.
+  it('a port already taken reaches onError with EADDRINUSE, never onListening', async () => {
+    const first = await listen('127.0.0.1');
+    const { port } = first.address();
+    let listened = false;
+    const err = await new Promise((resolve) => {
+      const second = listenOn(express(), port, '127.0.0.1', () => (listened = true), resolve);
+      open.push(second);
+    });
+    expect(err.code).toBe('EADDRINUSE');
+    expect(listened).toBe(false);
   });
 });

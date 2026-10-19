@@ -265,6 +265,25 @@ describe('GET /api/races — the team reads its own', () => {
     expect(new Set(ids).size).toBe(3);
   });
 
+  // 2026-10-19 (A7-03 piece 4): any spelling of the paging values stays inside the bounds and is
+  // answered — a fractional one used to reach SQLite's LIMIT and answer 500 ("datatype mismatch").
+  it('keeps the page inside its bounds for any spelling of limit and offset', async () => {
+    await store3(ours);
+    for (const [q, limit, offset] of [
+      ['limit=1.5', 1, 0],
+      ['limit=2&offset=1.5', 2, 1],
+      ['limit=1&limit=2', 20, 0],
+      ['limit[x]=1', 20, 0],
+      ['limit=-3', 1, 0],
+      ['limit=1e9', 100, 0],
+      ['limit=abc&offset=-2', 20, 0],
+    ]) {
+      const res = await request(appWithUser(ours)).get(`/api/races?${q}`);
+      expect(res.status, q).toBe(200);
+      expect([res.body.limit, res.body.offset], q).toEqual([limit, offset]);
+    }
+  });
+
   it('★ IGNORES a team in the QUERY — a caller cannot ask for another team list', async () => {
     // The write path has the same rule and its own test. This is the READ half, and it was added
     // because a sabotage that made the team come from the request reddened the write test and NOT

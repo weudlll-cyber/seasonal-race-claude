@@ -73,4 +73,30 @@ describe('apiErrorHandler', () => {
       (await request(appThatThrows(Object.assign(new Error(), { status: 200 }))).get('/x')).status
     ).toBe(500);
   });
+
+  // Express 5's `res.status` throws on a status that is not a whole number (A7-03 piece 4): the
+  // handler must not hand it one, or the request falls through to Express's default page.
+  it('a status that is not a whole number is answered as a JSON 500', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const res = await request(appThatThrows(Object.assign(new Error(), { status: 404.5 }))).get(
+      '/x'
+    );
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'HTTP 500' });
+  });
+
+  // Express 5 forwards a REJECTED async handler to the error middleware by itself (its migration
+  // guide, "Rejected promises handled from middleware and handlers"); it is answered here like a throw.
+  it('a rejected async handler is answered as JSON, not left hanging', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const app = express();
+    app.get('/x', async () => {
+      throw new Error('async C:/secret/path exploded');
+    });
+    app.use(apiErrorHandler);
+    const res = await request(app).get('/x');
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'HTTP 500' });
+    expect(res.text).not.toContain('secret');
+  });
 });

@@ -86,7 +86,7 @@ answers `ok` while sign-in fails (§6). After any repair, sign in once to be sur
 
 **Point any uptime checker at `https://<your domain>/api/health`.** The route needs no sign-in: it is
 on the public allow-list (`server/src/auth/guards.js:15-24`) and is mounted in
-`server/src/app.js:70`; its handler is `server/src/health.js:51-65`.
+`server/src/app.js:81`; its handler is `server/src/health.js:51-65`.
 
 | answer | what it means |
 | --- | --- |
@@ -420,6 +420,7 @@ Read the first lines it prints; each start-up refusal names its cause.
 | `RA_BIND_ADDRESS` not an IP address | refuses to start, naming the variable | an IP address, or leave it out |
 | `RA_TRUST_PROXY` not a whole number | refuses to start, naming the variable | the number of proxies in front (`1` behind Caddy, `0` for none), or leave it out |
 | `RA_COOKIE_NAME_MODE=host` without a guaranteed secure cookie | refuses to start | leave the variable unset |
+| the port is already taken (another server, an old one still running) | refuses to start: `RaceArena cannot start: listen EADDRINUSE …`, exit 1 | stop the other process, or choose another `PORT` |
 | no client build present | **starts**, logs where it looked, and serves only the API | build the client (Node path, install step 3) |
 
 On the Docker path: `docker compose logs server`. On the VPS install (branch feat/vps-install, not yet

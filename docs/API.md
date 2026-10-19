@@ -23,11 +23,12 @@ The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed 
 
 ## Access rules
 
-**Middleware order** (`server/src/app.js:37-87`): helmet → `cors(corsOptions)` (`:40`) →
-`express.json({ limit: '1mb' })` (`:41`) → session (`:42`) → `csrfOriginGuard` (`:43`) → static
-client + SPA fallback (`:51-52`, both refuse `/api/*`) → `requireAuth` (`:54`) → `requireAdmin`
-(`:55`) → `GET /api/health` (`:63`) → the three rate limiters (`:65-69`) → the routers (`:70-79`)
-→ the API 404 (`:83`) → the error handler (`:87`).
+**Middleware order** (`server/src/app.js:36-109`): helmet (`:41-46`) → `cors(corsOptions)` (`:47`) →
+`express.json({ limit: '1mb' })` (`:48`) → an absent body read as `{}` (`:56-59`; Express 5 leaves it
+undefined, every route here was written to `{}`) → session (`:60`) → `csrfOriginGuard` (`:61`) →
+static client + SPA fallback (`:69-70`, both refuse `/api/*`) → `requireAuth` (`:72`) →
+`requireAdmin` (`:73`) → `GET /api/health` (`:81`) → the three rate limiters (`:83-87`) → the
+routers (`:88-99`) → the API 404 (`:103`) → the error handler (`:107`).
 
 **Public paths** — exact path match, after the path is lower-cased and a trailing slash is stripped,
 and exact method with `HEAD` judged as `GET` (`server/src/auth/guards.js:15-24`, matched at
@@ -79,11 +80,11 @@ and are switched off when `NODE_ENV=test` or `VITEST` is set (`:12`).
 
 | Path (mounted with `app.use`, so every method) | Window | Max | Counts | Key | Lines |
 |---|---|---|---|---|---|
-| `/api/auth/login` (`server/src/app.js:65`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | `RA_LOGIN_RL_MAX`, default 10 | failed requests only | IP | `server/src/auth/rateLimit.js:18-26` |
-| `/api/auth/setup` (`server/src/app.js:66`) | `RA_SETUP_RL_WINDOW_MS`, default 60 min | `RA_SETUP_RL_MAX`, default 10 | every request | IP | `server/src/auth/rateLimit.js:34-42` |
-| `/api/auth/change-password` (`server/src/app.js:69`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | 5 (fixed) | failed requests only | `req.authUser.id`, else IP | `server/src/auth/rateLimit.js:74-83` |
+| `/api/auth/login` (`server/src/app.js:83`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | `RA_LOGIN_RL_MAX`, default 10 | failed requests only | IP | `server/src/auth/rateLimit.js:18-26` |
+| `/api/auth/setup` (`server/src/app.js:84`) | `RA_SETUP_RL_WINDOW_MS`, default 60 min | `RA_SETUP_RL_MAX`, default 10 | every request | IP | `server/src/auth/rateLimit.js:34-42` |
+| `/api/auth/change-password` (`server/src/app.js:87`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | 5 (fixed) | failed requests only | `req.authUser.id`, else IP | `server/src/auth/rateLimit.js:74-83` |
 
-The limiters are mounted after `requireAuth` (`server/src/app.js:65-69`). So a signed-out caller of
+The limiters are mounted after `requireAuth` (`server/src/app.js:83-87`). So a signed-out caller of
 `change-password` gets 401 and is never counted. "IP" is Express's `req.ip`, so how many proxy hops
 are trusted decides whose address it is: `RA_TRUST_PROXY` (`server/src/trustProxy.js`; unset = one
 hop when `NODE_ENV=production`, none otherwise — see [ENVIRONMENT.md](ENVIRONMENT.md)).
@@ -119,7 +120,7 @@ hop when `NODE_ENV=production`, none otherwise — see [ENVIRONMENT.md](ENVIRONM
 ## Health (`/api/health`)
 
 The build-identity probe and, since AUDIT-1 A10-05 (2026-10-12), the account-store check. Mounted in the
-app factory (`server/src/app.js:63`); the handler is `server/src/health.js`.
+app factory (`server/src/app.js:81`); the handler is `server/src/health.js`.
 
 ### `GET /api/health`
 
@@ -153,7 +154,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 ### `POST /api/auth/setup`
 
 - **Who:** public (`server/src/auth/guards.js:18`), gated by a bootstrap token. Rate-limited per IP,
-  counting every request (`server/src/app.js:66`, `server/src/auth/rateLimit.js:34-42`).
+  counting every request (`server/src/app.js:84`, `server/src/auth/rateLimit.js:34-42`).
 - **Request:** header `x-bootstrap-token`, compared in constant time with `RA_BOOTSTRAP_TOKEN`. A
   token in the body is not read (header read at `server/src/auth/authRouter.js:57`, constant-time compare at `:63`,
   helper at `:28-32`). Body `{username: string, password: string}`, both required and
@@ -178,7 +179,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 ### `POST /api/auth/login`
 
 - **Who:** public (`server/src/auth/guards.js:19`). Rate-limited per IP, counting failures only
-  (`server/src/app.js:65`, `server/src/auth/rateLimit.js:18-26`).
+  (`server/src/app.js:83`, `server/src/auth/rateLimit.js:18-26`).
 - **Request:** body `{username, password}`. There is no explicit validation; a missing field simply
   fails to match. The username is looked up normalised (NFC, trimmed, lower-cased,
   `server/src/auth/usersStore.js:23-25`) (`server/src/auth/authRouter.js:212-213`).
@@ -204,7 +205,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 
 - **Who:** any signed-in user, and only for **their own** password. The target is
   `req.authUser.id` and never the body (`server/src/auth/authRouter.js:257-277`). It is not in
-  `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:69`,
+  `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:87`,
   `server/src/auth/rateLimit.js:74-83`).
 - **Request:** body `{currentPassword, newPassword}` (`server/src/auth/authRouter.js:273`).
   `newPassword` must be non-blank and at least `PASSWORD_MIN_LENGTH` (10) characters, by the store's rule
@@ -978,7 +979,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 - **Who:** any signed-in user; it returns **the caller's team only** (`server/src/routes/races.js:163-181`).
 - **Request:** query `limit?`, clamped to 1–100 with a default of 20, and `offset?`, at least 0 with
-  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:683-688`).
+  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:684-692`).
 - **Response:** 200 `{races: [race…], hasMore, offset, limit, team}`, newest first
   (`server/src/routes/races.js:176-180`, `server/src/races/raceStore.js:631-639`). A user with no
   team gets `{races: [], hasMore: false, offset: 0, limit: 0, team: null}` (`server/src/routes/races.js:167-174`).
@@ -1052,7 +1053,7 @@ racerTypeOverrides, effectiveRacerTypes`.
   - 500 `{ error: 'internal error' }`: any other error, including one thrown by `readInstallTracks`
     on a malformed track file (`server/src/routes/races.js:68-73`), read on the server's thread
     before the worker starts (`:263`). An error inside the worker is rethrown (`:278`) and `asyncRoute`
-    answers it (`:255`, `server/utils/asyncRoute.js:32-33`): logged server-side
+    answers it (`:255`, `server/utils/asyncRoute.js:38-39`): logged server-side
     with the route, and the server keeps running. *(Until SERVER-DEFECTS-1, 2026-10-06, the rethrow
     escaped the async handler: the request got no answer and the process exited.)*
 
@@ -1062,7 +1063,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 Installation-wide settings, one JSON file each in the data folder — two: the test-aids switch
 (`server/src/settings/testAids.js`) and the operator's legal pages (`server/src/settings/legalPages.js`),
-both in `server/src/routes/settings.js`. Mounted at `server/src/app.js:79`. Written by admins only,
+both in `server/src/routes/settings.js`. Mounted at `server/src/app.js:90`. Written by admins only,
 the same shape as the points rule above. The test-aids switch is read by every signed-in user
 (TEST-AIDS-1, the owner's decision of 2026-10-04); the legal pages are read by ANYONE, signed in or
 not (LEGAL-PAGES-1, the owner's decision of 2026-10-18).

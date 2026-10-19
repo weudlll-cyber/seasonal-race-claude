@@ -99,7 +99,8 @@ process.stdout.write(JSON.stringify(await run()));`;
         String(e?.stderr || e?.message)
           .trim()
           .split('\n')[0]
-      }`
+      }`,
+      { cause: e }
     );
   }
   return JSON.parse(out);
