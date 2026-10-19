@@ -45,11 +45,12 @@ FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b533
 WORKDIR /app
 
 # NATIVE MODULES NEED A TOOLCHAIN ON ALPINE, and without it this image cannot be built at all.
-# `better-sqlite3` and `bcrypt` ship prebuilt binaries for glibc, not for musl — `prebuild-install`
-# finds nothing for `libc=musl` and falls through to `node-gyp rebuild`, which then fails on "find
-# Python". The image in this project's local registry was last built 2026-06-03; the auth work that
-# added those two dependencies landed after it, so every build since has failed and nobody noticed
-# because the running server was started outside Docker.
+# `bcrypt` ships no binary for musl and compiles at install (`node-gyp rebuild`), which fails on
+# "find Python" without these packages. (`better-sqlite3` was in the same position until 13.0, which
+# bundles a `linuxmusl-x64` binary and no longer compiles here — A7-03, 2026-10-19; bcrypt keeps the
+# toolchain needed.) The image in this project's local registry was last built 2026-06-03; the auth
+# work that added those two dependencies landed after it, so every build since has failed and nobody
+# noticed because the running server was started outside Docker.
 #
 # `--virtual` so the toolchain is removed in the same layer it was added: it is needed to COMPILE the
 # modules and never to run them, and keeping it would put a C compiler in a shipped image for nothing.
