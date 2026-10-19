@@ -164,8 +164,8 @@ export const ALLOWLIST = [
   { file: "scripts/sim/observers/report.mjs", hits: 6, why: "PRE-EXISTING — the German-language sim report observer; named by the night spec as its own block", since: "2026-08-15" },
   { file: "client/scripts/sweep-bufferPct-driver.mjs", hits: 8, why: "PRE-EXISTING — German summary strings in a one-off sweep driver", since: "2026-08-15" },
   { file: "client/e2e/vre-2-ux-verification.spec.js", hits: 1, why: "PRE-EXISTING — a German file description", since: "2026-08-15" },
-  { file: "server/src/auth/session.js", hits: 2, why: "PRE-EXISTING — German review markers in comments", since: "2026-08-15" },
-  { file: "server/src/auth/session.test.js", hits: 1, why: "PRE-EXISTING — a German review marker in a comment", since: "2026-08-15" },
+  // server/src/auth/session.js (2) and session.test.js (1) stood here: German review markers in
+  // comments, rewritten in English on 2026-10-19 (chore/a7-03-close), so their allowances went.
   { file: "docs/BACKLOG.md", hits: 1, why: "PRE-EXISTING — a German tool name in a backlog line", since: "2026-08-15" },
   { file: "docs/archive/cleanup-audit-pr98.md", hits: 1, why: "PRE-EXISTING — a German tooltip quoted in an archived audit", since: "2026-08-15" },
 

@@ -17,7 +17,7 @@ import { DATA_ROOT } from '../dataPaths.js';
 // and `getActiveCookieName` and `createSessionMiddleware` below call it.
 import { resolveCookieSecure } from './cookiePolicy.js';
 
-// PRÜFEN note: sqliteStoreFactory({ Store }) — the factory destructures session.Store from the
+// Checked: sqliteStoreFactory({ Store }) — the factory destructures session.Store from the
 // express-session function object, which is standard connect-store adapter convention.
 const SqliteStore = sqliteStoreFactory(session);
 
@@ -121,7 +121,7 @@ export function createSessionMiddleware(opts = {}) {
   const enableSweep = opts.enableSweep ?? !isTest;
 
   const db = openSessionDatabase(dbPath);
-  // PRÜFEN note: the library's `(options.expired.clear) || true` has a boolean short-circuit bug
+  // Checked: the library's `(options.expired.clear) || true` has a boolean short-circuit bug
   // that always evaluates to true, so { clear: false } does NOT disable the sweep timer. The
   // 15-minute interval is benign in tests because `vitest run` exits via process.exit() after the
   // suite — the timer never fires within the test window. Documented here; no workaround needed.

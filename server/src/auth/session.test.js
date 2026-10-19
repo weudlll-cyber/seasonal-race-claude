@@ -129,7 +129,7 @@ describe('session middleware — lifecycle', () => {
     mw._db = null;
     const db = new Database(tempDb, { readonly: true });
     try {
-      // PRÜFEN: table name is 'sessions' (confirmed from library source)
+      // Checked: the table name is 'sessions' (confirmed from the library source)
       const row = db.prepare('SELECT COUNT(*) as count FROM sessions').get();
       expect(row.count).toBeGreaterThanOrEqual(1);
     } finally {
