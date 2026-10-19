@@ -46,6 +46,17 @@ export function createApp() {
   );
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
+  // ★ EXPRESS 5 LEAVES `req.body` UNDEFINED when no parser read a body (its migration guide,
+  // "req.body"); Express 4 gave `{}`. Every route here was written against `{}` — their validators
+  // take the object and report what is missing — so under 5 a request with no body reached
+  // `undefined.name` and answered 500 instead of 400 (POST /api/tracks, /api/player-groups,
+  // /api/brands, /api/racers, /api/surface-classes and PUT /api/surface-classes/:id; A7-03 piece 4,
+  // 2026-10-19). One line restores the contract they were written to, for all of them; a parser
+  // that DID read a body (JSON above, multer on the upload routes) is left untouched.
+  app.use((req, _res, next) => {
+    req.body ??= {};
+    next();
+  });
   app.use(sessionMiddleware);
   app.use(csrfOriginGuard);
 

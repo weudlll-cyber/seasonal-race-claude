@@ -166,8 +166,8 @@ git hooks through the root `prepare` script — see [VERIFY-RULES.md](VERIFY-RUL
 
 ## 7. Working with the server
 
-**Single-server rule:** only one server instance on port 4000 at a time. If you see `EADDRINUSE`,
-kill the stale process and restart:
+**Single-server rule:** only one server instance on port 4000 at a time. If it stops with
+`RaceArena cannot start: listen EADDRINUSE …` (exit 1), kill the stale process and restart:
 
 ```bash
 # Windows

@@ -35,6 +35,10 @@ beforeAll(() => {
   writeFileSync(join(dist, 'index.html'), SHELL);
   mkdirSync(join(dist, 'assets'), { recursive: true });
   writeFileSync(join(dist, 'assets', 'real.js'), 'export const x = 1;\n');
+  // A dotfile and a file under a hidden directory, as a careless deploy could leave in a build.
+  writeFileSync(join(dist, '.secret'), 'DOTFILE-CONTENT');
+  mkdirSync(join(dist, '.hidden'), { recursive: true });
+  writeFileSync(join(dist, '.hidden', 'x.js'), 'HIDDEN-DIR-CONTENT');
 });
 afterAll(() => rmSync(dist, { recursive: true, force: true }));
 
@@ -93,6 +97,16 @@ describe('with a built client — the app is served', () => {
     const r = await request(app()).get('/assets/real.js');
     expect(r.status).toBe(200);
     expect(r.text).toContain('export const x');
+    // A script type the browser runs under `nosniff` (Express 5 sends `text/javascript`; 4 sent
+    // `application/javascript` — both are JavaScript types, A7-03 piece 4).
+    expect(r.headers['content-type']).toMatch(/^(text|application)\/javascript\b/);
+  });
+
+  it('never serves a dotfile or a file under a hidden directory as itself', async () => {
+    for (const p of ['/.secret', '/.hidden/x.js']) {
+      const r = await request(app()).get(p);
+      expect(r.text, p).not.toMatch(/DOTFILE-CONTENT|HIDDEN-DIR-CONTENT/);
+    }
   });
 
   it('serves the shell to a visitor who is NOT authenticated', async () => {
