@@ -13,7 +13,7 @@
 // ============================================================
 
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stubCanvas2d, boundedFrameClock, seedRace } from '../../test/raceScreenMount.js';
 import { KEYS, storageSet } from '../../modules/storage/storage.js';
@@ -120,7 +120,9 @@ describe('item 7: the M-key camera marker', () => {
   it('OFF: pressing M marks nothing', async () => {
     await firstFrame(false);
     fireEvent.keyDown(window, { key: 'm' });
-    await new Promise((r) => setTimeout(r, 20));
+    // Inside act: the screen's own frame timers update state during this wait, and under React 19
+    // an update outside act is reported (2026-10-19) — the wait is the same 20 ms either way.
+    await act(() => new Promise((r) => setTimeout(r, 20)));
     expect(screen.queryByText(/MARK/)).not.toBeInTheDocument();
   });
 

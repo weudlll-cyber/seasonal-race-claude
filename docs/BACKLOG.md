@@ -1827,43 +1827,8 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Records and decisions
 
-- [ ] **AUDIT-1 A7-03 · the major upgrades — before going online (decided 2026-10-18); three of five
-      merged, better-sqlite3 13 REVERTED, React 19 awaits the owner's look.** Opened by AUDIT-1
-      (2026-10-09) as "after v1.0.0, one package at a time" (decided 2026-10-12). **On 2026-10-18 the
-      owner decided to do them BEFORE going online**, replacing that decision, so that nothing needs
-      changing right after launch. Done in the night chain of 2026-10-18/19, one branch each; the
-      morning sheet [reports/release/UPGRADES-2026-10-19.md](../reports/release/UPGRADES-2026-10-19.md)
-      has every check. No fingerprint and no golden race moved in any piece.
-      - **ESLint 9.39.4 → 10.13.0 — merged `63e71805`.** `eslint-plugin-react` 7.37.5 (newest) calls a
-        context method ESLint 10 removed: the config reads the installed React version itself and an
-        npm override accepts the plugin's peer range; 12 new findings fixed in code, no rule off.
-      - **vitest 4.1.11 → 5.0.5 (and jsdom 29 → 30) — merged `eb25d5d2`.** Counts unchanged (client
-        313 / 5179, server 63 / 1107); the stale `undici` override removed.
-      - **better-sqlite3 12.10.0 → 13.0.3 — merged `e087a7ce`, REVERTED the same night.** Its data
-        checks all passed (files made by 12 open under 13, WAL off and on, the race refusing change,
-        the verify identical), and it loads on Windows and in the Linux image. **But `npm ci` of the
-        server fails on a machine without C++ build tools** — found putting the owner's 4173 on the
-        new master: under 13, `npm ci` runs `node-gyp rebuild` for it (npm's default for a package
-        with a `binding.gyp`; its `gypfile: false` does not stop it), so it compiles from source,
-        which needs Python and a C++ toolchain with the Windows SDK. CI (Linux) and the Docker image
-        have a toolchain, so both stayed green; this Windows machine has none, and neither need a
-        plain-Node install. 12.10.0 downloads a prebuilt binary (`prebuild-install`) instead. A plain
-        `npm install` happened to skip the script (npm 11.19 leaves unapproved install scripts
-        alone), which is why the piece's own Windows check passed. **Back on 12.10.0** (master,
-        `revert/better-sqlite3-13`). Ways forward, for the owner: (a) wait for a release whose
-        bundled binaries need no build at `npm ci`; (b) document build tools as a requirement of the
-        plain-Node install and of development on Windows; (c) install the server with
-        `--ignore-scripts` where its bundled binaries suffice — bcrypt has none for the Alpine image,
-        so the Dockerfile would need its own exception.
-      - **Express 4.22.2 → 5.3.0 — merged `d80dc945`.** Three Express 5 changes fixed (an absent
-        body read as `{}` again — six routes had answered 500; a taken port now refuses to start;
-        whole-number error statuses); every listed security check run and tested.
-      - **React 18.3.1 → 19.3.1 — pushed on `chore/upgrade-react-19`, NOT merged: the owner looks
-        first.** 0 differing pixels on every DOM screen compared; the race frames within the noise of
-        two runs of one build.
-      The other majors the audit listed: Vite was in range; `@testing-library/jest-dom` 7 and
-      `lint-staged` 17 were not part of this chain and stay on their current majors.
-      *(verify: better-sqlite3 13 decided — one of the ways forward — and React 19 looked at)*
+*(AUDIT-1 A7-03, the major upgrades, left this list on 2026-10-19: ESLint 10, vitest 5, Express 5
+and React 19 merged; better-sqlite3 stays on 12 by the owner's decision of that day — PART TWO.)*
 
 ---
 
@@ -1875,6 +1840,46 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A7-03 · the major upgrades — CLOSED 2026-10-19: four merged before going online,
+      better-sqlite3 stays on 12 by the owner's decision.** Opened by AUDIT-1 (2026-10-09) as "after
+      v1.0.0, one package at a time" (decided 2026-10-12). **On 2026-10-18 the owner decided to do them
+      BEFORE going online**, replacing that decision, so that nothing needs changing right after
+      launch. Done in the night chain of 2026-10-18/19, one branch each; the morning sheet
+      [reports/release/UPGRADES-2026-10-19.md](../reports/release/UPGRADES-2026-10-19.md) has every
+      check. No fingerprint and no golden race moved in any piece.
+      - **ESLint 9.39.4 → 10.13.0 — merged `63e71805`.** `eslint-plugin-react` 7.37.5 (newest) calls a
+        context method ESLint 10 removed: the config reads the installed React version itself and an
+        npm override accepts the plugin's peer range; 12 new findings fixed in code, no rule off.
+      - **vitest 4.1.11 → 5.0.5 (and jsdom 29 → 30) — merged `eb25d5d2`.** Counts unchanged (client
+        313 / 5179, server 63 / 1107); the stale `undici` override removed.
+      - **Express 4.22.2 → 5.3.0 — merged `d80dc945`.** Three Express 5 changes fixed (an absent
+        body read as `{}` again — six routes had answered 500; a taken port now refuses to start;
+        whole-number error statuses); every listed security check run and tested.
+      - **React 18.3.1 → 19.3.1 — merged `34c853d0`**, after the owner looked at it on 2026-10-19 and
+        saw no visual difference (the Dev Screen shows "Vite + React 19"). 0 differing pixels on every
+        DOM screen compared; the race frames within the noise of two runs of one build.
+      - **better-sqlite3 12.10.0 → 13.0.3 — merged `e087a7ce`, REVERTED `faf2387f` the same night.** Its
+        data checks all passed (files made by 12 open under 13, WAL off and on, the race refusing
+        change, the verify identical), and it loads on Windows and in the Linux image. **But `npm ci`
+        of the server fails on a machine without C++ build tools** — found putting the owner's 4173
+        on the new master: under 13, `npm ci` runs `node-gyp rebuild` for it (npm's default for a
+        package with a `binding.gyp`; its `gypfile: false` does not stop it), so it compiles from
+        source, which needs Python and a C++ toolchain with the Windows SDK. CI (Linux) and the Docker
+        image have a toolchain, so both stayed green; 12.10.0 downloads a prebuilt binary
+        (`prebuild-install`) instead. A plain `npm install` happened to skip the script (npm 11.19
+        leaves unapproved install scripts alone), which is why the piece's own Windows check passed.
+        **The owner decided on 2026-10-19 to stay on better-sqlite3 12 for now — the option "wait for
+        a release that needs no build on Windows"**; the other two options (build tools as a
+        requirement of plain-Node installs and Windows development; installing with
+        `--ignore-scripts`, with an exception in the Dockerfile for bcrypt) are not taken.
+      The other majors the audit listed: Vite was in range; `@testing-library/jest-dom` 7 and
+      `lint-staged` 17 were not part of this chain and stay on their current majors.
+      **Taken along when it closed (2026-10-19, `chore/a7-03-close`):** the German review markers in
+      `server/src/auth/session.js` (2) and `session.test.js` (1) rewritten in English and their
+      language-guard allowances removed; `PeriodEvaluation.jsx`'s two `react-refresh` warnings fixed by
+      moving its date helpers to `client/src/modules/periodDays.js`; the two React 19 `act()` warnings
+      of `testAidsRace.test.jsx` fixed by waiting inside `act()`.
 
 - [x] **PRIVACY-TEMPLATE-1 — a privacy-policy template beside the legal notice's — MERGED
       2026-10-18.** On 2026-10-18 the owner asked for an English, country-neutral privacy-policy

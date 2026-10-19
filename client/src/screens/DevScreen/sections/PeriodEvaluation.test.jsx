@@ -26,7 +26,8 @@ vi.mock('../../../services/racesApi.js', () => ({
   savePointsRule: vi.fn(async (rule) => rule),
 }));
 
-import PeriodEvaluation, { currentMonthUtc, periodProblem } from './PeriodEvaluation.jsx';
+import PeriodEvaluation from './PeriodEvaluation.jsx';
+import { currentMonthUtc, periodProblem } from '../../../modules/periodDays.js';
 import {
   fetchPeriodEvaluation,
   fetchPointsRule,
