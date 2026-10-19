@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Created:     2026-05-04
 // Description: Regression test — verifies that one race-end produces exactly
-//              one history entry, even under React 18 StrictMode double-mount.
+//              one history entry, even under React's StrictMode double-mount (18 and 19).
 // ============================================================
 
 import React from 'react';

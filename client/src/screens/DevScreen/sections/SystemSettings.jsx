@@ -7,7 +7,7 @@
 //              Not a data backup: the server's data is backed up by `npm run backup`.
 // ============================================================
 
-import { useRef } from 'react';
+import { useRef, version as reactVersion } from 'react';
 import {
   exportAllStorage,
   exportDiagnosticSnapshot,
@@ -180,7 +180,9 @@ function SystemSettings() {
             {[
               ['App', 'RaceArena'],
               ['Version', APP_VERSION],
-              ['Client build', 'Vite + React 18'],
+              // The running React's own version (major), so the row cannot go stale on an upgrade —
+              // it said "React 18" as a literal until A7-03 piece 5 (2026-10-19).
+              ['Client build', `Vite + React ${reactVersion.split('.')[0]}`],
               ['Storage', 'localStorage'],
             ].map(([k, v]) => (
               <tr key={k}>
