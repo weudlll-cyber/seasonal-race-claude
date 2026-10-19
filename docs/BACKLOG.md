@@ -830,11 +830,11 @@ are in PART TWO with what closed them; these are the ones still standing.
         the systemd timers, alert e-mails);
       - the written pre-exposure bar (auth item 2 above; item 1, the CSP, is on since 2026-10-12).
 
-      **Observed 2026-10-18 (the end-to-end test, six runs to 2026-10-19, local Docker on
-      Windows), not fixed:** in 2 of 12 starts on an EMPTY data directory, right after the image was built, the app did not
+      **Observed 2026-10-18 (the end-to-end test, seven runs to 2026-10-19, local Docker on
+      Windows), not fixed:** in 2 of 14 starts on an EMPTY data directory, right after the image was built, the app did not
       pass its health check within the compose `start_period` and retries, compose marked it
       unhealthy and did not start Caddy, and `racearena start` failed after 120 s; the next command
-      that runs `compose up` (here a restore) started Caddy and everything answered. The other 10
+      that runs `compose up` (here a restore) started Caddy and everything answered. The other 12
       starts were healthy within seconds. Today's behaviour is kept. On the first VPS run, if
       `racearena start` reports this, running it (or the install command) again runs `compose up`
       again, which is what started Caddy in the test — expected to repair it, not yet seen there.
@@ -851,8 +851,9 @@ are in PART TWO with what closed them; these are the ones still standing.
       (the backup's accounts replace it). The whole test: 71 of 71 on the third run; the first two
       runs failed only on a slow first start (the GOING ONLINE row above), the drill's restore checks
       passing in the second. Run again after master `fbcbe1e7` was merged in: 71 of 71 on the first
-      run; and on 2026-10-19 after the major upgrades (master `d80dc945`), and again after better-sqlite3 13
-      was reverted (master `faf2387f`): 71 of 71 on the first run each time. What it cannot show is the copy itself to another machine.
+      run; and on 2026-10-19 after the major upgrades (master `d80dc945`), again after better-sqlite3 13
+      was reverted (master `faf2387f`), and after React 19 (master `e371938b`): 71 of 71 on the first
+      run each time. What it cannot show is the copy itself to another machine.
       **verify:** a backup archive exists somewhere other than the server, newer than 2 days.
 - [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
       deliberately does not change the SSH configuration: a mistake there locks the owner out of his

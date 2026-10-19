@@ -199,6 +199,9 @@ stands.
 (`f60080e7`) and run again the same way — **71 of 71 on the first run**, on better-sqlite3 12.10.0
 and Express 5; no container left.
 
+**2026-10-19, after React 19 and the A7-03 close were merged** (master `e371938b`): merged in
+(`b118c5e6`) and run again the same way — **71 of 71 on the first run**; no container left.
+
 ## What could NOT be tested here — on the owner's VPS, at the first install
 
 - the system detection on the real machine (the dry run checked the parser on Debian 12);

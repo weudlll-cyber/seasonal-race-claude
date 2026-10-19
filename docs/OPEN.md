@@ -54,7 +54,7 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–1893) holds exactly FOUR unchecked `- [ ]` rows** — three in *Delivering to someone
+(lines 15–1894) holds exactly FOUR unchecked `- [ ]` rows** — three in *Delivering to someone
 else* (two of them VPS-INSTALL-1's, on this branch only), one in *AUDIT-1 — what the audit of
 2026-10-09 leaves open*.
 *(Re-counted 2026-10-19 on `feat/vps-install` after master `e371938b` was merged in.)* Every current count on this page says four.
