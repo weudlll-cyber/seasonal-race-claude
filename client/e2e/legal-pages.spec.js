@@ -66,7 +66,10 @@ test('signed out: the footer offers the source code and the operator’s legal n
     await expect(anon.getByRole('heading', { name: 'Legal notice' })).toBeVisible();
     const text = anon.getByTestId('legal-text');
     // innerText follows the rendering, so line breaks survive only if the page preserves them.
-    expect(await text.innerText()).toBe(NOTICE);
+    // Polled, not read once: the page shows "Loading…" until its own fetch answers, and the heading
+    // above is drawn before that — React 19 paints it sooner than 18 did, so a single read caught
+    // "Loading…" 2 runs in 3 (A7-03 piece 5, 2026-10-19).
+    await expect.poll(() => text.innerText()).toBe(NOTICE);
     await expect(text.locator('b')).toHaveCount(0);
 
     // A deep link, typed into the address bar while signed out, serves the page too.
