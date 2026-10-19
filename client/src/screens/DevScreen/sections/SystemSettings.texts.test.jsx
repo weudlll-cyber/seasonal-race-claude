@@ -15,6 +15,7 @@
 // promises built-in tracks or racers. Rewording is free; reinstating the false promise is not.
 // ============================================================================================
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import SystemSettings from './SystemSettings.jsx';
 import { CONTROL_INFO } from './controlInfo.js';
@@ -63,6 +64,14 @@ describe('Backup and reset texts', () => {
     const msg = confirm.mock.calls[0][0];
     expect(msg).not.toMatch(/deletes all custom tracks/);
     expect(msg).toMatch(/live on the server and are not deleted/);
+  });
+
+  // IF DELETED: the About table can again name a React major that is not the one running — it said
+  // "React 18" as a literal through the React 19 upgrade until A7-03 piece 5 (2026-10-19).
+  it('the About table names the React major that is actually running', () => {
+    render(<SystemSettings />);
+    const cell = screen.getByText('Client build').nextElementSibling;
+    expect(cell.textContent).toBe(`Vite + React ${React.version.split('.')[0]}`);
   });
 
   // IF DELETED: the info texts can drift back to implying the export is a full backup.
