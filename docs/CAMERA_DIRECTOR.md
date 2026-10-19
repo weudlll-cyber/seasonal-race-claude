@@ -1063,7 +1063,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 80441a70 2026-10-18 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6a234874 2026-10-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED 2026-10-19 (A7-03 piece 1, ESLint 10), IDENTICAL TO THE DIGIT** — 20606/4.36/10.43, 9014/3.71/10.24, 6049/11.77/16.00, 1944/3.22/8.22, ratio 2.89×. `cameraMarker.js`, in the closure, now passes the caught JSON error as the `cause` of the error it throws (ESLint 10's `preserve-caught-error`); the measurement does not parse a marker. Run rather than argued.
 
 ★★ **RE-STAMPED 2026-10-12 (AUDIT-1 B), NOT RE-MEASURED — UNCHANGED BY CONSTRUCTION.** The owner decided that day to re-stamp rather than re-run. What moved in the closure is comments only: the audit's held-back comment corrections ([b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch) — the camera, the race engine, `defaults.js`, `raceDriver.mjs`), one German word in `raceGovernor.js`, and the `file:line` citations those edits shifted. Every changed JavaScript file has the identical token stream and the identical line breaks between tokens before and after — `scripts/lib/inertChange.mjs`'s own predicate, the one `verify` uses to skip a fingerprint, and `engine-reach --check` calls every hull file in the diff inert — so nothing this measurement executes changed. The numbers below are the 2026-10-06 run.
 

@@ -1,10 +1,11 @@
 // ============================================================
 // File:        LegalPagesSection.test.jsx
 // Path:        client/src/screens/DevScreen/sections/LegalPagesSection.test.jsx
-// Project:     RaceArena — LEGAL-PAGES-1
-// Description: The Dev Screen's "Legal pages" section: it shows the stored texts, "Insert template"
-//              fills an empty legal-notice field with the one template, ASKS before replacing text,
-//              and never saves by itself; Save stores both texts.
+// Project:     RaceArena — LEGAL-PAGES-1, PRIVACY-TEMPLATE-1
+// Description: The Dev Screen's "Legal pages" section: it shows the stored texts; each field's
+//              "Insert template" (the legal notice's, and since 2026-10-18 the privacy policy's)
+//              fills an empty field with its template, ASKS before replacing text, and never saves
+//              by itself — the same three tests run for both buttons; Save stores both texts.
 // ============================================================
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -18,7 +19,8 @@ vi.mock('../../../services/legalPagesApi.js', () => ({
 }));
 
 const { default: LegalPagesSection } = await import('./LegalPagesSection.jsx');
-const { LEGAL_NOTICE_TEMPLATE } = await import('../../../modules/legal/legalNoticeTemplate.js');
+const { LEGAL_NOTICE_TEMPLATE, PRIVACY_POLICY_TEMPLATE } =
+  await import('../../../modules/legal/legalNoticeTemplate.js');
 
 const stored = (over) => ({
   legalNotice: '',
@@ -28,13 +30,32 @@ const stored = (over) => ({
   ...over,
 });
 
-async function renderSection(answer) {
+/** Renders the section with the server's answer and returns the field `textId` once loaded. */
+async function renderSection(answer, textId = 'legal-notice-text') {
   fetchLegalPages.mockResolvedValue(answer);
   render(<LegalPagesSection />);
-  const notice = screen.getByTestId('legal-notice-text');
-  await waitFor(() => expect(notice.disabled).toBe(false));
-  return notice;
+  const field = screen.getByTestId(textId);
+  await waitFor(() => expect(field.disabled).toBe(false));
+  return field;
 }
+
+/** The two fields with a template, and what each test needs to know about them. */
+const TEMPLATE_FIELDS = [
+  {
+    name: 'legal notice',
+    key: 'legalNotice',
+    textId: 'legal-notice-text',
+    buttonId: 'legal-notice-template',
+    template: LEGAL_NOTICE_TEMPLATE,
+  },
+  {
+    name: 'privacy policy',
+    key: 'privacyPolicy',
+    textId: 'privacy-policy-text',
+    buttonId: 'privacy-policy-template',
+    template: PRIVACY_POLICY_TEMPLATE,
+  },
+];
 
 beforeEach(() => {
   fetchLegalPages.mockReset();
@@ -43,36 +64,55 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-describe('Insert template', () => {
+describe.each(TEMPLATE_FIELDS)('Insert template — $name', (f) => {
   it('fills an EMPTY field with the template, without asking and without saving', async () => {
-    const notice = await renderSection(stored());
-    fireEvent.click(screen.getByTestId('legal-notice-template'));
-    expect(notice.value).toBe(LEGAL_NOTICE_TEMPLATE);
+    const field = await renderSection(stored(), f.textId);
+    fireEvent.click(screen.getByTestId(f.buttonId));
+    expect(field.value).toBe(f.template);
     expect(window.confirm).not.toHaveBeenCalled();
     expect(saveLegalPages).not.toHaveBeenCalled();
   });
 
   it('asks before replacing a filled field — and keeps the text when the answer is no', async () => {
     window.confirm.mockReturnValue(false);
-    const notice = await renderSection(stored({ legalNotice: 'My own notice' }));
-    expect(notice.value).toBe('My own notice');
-    fireEvent.click(screen.getByTestId('legal-notice-template'));
+    const field = await renderSection(stored({ [f.key]: 'My own text' }), f.textId);
+    expect(field.value).toBe('My own text');
+    fireEvent.click(screen.getByTestId(f.buttonId));
     expect(window.confirm).toHaveBeenCalledTimes(1);
-    expect(notice.value).toBe('My own notice');
+    expect(window.confirm.mock.calls[0][0]).toContain(f.name);
+    expect(field.value).toBe('My own text');
   });
 
   it('replaces a filled field when the answer is yes — still without saving', async () => {
     window.confirm.mockReturnValue(true);
-    const notice = await renderSection(stored({ legalNotice: 'My own notice' }));
-    fireEvent.click(screen.getByTestId('legal-notice-template'));
-    expect(notice.value).toBe(LEGAL_NOTICE_TEMPLATE);
+    const field = await renderSection(stored({ [f.key]: 'My own text' }), f.textId);
+    fireEvent.click(screen.getByTestId(f.buttonId));
+    expect(field.value).toBe(f.template);
     expect(saveLegalPages).not.toHaveBeenCalled();
   });
 
-  it('the template is English, country-neutral, and keeps its line breaks', () => {
+  it('fills only its own field', async () => {
+    await renderSection(stored());
+    fireEvent.click(screen.getByTestId(f.buttonId));
+    for (const other of TEMPLATE_FIELDS.filter((o) => o !== f)) {
+      expect(screen.getByTestId(other.textId).value).toBe('');
+    }
+  });
+});
+
+describe('The templates', () => {
+  it('the legal notice is English, country-neutral, and keeps its line breaks', () => {
     expect(LEGAL_NOTICE_TEMPLATE.startsWith('LEGAL NOTICE\n\nOperator\n')).toBe(true);
     expect(LEGAL_NOTICE_TEMPLATE).toContain('\n[Country]\n');
     expect(LEGAL_NOTICE_TEMPLATE.endsWith('Check what applies to you.')).toBe(true);
+  });
+
+  it('the privacy policy is English, country-neutral, and keeps its line breaks', () => {
+    expect(PRIVACY_POLICY_TEMPLATE.startsWith('PRIVACY POLICY\n\nWho is responsible\n')).toBe(true);
+    expect(PRIVACY_POLICY_TEMPLATE).toContain('\nContact: [contact@your-domain]\n');
+    expect(
+      PRIVACY_POLICY_TEMPLATE.endsWith('remove anything that does not match your installation.')
+    ).toBe(true);
   });
 });
 

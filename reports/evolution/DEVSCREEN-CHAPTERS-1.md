@@ -1,8 +1,8 @@
-# DEVSCREEN-CHAPTERS-1 — the Plan D design: 352 rows (351 controls and one read-only box) in seven chapters, each placed once, an info text each
+# DEVSCREEN-CHAPTERS-1 — the Plan D design: 353 rows (352 controls and one read-only box) in seven chapters, each placed once, an info text each
 
 *(348 as designed and merged. On 2026-10-06 the test-aids switch added one (TEST-AIDS-1) and two winners settings were removed (REMOVE-WINNERS-SETTING-1); on 2026-10-09 the read-only admin status box added a 348th row
-(AUDIT-1 D2); on 2026-10-18 the legal pages added four, rows 349 to 352 (LEGAL-PAGES-1) — see the
-sections at the end.)*
+(AUDIT-1 D2); on 2026-10-18 the legal pages added four, rows 349 to 352 (LEGAL-PAGES-1), and the privacy-policy
+template button a fifth, row 353 (PRIVACY-TEMPLATE-1) — see the sections at the end.)*
 
 **Owns:** the design of the Dev Screen rebuilt as chapters — which chapter every control goes into,
 in which order, and the info text each one carries. **It is a design. Nothing in it is built**: no
@@ -171,9 +171,9 @@ intro text, written to sit at the top of the chapter on the rebuilt screen.
 | 4 | Tracks, racers, brands and groups | 68 | 62 (+6 for an admin) | records and per-type settings |
 | 5 | History and evaluation | 15 | 13 (+2 for an admin) | reads the record |
 | 6 | Diagnostics and verification | 18 | 0 | changes neither |
-| 7 | Accounts and system | 26 | 4 | changes neither |
+| 7 | Accounts and system | 27 | 4 | changes neither |
 | — | Sidebar (all chapters) | 3 | 2 (+1 for an admin) | the screen's frame |
-| | **Total** | **352** | **88** (+9 for an admin) | |
+| | **Total** | **353** | **88** (+9 for an admin) | |
 
 ### 1 · The race — 100
 
@@ -244,7 +244,7 @@ whether the overlays, the logs and every other test aid are shown at all.
 Advanced today, where they read as camera settings; Export Race Config is a card of its own. All of
 them serve someone checking the game, none someone running an event.
 
-### 7 · Accounts and system — 26
+### 7 · Accounts and system — 27
 
 *Intro:* Who may use the screen and what it keeps: for an admin, first a read-only status of the
 installation; then your own password, the race directors of the server, backups of everything this
@@ -692,7 +692,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 6.16 | Race configuration export | `ConfigExportSection.jsx` | Export race config | `export-race-config` (testId) | advanced | Downloads world.json — the exact configuration the game reads when a race starts — so a simulator run can be checked against it, and copies it to the clipboard where it can. The hash beside it names that configuration. | REWRITTEN |
 | 6.17 | Race configuration export | `ConfigExportSection.jsx` | ↻ refresh | `refresh` (handler) | advanced | Recomputes the configuration hash and the list of changed settings after you have changed something. | REWRITTEN |
 
-### 7 · Accounts and system — 26 rows, and the sidebar's 3
+### 7 · Accounts and system — 27 rows, and the sidebar's 3
 
 Rows 7.1–7.3 are placed in **Sidebar (all chapters)** (the owner's decision of 2026-10-05); their
 numbers are kept so earlier references still find them.
@@ -726,8 +726,9 @@ numbers are kept so earlier references still find them.
 | 7.24 | Backup and reset | `SystemSettings.jsx` | Reset All Settings to Defaults | `handleReset` (handler) | advanced | Wipes every setting this browser stores and starts again from shipped values. Tracks, racers, player groups and brands live on the server and are neither deleted nor restored; only this browser’s own copies of them and settings for them are cleared. | REWRITTEN |
 | 7.25 | Legal pages | `LegalPagesSection.jsx` | Legal notice | `legal-notice-text` (testId) | advanced | The legal notice this installation shows to every visitor at /legal-notice, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Legal notice link. You, the operator, are responsible for its content and for checking which details apply where you operate. Stored on the server when you save. | NEW |
 | 7.26 | Legal pages | `LegalPagesSection.jsx` | Insert template | `legal-notice-template` (testId) | advanced | Fills in a country-neutral legal notice template. Replace the bracketed fields with your details and check which details apply where you operate. | NEW |
-| 7.27 | Legal pages | `LegalPagesSection.jsx` | Privacy policy | `privacy-policy-text` (testId) | advanced | The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. There is no template: describe how you run the game. Stored on the server when you save. | NEW |
-| 7.28 | Legal pages | `LegalPagesSection.jsx` | Save legal pages | `legal-pages-save` (testId) | advanced | Stores both texts on the server, for every visitor at once. Each text has a length limit; the count under each field shows how much of it is used. Nothing is stored until you press this — Insert template does not save. | NEW |
+| 7.27 | Legal pages | `LegalPagesSection.jsx` | Privacy policy | `privacy-policy-text` (testId) | advanced | The privacy policy this installation shows to every visitor at /privacy, signed in or not — as plain text with its line breaks; markup is shown as typed, never rendered. Empty means no page, and the start screen then shows no Privacy policy link. Insert template below it fills in a starting text; describe how you run the game. Stored on the server when you save. | NEW |
+| 7.28 | Legal pages | `LegalPagesSection.jsx` | Insert template | `privacy-policy-template` (testId) | advanced | Fills in a country-neutral privacy policy template, written from what this application actually stores. Replace the bracketed parts and check which details apply where you operate. | NEW |
+| 7.29 | Legal pages | `LegalPagesSection.jsx` | Save legal pages | `legal-pages-save` (testId) | advanced | Stores both texts on the server, for every visitor at once. Each text has a length limit; the count under each field shows how much of it is used. Nothing is stored until you press this — Insert template does not save. | NEW |
 
 ---
 
@@ -1224,3 +1225,20 @@ them; the server refuses anyone else's change (`ROUTE_POLICY`). The operator vie
 printed **349** on master before this piece (not the 347 recorded above — it had drifted with later
 pieces, not re-recorded here) and prints **353** with it: the four controls, each by its literal
 test id. The two text fields are written with their own literal test ids for exactly that reason.
+
+---
+
+## PRIVACY-TEMPLATE-1 — row 353, the privacy-policy template (2026-10-18)
+
+On 2026-10-18 the owner asked for an English, country-neutral privacy-policy template, the
+counterpart of the legal-notice one. *Insert template* under the privacy-policy field (7.28) fills it
+from `PRIVACY_POLICY_TEMPLATE`, beside `LEGAL_NOTICE_TEMPLATE` in the one template module
+(`client/src/modules/legal/legalNoticeTemplate.js`), through the same `insertTemplate` as 7.26 — fills
+an empty field, asks before replacing text, never saves. *Save legal pages* moves from 7.28 to 7.29;
+every other row keeps its number. The privacy-policy field's info text (7.27) no longer says there is
+no template. Advanced tier, as the rest of the sub-group; the operator view is unchanged: 88 (+9 for
+an admin).
+
+**Counts.** The table and the chapter guard hold **353 rows** (chapter 7: 27). `count-controls.mjs`
+prints **354** with it (353 on master before it): each template button is written with its literal
+test id.

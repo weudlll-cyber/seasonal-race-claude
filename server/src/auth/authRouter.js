@@ -90,7 +90,7 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     }
 
     // 4. Atomic gate: O_EXCL — exactly one winner across concurrent requests
-    let fd = null;
+    let fd; // set by openSync below; every path past the catch holds a real descriptor
     try {
       fd = openSync(setupMarkerPath, 'wx');
     } catch (e) {

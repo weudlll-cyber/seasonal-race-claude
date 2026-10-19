@@ -100,3 +100,15 @@ that event.
 - On the VPS install (branch `feat/vps-install`, **not merged**), the daily backup deletes archives
   older than 14 days **on that server**. Copies taken off the server are not touched.
 - A copy of a backup on another machine carries the same data and needs the same care.
+
+## The privacy-policy template
+
+The Dev Screen offers a country-neutral privacy-policy template (*Accounts and system* → *Legal
+pages* → *Insert template* under the privacy-policy field; added 2026-10-18, PRIVACY-TEMPLATE-1). It
+lives in `client/src/modules/legal/legalNoticeTemplate.js`, beside the legal-notice template, and is
+**derived from this page**: the 30-day session cookie and the session holding no IP address or
+browser details, no IP addresses recorded by the app and no access log, player names kept for good
+in stored races and not removable in the app, what the browser stores, no third parties, and the
+daily release check to GitHub. **Keep the two in step** — when a fact here changes, the template
+changes in the same commit. What only the operator knows (their proxy's logs, their hosting, how long
+they keep backups) is left in brackets for them to fill in.

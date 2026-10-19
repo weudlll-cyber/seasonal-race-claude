@@ -682,8 +682,11 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH, { wal = resolveRa
    * which is a second query whose cost grows with exactly the thing paging exists to bound.
    */
   function listRacesPage(team, { limit = 20, offset = 0 } = {}) {
-    const size = Math.max(1, Math.min(100, Number(limit) || 20));
-    const from = Math.max(0, Number(offset) || 0);
+    // Whole numbers: SQLite refuses a fractional LIMIT or OFFSET ("datatype mismatch"), so
+    // `?limit=1.5` used to answer 500 (found 2026-10-19 checking the bounds for A7-03 piece 4; the
+    // same on better-sqlite3 12 and Express 4 — not from either upgrade).
+    const size = Math.max(1, Math.min(100, Math.trunc(Number(limit)) || 20));
+    const from = Math.max(0, Math.trunc(Number(offset)) || 0);
     const rows = listRacesByTeam(team, { limit: size + 1, offset: from });
     return { races: rows.slice(0, size), hasMore: rows.length > size, offset: from, limit: size };
   }

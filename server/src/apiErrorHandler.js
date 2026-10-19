@@ -32,7 +32,10 @@ export function apiErrorHandler(err, req, res, next) {
   // A response already under way cannot be replaced; Express's own handler closes the connection.
   if (res.headersSent) return next(err);
   const raw = Number(err?.status ?? err?.statusCode);
-  const status = raw >= 400 && raw < 600 ? raw : 500;
+  // A whole number in the error range, or 500. Express 5's `res.status` THROWS on anything that is
+  // not an integer from 100 to 999 (its migration guide, "res.status"), and a throw here would
+  // leave the request to Express's default handler — the stack-trace page this file exists to stop.
+  const status = Number.isInteger(raw) && raw >= 400 && raw < 600 ? raw : 500;
   if (status >= 500) console.error(`[api] ${req.method} ${req.path} → ${status}`, err);
   else console.warn(`[api] ${req.method} ${req.path} → ${status} (${err?.type ?? 'client error'})`);
   res.status(status).json({ error: `HTTP ${status}` });

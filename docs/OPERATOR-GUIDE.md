@@ -86,7 +86,7 @@ answers `ok` while sign-in fails (§6). After any repair, sign in once to be sur
 
 **Point any uptime checker at `https://<your domain>/api/health`.** The route needs no sign-in: it is
 on the public allow-list (`server/src/auth/guards.js:15-24`) and is mounted in
-`server/src/app.js:70`; its handler is `server/src/health.js:51-65`.
+`server/src/app.js:81`; its handler is `server/src/health.js:51-65`.
 
 | answer | what it means |
 | --- | --- |
@@ -187,16 +187,18 @@ notice" and "Privacy policy" appear only once you have filled them in.** Both pa
 visitor reads them at `/legal-notice` and `/privacy` without signing in.
 
 **Filling them in (admins).** Dev Screen → *Accounts and system* → *Legal pages*. Write each text as
-plain text; line breaks are kept and nothing is read as markup. **Insert template** fills the legal-
-notice field with a country-neutral template (it asks first when the field already holds text, and
-it does not save); replace every bracketed field with your details, delete what does not apply,
-then press **Save legal pages**. There is no privacy-policy template. Leaving a field empty removes
-its link. The texts are stored on the server in `legal-pages.json` in the data folder, so every
+plain text; line breaks are kept and nothing is read as markup. Each field has an **Insert
+template** button that fills it with a country-neutral template (it asks first when the field
+already holds text, and it does not save); replace every bracketed part with your details, delete
+what does not apply, then press **Save legal pages**. The privacy-policy template (since 2026-10-18)
+is written from what this application actually stores, as listed in
+[PRIVACY-FACTS.md](PRIVACY-FACTS.md); what your hosting or proxy logs, and how long you keep
+backups, only you can fill in. Leaving a field empty removes its link. The texts are stored on the server in `legal-pages.json` in the data folder, so every
 backup carries them.
 
 ★ **You, the operator, are responsible for what the pages say.** Which details a legal notice and a
 privacy policy must contain depends on the country you operate from — some require a legal notice,
-others do not. Check what applies to you; the template is a starting point, not legal advice.
+others do not. Check what applies to you; the templates are a starting point, not legal advice.
 
 **Where "Source code" points.** The game is free software under the GNU AGPL-3.0-or-later, so
 everyone who uses it is offered its source. By default the link opens the upstream repository at
@@ -418,6 +420,7 @@ Read the first lines it prints; each start-up refusal names its cause.
 | `RA_BIND_ADDRESS` not an IP address | refuses to start, naming the variable | an IP address, or leave it out |
 | `RA_TRUST_PROXY` not a whole number | refuses to start, naming the variable | the number of proxies in front (`1` behind Caddy, `0` for none), or leave it out |
 | `RA_COOKIE_NAME_MODE=host` without a guaranteed secure cookie | refuses to start | leave the variable unset |
+| the port is already taken (another server, an old one still running) | refuses to start: `RaceArena cannot start: listen EADDRINUSE …`, exit 1 | stop the other process, or choose another `PORT` |
 | no client build present | **starts**, logs where it looked, and serves only the API | build the client (Node path, install step 3) |
 
 On the Docker path: `docker compose logs server`. On the VPS install (branch feat/vps-install, not yet

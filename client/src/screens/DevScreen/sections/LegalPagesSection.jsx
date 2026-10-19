@@ -9,14 +9,19 @@
 //              (`ROUTE_POLICY`, server/src/auth/guards.js).
 //
 // The texts live on the server (`legal-pages.json` in its data root); this section reads them from
-// the public `GET /api/settings/legal-pages` and stores both with one Save. "Insert template" fills
-// the legal-notice field with the one template (modules/legal/legalNoticeTemplate.js), asking first
-// when the field already holds text, and does NOT save — the operator edits, then saves.
+// the public `GET /api/settings/legal-pages` and stores both with one Save. Each field has an
+// "Insert template" button (one `insertTemplate` and `templateButtonProps` for both) that fills it with its
+// template from the one template module (modules/legal/legalNoticeTemplate.js — the legal notice,
+// and since 2026-10-18 the privacy policy beside it), asking first when the field already holds
+// text, and does NOT save — the operator edits, then saves.
 // ============================================================
 
 import { useEffect, useState } from 'react';
 import { fetchLegalPages, saveLegalPages } from '../../../services/legalPagesApi.js';
-import { LEGAL_NOTICE_TEMPLATE } from '../../../modules/legal/legalNoticeTemplate.js';
+import {
+  LEGAL_NOTICE_TEMPLATE,
+  PRIVACY_POLICY_TEMPLATE,
+} from '../../../modules/legal/legalNoticeTemplate.js';
 import { Ctl, Info } from './ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
@@ -24,10 +29,12 @@ const ID = {
   notice: 'LegalPagesSection:legal-notice-text',
   template: 'LegalPagesSection:legal-notice-template',
   privacy: 'LegalPagesSection:privacy-policy-text',
+  privacyTemplate: 'LegalPagesSection:privacy-policy-template',
   save: 'LegalPagesSection:legal-pages-save',
 };
 
-const REPLACE_QUESTION = 'Replace the text in the legal notice field with the template?';
+/** The question asked before a template replaces text, per field. */
+const replaceQuestion = (field) => `Replace the text in the ${field} field with the template?`;
 
 /**
  * A text field's frame: its label with the info icon, and a character count against the server's
@@ -57,6 +64,17 @@ const textareaProps = (maxChars, disabled) => ({
   disabled,
 });
 
+/**
+ * The props both "Insert template" buttons share. Each <button> is written at its use with its
+ * literal data-testid, like the textareas, so the control count sees two.
+ */
+const templateButtonProps = (disabled, onClick) => ({
+  type: 'button',
+  className: `${s.btn} ${s.btnGhost}`,
+  disabled,
+  onClick,
+});
+
 function LegalPagesSection() {
   const [notice, setNotice] = useState('');
   const [privacy, setPrivacy] = useState('');
@@ -83,10 +101,11 @@ function LegalPagesSection() {
     };
   }, []);
 
-  function insertTemplate() {
+  /** Fills one field with its template. Never saves: the operator edits, then saves. */
+  function insertTemplate(current, setText, template, field) {
     // Asks before replacing text — the same window.confirm the other Dev Screen sections use.
-    if (notice.trim() !== '' && !window.confirm(REPLACE_QUESTION)) return;
-    setNotice(LEGAL_NOTICE_TEMPLATE);
+    if (current.trim() !== '' && !window.confirm(replaceQuestion(field))) return;
+    setText(template);
     setMessage('Template inserted. Replace the bracketed fields, then save.');
   }
 
@@ -125,11 +144,10 @@ function LegalPagesSection() {
       <div className={s.btnRow} style={{ marginBottom: '1.25rem' }}>
         <Ctl id={ID.template}>
           <button
-            type="button"
-            className={`${s.btn} ${s.btnGhost}`}
             data-testid="legal-notice-template"
-            disabled={!loaded || busy}
-            onClick={insertTemplate}
+            {...templateButtonProps(!loaded || busy, () =>
+              insertTemplate(notice, setNotice, LEGAL_NOTICE_TEMPLATE, 'legal notice')
+            )}
           >
             Insert template
           </button>
@@ -150,6 +168,18 @@ function LegalPagesSection() {
           onChange={(e) => setPrivacy(e.target.value)}
         />
       </TextField>
+      <div className={s.btnRow} style={{ marginBottom: '1.25rem' }}>
+        <Ctl id={ID.privacyTemplate}>
+          <button
+            data-testid="privacy-policy-template"
+            {...templateButtonProps(!loaded || busy, () =>
+              insertTemplate(privacy, setPrivacy, PRIVACY_POLICY_TEMPLATE, 'privacy policy')
+            )}
+          >
+            Insert template
+          </button>
+        </Ctl>
+      </div>
       <div className={s.btnRow}>
         <Ctl id={ID.save}>
           <button

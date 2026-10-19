@@ -290,6 +290,11 @@ describe('authRouter', () => {
     const setCookie = logoutRes.headers['set-cookie'] ?? [];
     // In test env (NODE_ENV=test, no RA_COOKIE_SECURE=true), active name is ra.sid
     expect(setCookie.some((c) => /^ra\.sid=/.test(c))).toBe(true);
+    // ...and it really ENDS the cookie: empty, expired at the epoch. Express 5's clearCookie ignores
+    // a caller's maxAge/expires and sets this itself (its migration guide, "res.clearCookie").
+    expect(setCookie.find((c) => /^ra\.sid=/.test(c))).toMatch(
+      /^ra\.sid=;.*Expires=Thu, 01 Jan 1970 00:00:00 GMT/
+    );
   });
 
   it('logout: RA_COOKIE_SECURE=true → Set-Cookie clears __Host-ra.sid (active) and ra.sid (legacy)', async () => {
@@ -321,6 +326,11 @@ describe('authRouter', () => {
       const setCookie = logoutRes.headers['set-cookie'] ?? [];
       expect(setCookie.some((c) => /^__Host-ra\.sid=/.test(c))).toBe(true);
       expect(setCookie.some((c) => /^ra\.sid=/.test(c))).toBe(true);
+      for (const name of ['__Host-ra\\.sid', 'ra\\.sid']) {
+        expect(setCookie.find((c) => new RegExp(`^${name}=`).test(c))).toMatch(
+          new RegExp(`^${name}=;.*Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+        );
+      }
     } finally {
       delete process.env.RA_COOKIE_SECURE;
     }
