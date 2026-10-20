@@ -252,6 +252,75 @@ the app's colour tokens.
 - `docs/SHIP-CEREMONY.md` counts regenerated: 85/29 → 86/30, because of the new modules file. The
   race hull is unchanged at 231 files, so no fingerprint guard is selected.
 
+## P4 — the director UI, QR, stage view, "Use these players"
+
+**Built.**
+
+- **The Players tab gets a two-button switch**, "Enter names" (the default, so the tab opens exactly
+  as before) and "Player registration" (`SetupScreen.jsx`).
+- `client/src/screens/SetupScreen/RegistrationPanel.jsx` + `.module.css` (new). It covers:
+  - **opening**: the track (the selected one first), "Open for" 5 min / 15 min / 1 hour / 1 day /
+    3 days / 7 days / "Until…" (a date and time), and an optional event name;
+  - **the place count**, shown before opening — "N places — this track's player limit". A track
+    whose geometry has not loaded cannot be opened, the way Start Race refuses it;
+  - **one registration**: the join link with **Copy link**, a **QR code**, places taken and left,
+    the time left, the names in arrival order each with ✕, **Close now**, **Extend** (+5 min,
+    +15 min, +1 hour, +1 day, or "Extend until" a date and time), and **Delete registration**
+    after a confirmation;
+  - when closed, **Use these players**;
+  - **the team's open and recently closed registrations** (the newest ten), each opening its view;
+  - while a registration is shown and open, it is asked for again every 5 s.
+- **Show QR full screen** — a white stage over the whole window, in the browser's full-screen mode
+  where allowed. It shows the event name, the track, a QR code about two thirds of the window's
+  height, and the link. Escape or Close leaves it, and leaving the browser's full screen closes it
+  too.
+- `client/src/components/QrCode/QrCode.jsx` (new) — the matrix from **`lean-qr` 2.7.4**, drawn as
+  one SVG path with the standard quiet zone. No service is asked, no markup is injected and no
+  inline style is used.
+- **"Use these players"** passes the names through the Setup screen's own `setPlayers` (the
+  existing roster path) and the registration's track through `setSelectedTrackId`, then switches
+  back to "Enter names"; Start Race is the normal flow.
+- `fieldCap.js` gains **`isTrackOpen(track, getTrack)`**: the open/closed test the Setup screen wrote
+  out twice (the selected track and the Quick Test track), now one helper used by both and by the
+  panel. Behaviour is unchanged, including `false` for an unknown geometry.
+
+**The new dependency.** `lean-qr` 2.7.4, pinned exactly: MIT, no dependencies, pure JavaScript,
+released 2026-09-07 (over two weeks ago). `npm audit` in client is unchanged — the same one high
+advisory (vite 8.0.0–8.1.5, launch-editor) as before this chain, none from `lean-qr`. The bundle
+check (`scripts/audit-bundle-address.mjs`) passes: "no deployment address".
+
+**Tests.**
+
+- `RegistrationPanel.test.jsx` (8):
+  - the place count is the Players-tab limit for a closed and an open track;
+  - an unloaded track cannot be opened;
+  - opening sends the track, the operator's own limit, the trimmed event name and a deadline one
+    hour away;
+  - the view shows the link, a QR path, the counts, the countdown and the names in order;
+  - remove, +1 hour (exactly one hour later) and Close now;
+  - "Use these players" hands over exactly the names and the track;
+  - Delete asks, and deletes only on yes;
+  - the QR stage opens and closes with Escape.
+- SetupScreen's 15 test files: 182 / 182, the tab unchanged when "Enter names" is the default.
+- Browser gate, production arm, `e2e/registration-director.spec.js` (1), on the built app:
+  - opening from the Players tab; the link and the QR code;
+  - the stage view's code taller than half the window, closed by Escape;
+  - two phones (390 × 844, signed out) join through the shown link, and the director's list shows
+    both within a poll;
+  - a removed name leaves the list; Close now;
+  - "Use these players" leaves exactly "E2E Ada" in the roster with Start Race enabled;
+  - the registration is deleted through the panel.
+
+**Decided by rule.**
+
+- **"Use these players" replaces the roster rather than adding to it.** A registration is a way to
+  fill the race; mixing in names typed earlier would give a roster nobody registered. The button
+  says so in its tooltip.
+- **The recent list shows the newest ten** of what the server returns (at most 50).
+- **QR library: `lean-qr`.** Of the three maintained, dependency-free candidates (`uqr` 0.1.3,
+  `qrcode-generator` 2.0.4, `lean-qr` 2.7.4), it is the most recently maintained, and its plain
+  matrix API lets the code be drawn as SVG elements with no markup injection.
+
 ## Refusals
 
 | when | what was refused | what was done instead |

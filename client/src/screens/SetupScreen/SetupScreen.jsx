@@ -20,7 +20,8 @@ import LegalFooter from '../../components/LegalFooter/LegalFooter.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
 import PlayerGroupPicker from './PlayerGroupPicker.jsx';
 import { sectionsOf } from './rosterGroups.js';
-import { fieldCapFor, quickTestFieldSize } from './fieldCap.js';
+import { fieldCapFor, isTrackOpen, quickTestFieldSize } from './fieldCap.js';
+import RegistrationPanel from './RegistrationPanel.jsx';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
@@ -243,6 +244,18 @@ function SetupScreen() {
   const [racePlanMinDur] = useState(() => loadRaceDynamicsConfig().racePlanMinDurationSec ?? 30);
 
   const [selectedTrackId, setSelectedTrackId] = useState(null);
+  // REGISTRATION-1: 'names' (type them, or load a saved group) or 'registration' (the players
+  // register themselves through a link — RegistrationPanel.jsx).
+  const [playersMode, setPlayersMode] = useState('names');
+  // "Use these players": the registered names become the roster — through the same `setPlayers`
+  // every other way of filling the field uses, REPLACING what was there (a registration is a way
+  // to fill the race, not to add to it) — and the registration's track is selected. The tab goes
+  // back to the names, where the roster can be checked before Start Race.
+  function handleUseRegisteredPlayers({ names, trackId }) {
+    setPlayers(names.map((name) => ({ name })));
+    setSelectedTrackId(trackId);
+    setPlayersMode('names');
+  }
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
   // CLOSED tracks: the operator picks LAPS and the duration is derived. OPEN tracks: the operator
   // picks SECONDS and the finish line is derived. There is no closed-track duration control any
@@ -333,11 +346,7 @@ function SetupScreen() {
   }, [players.length, selectedTrack, geometricRacersPerRow]);
 
   // Detect open/closed from the geometry's closed flag directly (isOpen = !closed)
-  const trackIsOpen = useMemo(() => {
-    if (!selectedTrack?.geometryId) return false;
-    const geom = getTrack(selectedTrack.geometryId);
-    return geom ? !geom.closed : false;
-  }, [selectedTrack]);
+  const trackIsOpen = useMemo(() => isTrackOpen(selectedTrack, getTrack), [selectedTrack]);
 
   // PLAYER-GROUPS-1: the field cap, resolved ONCE. It was computed inline at the one place that
   // needed it; two components need it now, and two copies of a `??` chain is how they drift apart.
@@ -614,11 +623,7 @@ function SetupScreen() {
   // QUICKTEST-CAP-1: the Quick Test track's own open/closed flag, at RENDER time. `handleQuickTest`
   // already derived it from the geometry at click time; the cap has to be known before the click, to
   // clamp the N input and to refuse before the button is pressed rather than after.
-  const quickTrackIsOpen = useMemo(() => {
-    if (!quickTrack?.geometryId) return false;
-    const geom = getTrack(quickTrack.geometryId);
-    return geom ? !geom.closed : false;
-  }, [quickTrack]);
+  const quickTrackIsOpen = useMemo(() => isTrackOpen(quickTrack, getTrack), [quickTrack]);
 
   // THE SAME AUTHORITY THE NORMAL PATH READS — `maxPlayersOpen`/`maxPlayersClosed`, through the one
   // expression in `fieldCap.js`. Quick Test used to cap itself at a hardcoded 100 whatever the track
@@ -1238,20 +1243,52 @@ function SetupScreen() {
           {activeTab === 0 && (
             <>
               <h2 className={styles.panelTitle}>Players</h2>
-              {/* PLAYER-GROUPS-1: the picker sits ABOVE the name input, because filling the field
-                  from a saved group is the common case and typing thirty names is not. It writes
-                  into the SAME roster the input below writes into — there is one field, and both
-                  doors lead to it. */}
-              <PlayerGroupPicker
-                players={players}
-                onChange={setPlayers}
-                maxPlayers={effectiveMaxPlayers}
-              />
-              <PlayerSetup
-                players={players}
-                onChange={setPlayers}
-                maxPlayers={effectiveMaxPlayers}
-              />
+              {/* REGISTRATION-1: two ways to fill the race — typing the names (with saved groups),
+                  or a registration the players fill themselves. Typing is the default, so the tab
+                  opens exactly as before. */}
+              <div className={styles.playersMode} role="group" aria-label="How to fill the race">
+                <button
+                  type="button"
+                  aria-pressed={playersMode === 'names'}
+                  className={playersMode === 'names' ? styles.playersModeActive : ''}
+                  onClick={() => setPlayersMode('names')}
+                >
+                  Enter names
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={playersMode === 'registration'}
+                  className={playersMode === 'registration' ? styles.playersModeActive : ''}
+                  onClick={() => setPlayersMode('registration')}
+                >
+                  Player registration
+                </button>
+              </div>
+              {playersMode === 'registration' ? (
+                <RegistrationPanel
+                  tracks={tracks}
+                  raceDefaults={raceDefaults}
+                  selectedTrackId={selectedTrackId}
+                  onUsePlayers={handleUseRegisteredPlayers}
+                />
+              ) : (
+                <>
+                  {/* PLAYER-GROUPS-1: the picker sits ABOVE the name input, because filling the
+                      field from a saved group is the common case and typing thirty names is not.
+                      It writes into the SAME roster the input below writes into — there is one
+                      field, and both doors lead to it. */}
+                  <PlayerGroupPicker
+                    players={players}
+                    onChange={setPlayers}
+                    maxPlayers={effectiveMaxPlayers}
+                  />
+                  <PlayerSetup
+                    players={players}
+                    onChange={setPlayers}
+                    maxPlayers={effectiveMaxPlayers}
+                  />
+                </>
+              )}
             </>
           )}
           {activeTab === 1 && (

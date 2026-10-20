@@ -1,0 +1,218 @@
+/* ============================================================
+   File:        RegistrationPanel.module.css
+   Path:        client/src/screens/SetupScreen/RegistrationPanel.module.css
+   Project:     RaceArena — REGISTRATION-1
+   Description: The Players tab's "Open registration" panel — the form, the list, one registration
+                with its link, QR code and names — and the full-screen QR stage view, sized to be
+                scanned from across a room.
+   ============================================================ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.durations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.durations legend {
+  margin-bottom: 0.3rem;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.primary {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.danger {
+  color: var(--color-primary);
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent);
+  cursor: pointer;
+  text-align: left;
+}
+
+.subTitle {
+  font-size: 1rem;
+  margin: 0.25rem 0 0;
+}
+
+.muted {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.error {
+  color: var(--color-accent);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.closed {
+  font-weight: 600;
+}
+
+.list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.qr {
+  width: 160px;
+  height: 160px;
+}
+
+.shareText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.link {
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0;
+}
+
+.facts dt {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.facts dd {
+  margin: 0.1rem 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.names {
+  margin: 0;
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.names li span {
+  margin-right: 0.5rem;
+}
+
+.remove {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+/* ── The stage view: the whole window, the code as large as fits ─────────────────────────────── */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #fff;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5vh;
+  padding: 2vh;
+}
+
+.stageTitle {
+  font-size: 6vh;
+  margin: 0;
+  text-align: center;
+}
+
+.stageTrack {
+  font-size: 3vh;
+  margin: 0;
+}
+
+/* The code takes what the window leaves after the text: about two thirds of its height. */
+.stageQr {
+  width: min(66vh, 90vw);
+  height: min(66vh, 90vw);
+}
+
+.stageLink {
+  font-size: 2.5vh;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.stageExit {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
