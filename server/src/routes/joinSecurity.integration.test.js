@@ -27,15 +27,13 @@ beforeAll(async () => {
 
 /** A fresh registration, opened by the director; returns the director's view. */
 async function openRegistration(body = {}) {
-  const res = await director
-    .post('/api/registrations')
-    .send({
-      trackId: 'dirt-oval',
-      capacity: 5,
-      eventName: 'Night cup',
-      closesAt: inMinutes(10),
-      ...body,
-    });
+  const res = await director.post('/api/registrations').send({
+    trackId: 'dirt-oval',
+    capacity: 5,
+    eventName: 'Night cup',
+    closesAt: inMinutes(10),
+    ...body,
+  });
   expect(res.status).toBe(201);
   return res.body;
 }
