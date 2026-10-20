@@ -101,6 +101,115 @@ store) and `test/authAgent.js` (`operatorAgent`).
 **Documents changed with it (stale otherwise):** `docs/SETUP.md`, `docs/DEPLOYMENT.md` (the live
 databases are three) and `docs/OPERATOR-GUIDE.md` (the data-folder table). The rest is P5.
 
+## P2 — public routes, device cookie, limiter, integration seam, security tests
+
+**Built.**
+
+- `server/src/routes/join.js` (new) — `/api/join/:code`, no sign-in.
+  - `GET` returns the public view: event name, track name, places, places left, state and closes-at.
+    For a device that has registered it adds its own name and number (`you`). Never another
+    player's name, the director, the team or the registration's id.
+  - `POST { name }` registers, with the player-name rules and the case-insensitive duplicate
+    refusal. Full answers "This race is full."; closed answers "Registration is closed.". On success
+    it answers "You're in! You are number N of M.".
+- **The device cookie** `ra_join`: httpOnly, SameSite=Lax, `Secure` by the session cookie's own rule
+  (`resolveCookieSecure`), path `/api/join/<code>` (so one per registration), 31 days. Its value is the
+  entry id. A second attempt is answered "You are already registered as <name>." with 409. A name
+  the director removed frees the device again.
+- **`PUBLIC_PATHS` takes an anchored `pattern`** beside the exact `path` (`server/src/auth/guards.js`
+  `matchesPublicPath`).
+  - Two entries admit exactly `/api/join/` plus 22 URL-safe characters, for GET (and so HEAD) and
+    POST; nothing under, beside or around it, and no PUT, DELETE or PATCH.
+  - The pattern is tested on the same lower-cased, slash-trimmed path the exact entries are, so
+    letter case is judged as the router judges it.
+- **`joinLimiter`** (`server/src/auth/rateLimit.js`, new factory `createJoinLimiter`): 60 a minute
+  per address on the public POST only. It caps requests, not entries; there is no per-IP cap on
+  entries.
+- **A 1 KB body limit** on `/api/join` and `/api/integrations`, mounted before the app's 1 MB parser
+  (`server/src/app.js`).
+- `server/src/routes/integrations.js` (new) — `POST /api/integrations/registrations/:code/entries`,
+  `Authorization: Bearer <RA_INTEGRATION_KEY>`, body `{ name, externalId }`.
+  - Off (404, the body of an unknown route) while the key is unset.
+  - 401 for a wrong or missing key. The comparison is constant-time: both sides are hashed to 32
+    bytes, then compared with `timingSafeEqual`.
+  - The same capacity, deadline and name rules apply; a doubled external id is 409.
+- Documents: `docs/INTEGRATIONS.md` (new: purpose, the principle, the endpoint, errors, security
+  notes), its row in `docs/README.md`, `RA_INTEGRATION_KEY` in `docs/ENVIRONMENT.md` (plus a line on
+  the join limiter), and the standing principle as `docs/PROJECT-PRINCIPLES.md` §11.
+
+**Reused, and named.**
+
+- `PUBLIC_PATHS` and `matchesPublicPath` (extended, not duplicated); `policyMethod` (HEAD judged as
+  GET).
+- `express-rate-limit` through the existing factory shape of `rateLimit.js`.
+- `resolveCookieSecure` (`server/src/auth/cookiePolicy.js`).
+- `unknownFields` / `unknownFieldsMessage` for both bodies.
+- The store's `addEntry` / `publicInfo` / `ownEntry` from P1, and its default instance
+  (`getDefaultRegistrationStore`, shared by all three routers).
+- The not-found body of `mountApiNotFound`.
+
+**Tests.**
+
+- `joinSecurity.integration.test.js` (13), against the real app:
+  - the player path end to end: the cookie's attributes, "already registered", revisit, a doubled
+    name from another device, a removed name freeing the device;
+  - full, closed and unknown code;
+  - **30 parallel registrations on 10 places: exactly 10 land, 20 are FULL**;
+  - **the public bodies never carry another name, the director, the team or the id** (GET, success,
+    refusal);
+  - **path variants**: the code path in any case and with a trailing slash is public; 13 shapes
+    under, beside or around it are 401, including `..`, `%2e%2e`, a short or long code, PUT, DELETE,
+    PATCH and the director routes in other cases;
+  - **HEAD** is public on `/api/join/<code>`, and refused on a POST-only public path and on a
+    director route;
+  - a 2 KB body is 413;
+  - the limiter passes 60 and refuses the 61st;
+  - **the integration seam**: unset → 404 with the unknown-route body; five wrong forms of the key
+    (one character more, one fewer, none, `Basic`, empty) → 401 with nothing added; the right key →
+    `source: 'integration'` with the external id; a doubled external id → 409; a doubled name and
+    full answered by code.
+- `guards.test.js` (+3): the pattern admits GET, HEAD and POST in any case and refuses PUT, DELETE,
+  PATCH and seven near-miss paths.
+- `routePolicyDrift.test.js`: the two routers are in the mount map and the two POSTs are classified.
+
+**Checks.**
+
+- Server lint clean.
+- **The full server suite twice under load from other projects on the machine** (another project's
+  Vite dev server and two other node services were running; not this chain's, and not stopped).
+  - First run: 1240 of 1245 passed; 5 timeouts, all bcrypt-bound, in `teams.test.js`,
+    `usersStore.test.js` and `caseBypass.integration.test.js`. Those three files alone: 91 / 91.
+  - Second run: 1238 of 1245 passed; 7 timeouts in `authRouter.test.js`, `recoverAdmin.test.js`,
+    `teams.test.js` and `usersStore.test.js`. Those four files alone: 116 / 116.
+  - None of the failing files is touched by this branch. Every new test passed in both runs.
+
+**Documents brought current in the same commit** (they became stale with P1 and P2):
+
+- `docs/API.md`: the ten new routes (a new section and table rows 69–78; 68 → 78 routes, eleven →
+  fourteen routers), the public-pattern rule, the middleware order, and the join limiter.
+- 185 `file:line` citations into `guards.js`, `app.js` and `routes/races.js` remapped across
+  `docs/API.md`, `docs/OPERATOR-GUIDE.md` and `docs/DEPLOYMENT.md`, plus 9 into `rateLimit.js`.
+  This was done by a line map of the insertions, spot-checked against the code.
+- One citation already wrong before this branch was corrected by hand: the settings router's mount,
+  now `app.js:110`.
+- `docs/AUTH.md` §5: the join link on the allow-list, and why it is narrow enough.
+- Historical records (BACKLOG, `docs/archive/`) keep their citations as written.
+
+**Decided by rule.**
+
+- **The integration seam is mounted before the session and the guards, not put on `PUBLIC_PATHS`.**
+  Its caller is a server with a key: on `PUBLIC_PATHS` it would also have needed an exemption from
+  the CSRF guard, which in strict mode refuses a POST without `Origin`. That would have been two
+  exemptions in two security components. Mounted first, it answers every request itself (404 off,
+  401 wrong key) and touches neither.
+- **The cookie is a courtesy, not a boundary.** Clearing cookies allows a second name; the director
+  sees and removes it. Two simultaneous first attempts from one device both land, for the same
+  reason.
+- **GET is not rate-limited**, like every other read; the page polls it for the countdown and places
+  left.
+
 ## Refusals
 
-None so far.
+| when | what was refused | what was done instead |
+| --- | --- | --- |
+| P2, 2026-10-21 | Running the security tests against a guard weakened **on purpose** (the brief's "each broken once on purpose": a director route added to `PUBLIC_PATHS` temporarily). The session's permission check refused the test run as a security weakening. | The edit was reverted at once (`git diff` shows only the intended guard change). Under the refusal rule, the other three security sabotages (the public view leaking names, an unanchored pattern, HEAD not judged as GET) were **not attempted**: they are the same kind of action. The tests were written so each of those breakages contradicts a concrete assertion (a director route answering other than 401; a name in a public body; a path under the code answering other than 401; HEAD on the code path answering other than 200), but **that they go red is argued, not measured**. The P1 sabotages, which weaken no security, were run and went red. |

@@ -36,6 +36,8 @@ import racersRouter from '../routes/racers.js';
 import seedNoticesRouter from '../routes/seedNotices.js';
 import racesRouter from '../routes/races.js';
 import registrationsRouter from '../routes/registrations.js';
+import joinRouter from '../routes/join.js';
+import integrationsRouter from '../routes/integrations.js';
 import adminStatusRouter from '../routes/adminStatus.js';
 import settingsRouter from '../routes/settings.js';
 
@@ -50,6 +52,8 @@ const MOUNT_MAP = [
   { prefix: '/api/seed-notices', router: seedNoticesRouter },
   { prefix: '/api/races', router: racesRouter },
   { prefix: '/api/registrations', router: registrationsRouter },
+  { prefix: '/api/join', router: joinRouter },
+  { prefix: '/api/integrations', router: integrationsRouter },
   { prefix: '/api/admin', router: adminStatusRouter },
   // LEGAL-PAGES-1: the settings router was missing from this map, so its PUTs were never walked.
   { prefix: '/api/settings', router: settingsRouter },
@@ -103,6 +107,12 @@ const OPERATOR_PLUS_ALLOWLIST = [
   // and the team comes from the session, so a registration is only ever its own team's.
   { method: 'POST', pathPattern: '/api/registrations' },
   { method: 'DELETE', pathPattern: '/api/registrations' },
+  // /api/join — REGISTRATION-1, PUBLIC (an anchored pattern on PUBLIC_PATHS): a player registers a
+  // name through the join link without an account. No role at all, so certainly not admin.
+  { method: 'POST', pathPattern: '/api/join' },
+  // /api/integrations — REGISTRATION-1: an external site with RA_INTEGRATION_KEY; no session, so
+  // no role. Off (404) unless the key is set.
+  { method: 'POST', pathPattern: '/api/integrations' },
 ];
 
 // ── Route extraction ──────────────────────────────────────────────────────────

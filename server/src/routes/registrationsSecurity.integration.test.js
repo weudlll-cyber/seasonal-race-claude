@@ -9,7 +9,7 @@
 //              own (RA_DATA_DIR, test/env-setup.js).
 // ============================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { operatorAgent } from '../../test/authAgent.js';
@@ -40,8 +40,14 @@ describe('the director routes need a session', () => {
 });
 
 describe('a signed-in operator', () => {
+  // Signed in once, in the hook: a bcrypt sign-in inside the test body can outlast the 5 s test
+  // timeout under the parallel suite.
+  let agent;
+  beforeAll(async () => {
+    agent = await operatorAgent(app);
+  });
+
   it('opens a registration on an installed track and reads it back', async () => {
-    const agent = await operatorAgent(app);
     const res = await agent
       .post('/api/registrations')
       .send({ trackId: 'dirt-oval', capacity: 8, closesAt: inMinutes(5) });

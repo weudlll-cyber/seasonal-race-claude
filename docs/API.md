@@ -2,9 +2,10 @@
 
 **Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Complete as of 2026-10-18: all 68 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
-the two settings routes, AUDIT-1 D2 the admin status route, LEGAL-PAGES-1 the two legal-pages routes). Counted from source, not from earlier
-counts: the `router.<verb>(` calls in the eleven routers `server/src/app.js` mounts under `/api` (58), the three promote/export sub-routes
+**Complete as of 2026-10-21: all 78 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
+the two settings routes, AUDIT-1 D2 the admin status route, LEGAL-PAGES-1 the two legal-pages routes,
+REGISTRATION-1 the ten registration routes). Counted from source, not from earlier
+counts: the `router.<verb>(` calls in the fourteen routers `server/src/app.js` mounts under `/api` (68), the three promote/export sub-routes
 `attachPromoteExport`
 (`server/src/routes/_defaultPromote.js`) adds to each of tracks, player groups and brands (9), and
 `GET /api/health` (1). Every entry says who may call it, what it takes, what it answers and every
@@ -23,42 +24,47 @@ The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed 
 
 ## Access rules
 
-**Middleware order** (`server/src/app.js:36-109`): helmet (`:41-46`) → `cors(corsOptions)` (`:47`) →
-`express.json({ limit: '1mb' })` (`:48`) → an absent body read as `{}` (`:56-59`; Express 5 leaves it
-undefined, every route here was written to `{}`) → session (`:60`) → `csrfOriginGuard` (`:61`) →
-static client + SPA fallback (`:69-70`, both refuse `/api/*`) → `requireAuth` (`:72`) →
-`requireAdmin` (`:73`) → `GET /api/health` (`:81`) → the three rate limiters (`:83-87`) → the
-routers (`:88-99`) → the API 404 (`:103`) → the error handler (`:107`).
+**Middleware order** (`server/src/app.js:39-122`): helmet (`:44-49`) → `cors(corsOptions)` (`:50`) →
+a 1 KB JSON parser for `/api/join` (`:55`) → the integration seam with its own 1 KB parser, which
+answers every `/api/integrations` request itself (`:56`, REGISTRATION-1) →
+`express.json({ limit: '1mb' })` (`:57`) → an absent body read as `{}` (`:65-68`; Express 5 leaves it
+undefined, every route here was written to `{}`) → session (`:69`) → `csrfOriginGuard` (`:70`) →
+static client + SPA fallback (`:78-79`, both refuse `/api/*`) → `requireAuth` (`:81`) →
+`requireAdmin` (`:82`) → `GET /api/health` (`:90`) → the three rate limiters (`:92-96`) → the
+routers (`:97-112`) → the API 404 (`:116`) → the error handler (`:120`).
 
 **Public paths** — exact path match, after the path is lower-cased and a trailing slash is stripped,
-and exact method with `HEAD` judged as `GET` (`server/src/auth/guards.js:15-24`, matched at
-`:149-153`, normalisation at `:122-125`, HEAD at `:127-133`):
+and exact method with `HEAD` judged as `GET` (`server/src/auth/guards.js:15-33`, matched at
+`:160-168`, normalisation at `:131-134`, HEAD at `:136-142`):
 `GET /api/health`, `GET /api/auth/setup-needed`, `POST /api/auth/setup`, `POST /api/auth/login`, and
 — since 2026-10-18, LEGAL-PAGES-1 — `GET /api/settings/legal-pages` (`:23`); so `HEAD` on each of the
-three GET paths is public too (since 2026-10-18).
+three GET paths is public too (since 2026-10-18). Since 2026-10-21 (REGISTRATION-1) an entry may
+instead be an anchored **pattern** on the same normalised path: `GET` and `POST` on
+`/api/join/<22 URL-safe characters>` (`:31-32`), the join link — so `HEAD` there too, and nothing
+under or beside it. The integration seam is not on the list; it is mounted ahead of the guard.
 
 **Any signed-in user** — every other `/api/*` path (deny by default). `requireAuth` answers
-`401 {"error":"not authenticated"}` when there is no session user (`server/src/auth/guards.js:177-179`),
-when the session's user no longer exists (`:181-185`), or when the session's `sessionEpoch` differs
-from the user record's, i.e. the password was changed since sign-in (`:190-192`). On success it sets
-`req.authUser = {id, username, role, team, teamNormalized}` (`:218-224`); a user with no team still
-authenticates, with `team: null` (`:211-216`). The two roles are `operator` and `admin`
+`401 {"error":"not authenticated"}` when there is no session user (`server/src/auth/guards.js:193-195`),
+when the session's user no longer exists (`:197-201`), or when the session's `sessionEpoch` differs
+from the user record's, i.e. the password was changed since sign-in (`:206-208`). On success it sets
+`req.authUser = {id, username, role, team, teamNormalized}` (`:234-240`); a user with no team still
+authenticates, with `team: null` (`:227-232`). The two roles are `operator` and `admin`
 (`server/src/auth/usersStore.js:240`); "signed-in" below means operator or admin.
 
 **Admin only** — `requireAdmin` answers `403 {"error":"forbidden"}` when the path matches a
 `ROUTE_POLICY` entry with `role: 'admin'` and `req.authUser.role !== 'admin'`
-(`server/src/auth/guards.js:229-237`). HEAD is checked as GET (`:127-133`). The admin entries:
+(`server/src/auth/guards.js:245-253`). HEAD is checked as GET (`:136-142`). The admin entries:
 
 | Entry | Methods | Path pattern | Line |
 |---|---|---|---|
-| users | GET POST PUT DELETE PATCH | `/api/users` and everything under it | `server/src/auth/guards.js:30-35` |
-| surface-classes mutations | POST PUT DELETE PATCH | `/api/surface-classes` and under | `server/src/auth/guards.js:37-42` |
-| player-groups promote/export | GET POST | `/api/player-groups/:id/(set-default\|clear-default\|export-seed)` | `server/src/auth/guards.js:45-51` |
-| brands promote/export | GET POST | `/api/brands/:id/(set-default\|clear-default\|export-seed)` | `server/src/auth/guards.js:54-59` |
-| tracks promote/export | GET POST | `/api/tracks/:id/(set-default\|clear-default\|export-seed)` | `server/src/auth/guards.js:62-67` |
-| race verify | POST | `/api/races/:shortKey/verify` | `server/src/auth/guards.js:72-77` |
-| points rule write | PUT | `/api/races/evaluation/points-rule` | `server/src/auth/guards.js:80-85` |
-| legal pages write | PUT | `/api/settings/legal-pages` | `server/src/auth/guards.js:96-101` (2026-10-18) |
+| users | GET POST PUT DELETE PATCH | `/api/users` and everything under it | `server/src/auth/guards.js:39-44` |
+| surface-classes mutations | POST PUT DELETE PATCH | `/api/surface-classes` and under | `server/src/auth/guards.js:46-51` |
+| player-groups promote/export | GET POST | `/api/player-groups/:id/(set-default\|clear-default\|export-seed)` | `server/src/auth/guards.js:54-60` |
+| brands promote/export | GET POST | `/api/brands/:id/(set-default\|clear-default\|export-seed)` | `server/src/auth/guards.js:63-68` |
+| tracks promote/export | GET POST | `/api/tracks/:id/(set-default\|clear-default\|export-seed)` | `server/src/auth/guards.js:71-76` |
+| race verify | POST | `/api/races/:shortKey/verify` | `server/src/auth/guards.js:81-86` |
+| points rule write | PUT | `/api/races/evaluation/points-rule` | `server/src/auth/guards.js:89-94` |
+| legal pages write | PUT | `/api/settings/legal-pages` | `server/src/auth/guards.js:105-110` (2026-10-18) |
 
 The policy matches on the path pattern alone, before any route runs, so an operator gets 403 on an
 admin path whether or not the record exists.
@@ -74,17 +80,19 @@ This guard runs **before** `requireAuth`, so it applies to the public `POST` pat
 rejected cross-origin request gets 403 rather than 401. Where the routes below say "CSRF 403",
 these are the citations.
 
-**Rate limits** (`server/src/auth/rateLimit.js`). All three answer
-`429 {"error":"too many attempts, please try again later"}`, send standard `RateLimit-*` headers,
-and are switched off when `NODE_ENV=test` or `VITEST` is set (`:12`).
+**Rate limits** (`server/src/auth/rateLimit.js`). The first three answer
+`429 {"error":"too many attempts, please try again later"}`; the join limiter (REGISTRATION-1)
+answers 429 with a sentence a player can read. All four send standard `RateLimit-*` headers,
+and are switched off when `NODE_ENV=test` or `VITEST` is set (`:13`).
 
 | Path (mounted with `app.use`, so every method) | Window | Max | Counts | Key | Lines |
 |---|---|---|---|---|---|
-| `/api/auth/login` (`server/src/app.js:83`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | `RA_LOGIN_RL_MAX`, default 10 | failed requests only | IP | `server/src/auth/rateLimit.js:18-26` |
-| `/api/auth/setup` (`server/src/app.js:84`) | `RA_SETUP_RL_WINDOW_MS`, default 60 min | `RA_SETUP_RL_MAX`, default 10 | every request | IP | `server/src/auth/rateLimit.js:34-42` |
-| `/api/auth/change-password` (`server/src/app.js:87`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | 5 (fixed) | failed requests only | `req.authUser.id`, else IP | `server/src/auth/rateLimit.js:74-83` |
+| `/api/auth/login` (`server/src/app.js:92`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | `RA_LOGIN_RL_MAX`, default 10 | failed requests only | IP | `server/src/auth/rateLimit.js:19-27` |
+| `/api/auth/setup` (`server/src/app.js:93`) | `RA_SETUP_RL_WINDOW_MS`, default 60 min | `RA_SETUP_RL_MAX`, default 10 | every request | IP | `server/src/auth/rateLimit.js:35-43` |
+| `/api/auth/change-password` (`server/src/app.js:96`) | `RA_LOGIN_RL_WINDOW_MS`, default 15 min | 5 (fixed) | failed requests only | `req.authUser.id`, else IP | `server/src/auth/rateLimit.js:75-84` |
+| `POST /api/join/:code` only (in the router, `server/src/routes/join.js`) | 1 min (fixed) | 60 (fixed) — generous, a venue's phones may share one address | every request | IP | `server/src/auth/rateLimit.js` `createJoinLimiter` |
 
-The limiters are mounted after `requireAuth` (`server/src/app.js:83-87`). So a signed-out caller of
+The limiters are mounted after `requireAuth` (`server/src/app.js:92-96`). So a signed-out caller of
 `change-password` gets 401 and is never counted. "IP" is Express's `req.ip`, so how many proxy hops
 are trusted decides whose address it is: `RA_TRUST_PROXY` (`server/src/trustProxy.js`; unset = one
 hop when `NODE_ENV=production`, none otherwise — see [ENVIRONMENT.md](ENVIRONMENT.md)).
@@ -120,12 +128,12 @@ hop when `NODE_ENV=production`, none otherwise — see [ENVIRONMENT.md](ENVIRONM
 ## Health (`/api/health`)
 
 The build-identity probe and, since AUDIT-1 A10-05 (2026-10-12), the account-store check. Mounted in the
-app factory (`server/src/app.js:81`); the handler is `server/src/health.js`.
+app factory (`server/src/app.js:90`); the handler is `server/src/health.js`.
 
 ### `GET /api/health`
 
 - **Who:** public (`server/src/auth/guards.js:16`); `HEAD /api/health` too, with the same status and
-  no body (HEAD is judged as GET, `:137-141`).
+  no body (HEAD is judged as GET, `:146-150`).
 - **Request:** none.
 - **Response:** 200 `{status: "ok", timestamp: <ISO string>, build: {commit, branch, dirty?, reason?}}`
   (`server/src/health.js:54-56`). The keys and their order are unchanged by A10-05. The `build` shape is in `server/src/buildIdentity.js:45`. When nothing
@@ -154,7 +162,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 ### `POST /api/auth/setup`
 
 - **Who:** public (`server/src/auth/guards.js:18`), gated by a bootstrap token. Rate-limited per IP,
-  counting every request (`server/src/app.js:84`, `server/src/auth/rateLimit.js:34-42`).
+  counting every request (`server/src/app.js:93`, `server/src/auth/rateLimit.js:35-43`).
 - **Request:** header `x-bootstrap-token`, compared in constant time with `RA_BOOTSTRAP_TOKEN`. A
   token in the body is not read (header read at `server/src/auth/authRouter.js:57`, constant-time compare at `:63`,
   helper at `:28-32`). Body `{username: string, password: string}`, both required and
@@ -174,12 +182,12 @@ the first admin (`server/src/auth/authRouter.js:6`).
     or the store rejects the username, password or role (`:198-200`).
   - 500 `setup failed`: the marker could not be opened (`server/src/auth/authRouter.js:98-99`), or
     any other failure before the commit (`:201`).
-  - 429 from the setup limiter (`server/src/auth/rateLimit.js:41-42`). CSRF 403.
+  - 429 from the setup limiter (`server/src/auth/rateLimit.js:42-43`). CSRF 403.
 
 ### `POST /api/auth/login`
 
 - **Who:** public (`server/src/auth/guards.js:19`). Rate-limited per IP, counting failures only
-  (`server/src/app.js:83`, `server/src/auth/rateLimit.js:18-26`).
+  (`server/src/app.js:92`, `server/src/auth/rateLimit.js:19-27`).
 - **Request:** body `{username, password}`. There is no explicit validation; a missing field simply
   fails to match. The username is looked up normalised (NFC, trimmed, lower-cased,
   `server/src/auth/usersStore.js:23-25`) (`server/src/auth/authRouter.js:212-213`).
@@ -189,24 +197,24 @@ the first admin (`server/src/auth/authRouter.js:6`).
   - 401 `invalid credentials`: unknown user (`server/src/auth/authRouter.js:215-218`, which
     deliberately spends the same time on a dummy hash) or wrong password (`:220-223`).
   - 500 `login failed`: session regenerate or save failed (`server/src/auth/authRouter.js:227`, `:231`).
-  - 429 from the login limiter (`server/src/auth/rateLimit.js:25-26`). CSRF 403.
+  - 429 from the login limiter (`server/src/auth/rateLimit.js:26-27`). CSRF 403.
 
 ### `POST /api/auth/logout`
 
-- **Who:** any signed-in user (not public, so `server/src/auth/guards.js:177`). The handler repeats
+- **Who:** any signed-in user (not public, so `server/src/auth/guards.js:193`). The handler repeats
   the check inline (`server/src/auth/authRouter.js:240-242`), but the guard always answers first.
 - **Request:** none.
 - **Response:** 200 `{ok: true}`. The session is destroyed and the cookie cleared, as is the legacy
   `ra.sid` cookie (`server/src/auth/authRouter.js:243-253`).
-- **Errors:** 401 from the guard (`server/src/auth/guards.js:178`, `:184`, `:191`). 500
+- **Errors:** 401 from the guard (`server/src/auth/guards.js:194`, `:200`, `:207`). 500
   `logout failed` when destroying the session fails (`server/src/auth/authRouter.js:244-247`). CSRF 403.
 
 ### `POST /api/auth/change-password`
 
 - **Who:** any signed-in user, and only for **their own** password. The target is
   `req.authUser.id` and never the body (`server/src/auth/authRouter.js:257-277`). It is not in
-  `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:87`,
-  `server/src/auth/rateLimit.js:74-83`).
+  `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:96`,
+  `server/src/auth/rateLimit.js:75-84`).
 - **Request:** body `{currentPassword, newPassword}` (`server/src/auth/authRouter.js:273`).
   `newPassword` must be non-blank and at least `PASSWORD_MIN_LENGTH` (10) characters, by the store's rule
   (`server/src/auth/usersStore.js:287-298`, `:39-53`). Never checked at sign-in, so an older shorter password
@@ -214,22 +222,22 @@ the first admin (`server/src/auth/authRouter.js:6`).
 - **Response:** 200 `{ok: true}`. The epoch bump ends the user's **other** sessions; this session is
   re-stamped so it survives (`server/src/auth/authRouter.js:294-311`).
 - **Errors:**
-  - 401 from the guard (`server/src/auth/guards.js:178`, `:184`, `:191`). The inline 401s at
+  - 401 from the guard (`server/src/auth/guards.js:194`, `:200`, `:207`). The inline 401s at
     `server/src/auth/authRouter.js:278` and `:280-283` are defensive.
   - 401 `invalid credentials`: wrong current password (`server/src/auth/authRouter.js:286-292`).
   - 400 `Password must not be empty` or `Password must be at least 10 characters long`: `newPassword` is
     missing, blank or too short. The store raises `INVALID_PASSWORD` with that message, or `EMPTY_UPDATE` for a
     missing one (`server/src/auth/authRouter.js:299-303`).
   - 500 `internal error` (`server/src/auth/authRouter.js:304-305`).
-  - 429 from the change-password limiter (`server/src/auth/rateLimit.js:82-83`). CSRF 403.
+  - 429 from the change-password limiter (`server/src/auth/rateLimit.js:83-84`). CSRF 403.
 
 ### `GET /api/auth/me`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`). The handler repeats the check
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`). The handler repeats the check
   inline (`server/src/auth/authRouter.js:317-325`).
 - **Request:** none.
 - **Response:** 200 `{username, role, team}`, where `team` may be `null` (`server/src/auth/authRouter.js:326-328`).
-- **Errors:** 401 from the guard (`server/src/auth/guards.js:178`, `:184`, `:191`). The handler's own
+- **Errors:** 401 from the guard (`server/src/auth/guards.js:194`, `:200`, `:207`). The handler's own
   401s (`server/src/auth/authRouter.js:318`, `:323`) are defensive.
 
 ---
@@ -245,17 +253,17 @@ teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/
 
 ### `GET /api/users`
 
-- **Who:** admin only (`server/src/auth/guards.js:30-35`).
+- **Who:** admin only (`server/src/auth/guards.js:39-44`).
 - **Request:** none.
 - **Response:** 200 `[user, …]` (`server/src/auth/usersRouter.js:21-24`).
-- **Errors:** 401 (`server/src/auth/guards.js:178`, `:184`, `:191`). 403 for an operator
-  (`server/src/auth/guards.js:232-233`). A corrupt `users.json` throws `USERS_STORE_CORRUPT`
+- **Errors:** 401 (`server/src/auth/guards.js:194`, `:200`, `:207`). 403 for an operator
+  (`server/src/auth/guards.js:248-249`). A corrupt `users.json` throws `USERS_STORE_CORRUPT`
   (`server/src/auth/usersStore.js:77-94`), which is not caught and so becomes Express's default 500
   HTML page. The same throw would already fail `requireAuth`'s lookup.
 
 ### `POST /api/users`
 
-- **Who:** admin only (`server/src/auth/guards.js:30-35`).
+- **Who:** admin only (`server/src/auth/guards.js:39-44`).
 - **Request:** body `{username, password, role, team, allowNewTeam?}` (`server/src/auth/usersRouter.js:31`).
   - `username`: non-blank, and unique after normalisation (`server/src/auth/usersStore.js:234-238`, `:246-253`).
   - `password`: non-blank and at least `PASSWORD_MIN_LENGTH` (10) characters (`server/src/auth/usersStore.js:239`, the
@@ -276,7 +284,7 @@ teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/
 
 ### `PUT /api/users/:id`
 
-- **Who:** admin only (`server/src/auth/guards.js:30-35`).
+- **Who:** admin only (`server/src/auth/guards.js:39-44`).
 - **Request:** path `id` (the user's UUID). Body `{role?, password?, team?, allowNewTeam?}`
   (`server/src/auth/usersRouter.js:76`), with at least one of role, password or team present. An
   empty-string `password` counts as absent (`server/src/auth/usersStore.js:289-299`). The role, team
@@ -296,7 +304,7 @@ teamNormalized, createdAt, createdBy}` (the record is built at `server/src/auth/
 
 ### `DELETE /api/users/:id`
 
-- **Who:** admin only (`server/src/auth/guards.js:30-35`).
+- **Who:** admin only (`server/src/auth/guards.js:39-44`).
 - **Request:** path `id`.
 - **Response:** 200 with the deleted user object (`server/src/auth/usersRouter.js:106-109`). Note:
   200 with a body, not 204.
@@ -318,24 +326,24 @@ tracks. Every create, update, upload or background removal also writes a timesta
 
 ### `GET /api/tracks`
 
-- **Who:** any signed-in user (not in `ROUTE_POLICY`; `server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (not in `ROUTE_POLICY`; `server/src/auth/guards.js:193`).
 - **Request:** none.
 - **Response:** 200 `[summary, …]`. Each summary is the track record without `innerPoints`,
   `outerPoints`, `centerPoints` and `backgroundImageFile`, plus `pointCount: {inner, outer}`
   (`server/src/routes/tracks.js:346-360`, `:571-573`).
-- **Errors:** 401 (`server/src/auth/guards.js:178`, `:184`, `:191`).
+- **Errors:** 401 (`server/src/auth/guards.js:194`, `:200`, `:207`).
 
 ### `GET /api/tracks/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 200 with the full track record minus `backgroundImageFile` (`server/src/routes/tracks.js:575-580`).
 - **Errors:** 404 `Track not found` (`server/src/routes/tracks.js:577`). 401.
 
 ### `GET /api/tracks/:id/background`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`). The admin regex for tracks covers
-  only the three promote/export suffixes (`:59`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`). The admin regex for tracks covers
+  only the three promote/export suffixes (`:68`).
 - **Request:** path `id`.
 - **Response:** 200 binary image stream. `Content-Type` comes from the stored file's extension
   (`image/jpeg|png|webp`, else `application/octet-stream`), with `X-Content-Type-Options: nosniff`
@@ -350,7 +358,7 @@ tracks. Every create, update, upload or background removal also writes a timesta
 
 ### `POST /api/tracks`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** JSON body, validated by `validateTrackBodyForCreate` (`server/src/routes/tracks.js:433-488`):
   - `name`: non-blank string, at most 100 characters (`:435-439`, `:145`).
   - `closed`: boolean (`:440-442`).
@@ -385,7 +393,7 @@ tracks. Every create, update, upload or background removal also writes a timesta
 
 ### `PUT /api/tracks/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`). This includes default tracks: there
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`). This includes default tracks: there
   is no `isDefault` check on update.
 - **Request:** path `id`. A partial JSON body, validated by `validateTrackBodyForUpdate`, which checks
   only the fields present (`server/src/routes/tracks.js:497-565`). The rules are the same as for
@@ -401,7 +409,7 @@ tracks. Every create, update, upload or background removal also writes a timesta
 
 ### `DELETE /api/tracks/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 204, empty. The JSON file and the background image are removed; the image is removed
   only if its stored name is safe (`server/src/routes/tracks.js:689-695`, `:408-411`).
@@ -410,7 +418,7 @@ tracks. Every create, update, upload or background removal also writes a timesta
 
 ### `DELETE /api/tracks/:id/background`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 204. The file is removed only if its name is safe, and `backgroundImageFile` is set
   to `null` (`server/src/routes/tracks.js:699-711`). It is still 204 when the track had no background.
@@ -418,7 +426,7 @@ tracks. Every create, update, upload or background removal also writes a timesta
 
 ### `POST /api/tracks/:id/background`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`. `multipart/form-data` with the file in field **`background`**
   (`server/src/routes/tracks.js:714`), at most 10 MB, PNG/JPEG/WebP. It is stored as `<id>.<ext>`;
   an older file under another extension is deleted, only if its stored name is safe (`:735-736`).
@@ -432,24 +440,24 @@ tracks. Every create, update, upload or background removal also writes a timesta
 
 ### `POST /api/tracks/:id/set-default`
 
-- **Who:** admin only (`server/src/auth/guards.js:62-67`).
+- **Who:** admin only (`server/src/auth/guards.js:71-76`).
 - **Request:** path `id`; no body.
 - **Response:** 200 with the full stored record, now `isDefault: true` with a new `updatedAt`. This
   is the raw record, so `backgroundImageFile` is included (`server/src/routes/_defaultPromote.js:34-40`,
   attached at `server/src/routes/tracks.js:755-760`).
 - **Errors:** 404 `Not found` (`server/src/routes/_defaultPromote.js:36`). 401. 403
-  (`server/src/auth/guards.js:232-233`). CSRF 403.
+  (`server/src/auth/guards.js:248-249`). CSRF 403.
 
 ### `POST /api/tracks/:id/clear-default`
 
-- **Who:** admin only (`server/src/auth/guards.js:62-67`).
+- **Who:** admin only (`server/src/auth/guards.js:71-76`).
 - **Request:** path `id`; no body.
 - **Response:** 200 with the full record, now `isDefault: false` (`server/src/routes/_defaultPromote.js:42-48`).
 - **Errors:** 404 `Not found` (`server/src/routes/_defaultPromote.js:44`). 401. 403. CSRF 403.
 
 ### `GET /api/tracks/:id/export-seed`
 
-- **Who:** admin only (`server/src/auth/guards.js:62-67`).
+- **Who:** admin only (`server/src/auth/guards.js:71-76`).
 - **Request:** path `id`.
 - **Response:** 200 with the full record. When there is a background, it also carries
   `_backgroundAssetRelPath: "server/data/backgrounds/<file>"`
@@ -481,21 +489,21 @@ A class object: `{id, label, generatorId, config, isDefault: false, isOverride, 
 
 ### `GET /api/surface-classes`
 
-- **Who:** any signed-in user. The admin entry covers only mutating methods (`server/src/auth/guards.js:37-42`, `:177`).
+- **Who:** any signed-in user. The admin entry covers only mutating methods (`server/src/auth/guards.js:46-51`, `:193`).
 - **Request:** none.
 - **Response:** 200 `[class, …]` (`server/src/routes/surfaceClasses.js:88-90`).
 - **Errors:** 401.
 
 ### `GET /api/surface-classes/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 200 with the class (`server/src/routes/surfaceClasses.js:93-97`).
 - **Errors:** 404 `Surface class not found` (`server/src/routes/surfaceClasses.js:95`). 401.
 
 ### `POST /api/surface-classes`
 
-- **Who:** admin only (`server/src/auth/guards.js:37-42`).
+- **Who:** admin only (`server/src/auth/guards.js:46-51`).
 - **Request:** body validated by `validateBody` (`server/src/routes/surfaceClasses.js:62-81`):
   - `id`: matches `^[a-z0-9_-]+$` (`server/utils/isValidId.js:16-18`).
   - `label`: non-blank, at most 100 characters after trimming (`:69-73`, `:29`).
@@ -504,11 +512,11 @@ A class object: `{id, label, generatorId, config, isDefault: false, isOverride, 
   - `isOverride?`: kept only when it is literally `true` (`:117`).
 - **Response:** 201 with the class (`server/src/routes/surfaceClasses.js:124`).
 - **Errors:** 400 joined messages (`server/src/routes/surfaceClasses.js:101-102`). 409 `Surface class
-  '<id>' already exists` (`:105-107`). 401. 403 (`server/src/auth/guards.js:232-233`). CSRF 403.
+  '<id>' already exists` (`:105-107`). 401. 403 (`server/src/auth/guards.js:248-249`). CSRF 403.
 
 ### `PUT /api/surface-classes/:id`
 
-- **Who:** admin only (`server/src/auth/guards.js:37-42`).
+- **Who:** admin only (`server/src/auth/guards.js:46-51`).
 - **Request:** path `id`, which must pass `isValidId`. The body follows the same rules as POST; a
   body `id`, if present, must equal the path id (`server/src/routes/surfaceClasses.js:136-142`).
   This is an **upsert**: it creates the class if it is missing (`:127-131`). `isOverride` stays true
@@ -520,7 +528,7 @@ A class object: `{id, label, generatorId, config, isDefault: false, isOverride, 
 
 ### `DELETE /api/surface-classes/:id`
 
-- **Who:** admin only (`server/src/auth/guards.js:37-42`).
+- **Who:** admin only (`server/src/auth/guards.js:46-51`).
 - **Request:** path `id`.
 - **Response:** 204 (`server/src/routes/surfaceClasses.js:163-172`).
 - **Errors:** 404 `Surface class not found` (`server/src/routes/surfaceClasses.js:165`). 401. 403. CSRF 403.
@@ -585,21 +593,21 @@ A group object: `{id, name, players: string[], isDefault, createdAt, updatedAt}`
 
 ### `GET /api/player-groups`
 
-- **Who:** any signed-in user. The admin regex covers only the three suffixes (`server/src/auth/guards.js:45-51`, `:177`).
+- **Who:** any signed-in user. The admin regex covers only the three suffixes (`server/src/auth/guards.js:54-60`, `:193`).
 - **Request:** none.
 - **Response:** 200 `[group, …]` (`server/src/routes/playerGroups.js:123-125`).
 - **Errors:** 401.
 
 ### `GET /api/player-groups/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 200 with the group (`server/src/routes/playerGroups.js:128-132`).
 - **Errors:** 404 `Player group not found` (`server/src/routes/playerGroups.js:130`). 401.
 
 ### `POST /api/player-groups`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** body validated by `validateBody` (`server/src/routes/playerGroups.js:68-100`):
   - `name`: non-blank, at most 100 characters after trimming (`:71-75`, `:35`).
   - `players`: a non-empty array of at most 200 entries (`:77-82`, `:40`). Every entry is a
@@ -618,7 +626,7 @@ A group object: `{id, name, players: string[], isDefault, createdAt, updatedAt}`
 
 ### `PUT /api/player-groups/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`. The body follows the same `name` and `players` rules as POST, and both are
   required (`server/src/routes/playerGroups.js:177-178`). `isDefault` is preserved (`:185`).
 - **Response:** 200 with the group (`server/src/routes/playerGroups.js:191`).
@@ -627,7 +635,7 @@ A group object: `{id, name, players: string[], isDefault, createdAt, updatedAt}`
 
 ### `DELETE /api/player-groups/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 204 (`server/src/routes/playerGroups.js:196-206`).
 - **Errors:** 404 (`server/src/routes/playerGroups.js:198`). 403 `Cannot delete a default player
@@ -635,7 +643,7 @@ A group object: `{id, name, players: string[], isDefault, createdAt, updatedAt}`
 
 ### `POST /api/player-groups/:id/set-default`
 
-- **Who:** admin only (`server/src/auth/guards.js:45-51`).
+- **Who:** admin only (`server/src/auth/guards.js:54-60`).
 - **Request:** path `id`; no body.
 - **Response:** 200 with the group, now `isDefault: true` and with a new `updatedAt`
   (`server/src/routes/_defaultPromote.js:34-40`, attached at `server/src/routes/playerGroups.js:211-217`).
@@ -643,14 +651,14 @@ A group object: `{id, name, players: string[], isDefault, createdAt, updatedAt}`
 
 ### `POST /api/player-groups/:id/clear-default`
 
-- **Who:** admin only (`server/src/auth/guards.js:45-51`).
+- **Who:** admin only (`server/src/auth/guards.js:54-60`).
 - **Request:** path `id`; no body.
 - **Response:** 200 with the group, now `isDefault: false` (`server/src/routes/_defaultPromote.js:42-48`).
 - **Errors:** 404 (`server/src/routes/_defaultPromote.js:44`). 401. 403. CSRF 403.
 
 ### `GET /api/player-groups/:id/export-seed`
 
-- **Who:** admin only (`server/src/auth/guards.js:45-51`).
+- **Who:** admin only (`server/src/auth/guards.js:54-60`).
 - **Request:** path `id`.
 - **Response:** 200 with the record as stored. No `exportSeed` callback is passed, so the default
   JSON handler is used (`server/src/routes/_defaultPromote.js:55-57`, `server/src/routes/playerGroups.js:211-217`).
@@ -685,21 +693,21 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `GET /api/brands`
 
-- **Who:** any signed-in user. The admin regex covers only the three suffixes (`server/src/auth/guards.js:54-59`, `:177`).
+- **Who:** any signed-in user. The admin regex covers only the three suffixes (`server/src/auth/guards.js:63-68`, `:193`).
 - **Request:** none.
 - **Response:** 200 `[brand, …]` (`server/src/routes/brands.js:195-197`).
 - **Errors:** 401.
 
 ### `GET /api/brands/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 200 with the brand (`server/src/routes/brands.js:200-204`).
 - **Errors:** 404 `Brand not found` (`server/src/routes/brands.js:202`). 401.
 
 ### `POST /api/brands`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** the body rules above, plus `id?`, which must satisfy `isValidId` and otherwise becomes
   a random UUID (`server/src/routes/brands.js:211-220`). `isDefault` in the body is ignored (`:238`).
 - **Response:** 201 with the brand. Defaults: `primaryColor` `#000000`, `secondaryColor` `#ffffff`,
@@ -710,7 +718,7 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `PUT /api/brands/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`. The body rules above apply, so `name` and `eventName` are required on every
   PUT. Omitted optional fields keep their stored values; `isDefault` and `logoFile` are preserved
   (`server/src/routes/brands.js:261-282`). Ambiguity: a `subtitle` or `sponsorText` of `null` passes
@@ -722,7 +730,7 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `DELETE /api/brands/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 204. The logo file and the record are removed (`server/src/routes/brands.js:298-303`).
   The stored `logoFile` is unlinked only if its name is safe (`:298`,
@@ -732,7 +740,7 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `GET /api/brands/:id/logo`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 200 binary image stream, with `Content-Type` from the file extension and `nosniff`
   (`server/src/routes/brands.js:319-326`).
@@ -745,7 +753,7 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `POST /api/brands/:id/logo`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`. `multipart/form-data` with the file in field **`logo`**
   (`server/src/routes/brands.js:330`), at most 10 MB, PNG/JPEG/WebP. It is stored as `<id>.<ext>`;
   an older file under another extension is deleted, only if its stored name is safe (`:347-350`).
@@ -759,7 +767,7 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `DELETE /api/brands/:id/logo`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 204, with `logoFile` set to `null` (`server/src/routes/brands.js:362-373`). The stored
   name is unlinked only if it is safe (`:366`).
@@ -767,7 +775,7 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `POST /api/brands/:id/set-default`
 
-- **Who:** admin only (`server/src/auth/guards.js:54-59`).
+- **Who:** admin only (`server/src/auth/guards.js:63-68`).
 - **Request:** path `id`; no body.
 - **Response:** 200 with the brand, now `isDefault: true` (`server/src/routes/_defaultPromote.js:34-40`,
   attached at `server/src/routes/brands.js:378-383`).
@@ -775,14 +783,14 @@ Body rules shared by POST and PUT (`validateBody`, `server/src/routes/brands.js:
 
 ### `POST /api/brands/:id/clear-default`
 
-- **Who:** admin only (`server/src/auth/guards.js:54-59`).
+- **Who:** admin only (`server/src/auth/guards.js:63-68`).
 - **Request:** path `id`; no body.
 - **Response:** 200 with the brand, now `isDefault: false` (`server/src/routes/_defaultPromote.js:42-48`).
 - **Errors:** 404 (`server/src/routes/_defaultPromote.js:44`). 401. 403. CSRF 403.
 
 ### `GET /api/brands/:id/export-seed`
 
-- **Who:** admin only (`server/src/auth/guards.js:54-59`).
+- **Who:** admin only (`server/src/auth/guards.js:63-68`).
 - **Request:** path `id`.
 - **Response:** 200 with the record. When there is a logo, it also carries
   `_logoAssetRelPath: "server/data/brand-logos/<file>"` (`server/src/routes/brands.js:384-390`).
@@ -821,21 +829,21 @@ Optional fields are copied through only when they are present: `bodyFillX`,
 
 ### `GET /api/racers`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** none.
 - **Response:** 200 `[racer, …]` (`server/src/routes/racers.js:190-192`).
 - **Errors:** 401.
 
 ### `GET /api/racers/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 200 with the racer (`server/src/routes/racers.js:195-199`).
 - **Errors:** 404 `Racer not found` (`server/src/routes/racers.js:197`). 401.
 
 ### `POST /api/racers`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** the body rules above. `id?` must satisfy `isValidId` and must not be a built-in racer
   id from `server/src/constants/builtinRacerIds.js` (`server/src/routes/racers.js:79-85`); if it is
   omitted, a random UUID is used (`:209`).
@@ -846,7 +854,7 @@ Optional fields are copied through only when they are present: `bodyFillX`,
 
 ### `PUT /api/racers/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`. The full body rules apply, with no id check (`server/src/routes/racers.js:258`).
 - **Response:** 200 with the racer (`server/src/routes/racers.js:263-287`).
 - **Errors:**
@@ -857,7 +865,7 @@ Optional fields are copied through only when they are present: `bodyFillX`,
 
 ### `DELETE /api/racers/:id`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 204 (`server/src/routes/racers.js:291-301`). There is no `isDefault` protection. The
   stored `spriteFile` is unlinked only if its name is safe (`:295`,
@@ -866,7 +874,7 @@ Optional fields are copied through only when they are present: `bodyFillX`,
 
 ### `GET /api/racers/:id/sprite`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 200 binary image stream, with `Content-Type` from the file extension and `nosniff`
   (`server/src/routes/racers.js:316-323`).
@@ -879,7 +887,7 @@ Optional fields are copied through only when they are present: `bodyFillX`,
 
 ### `POST /api/racers/:id/sprite`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`. `multipart/form-data` with the file in field **`sprite`**
   (`server/src/routes/racers.js:327`), at most 10 MB, PNG/JPEG/WebP, stored as `<id>.<ext>` (`:340-349`).
 - **Response:** 200 `{spriteFile: "<id>.<ext>"}` (`server/src/routes/racers.js:355`).
@@ -892,7 +900,7 @@ Optional fields are copied through only when they are present: `bodyFillX`,
 
 ### `DELETE /api/racers/:id/sprite`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** path `id`.
 - **Response:** 204, with `spriteFile` set to `null`. The file is removed only if its name is safe
   (`server/src/routes/racers.js:359-370`).
@@ -907,7 +915,7 @@ deliberately open to every signed-in user, operators included (`server/src/route
 
 ### `GET /api/seed-notices`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`; `server/src/routes/seedNotices.js:10-12`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`; `server/src/routes/seedNotices.js:10-12`).
 - **Request:** none.
 - **Response:** 200 `{notices: [{unit, kind, name, from, to, at}, …]}`. An unreadable file reads as
   `[]` (`server/src/routes/seedNotices.js:31-33`, `server/src/seedNotices.js:45-52`). The entries are
@@ -916,7 +924,7 @@ deliberately open to every signed-in user, operators included (`server/src/route
 
 ### `POST /api/seed-notices/dismiss`
 
-- **Who:** any signed-in user (`server/src/auth/guards.js:177`).
+- **Who:** any signed-in user (`server/src/auth/guards.js:193`).
 - **Request:** none.
 - **Response:** 200 `{cleared: <number cleared>, notices: []}` (`server/src/routes/seedNotices.js:36-39`,
   `server/src/seedNotices.js:70-74`).
@@ -928,7 +936,7 @@ deliberately open to every signed-in user, operators included (`server/src/route
 
 Finished races written to the server and read back by their own team, plus the period evaluation and
 its points rule (`server/src/routes/races.js:6`). The router is built by `createRacesRouter`
-(`:90-294`). **This is the only team-scoped router.** The team always comes from `req.authUser.team`
+(`:91-295`). **This is the only team-scoped router.** The team always comes from `req.authUser.team`
 and never from the request (`:31-36`).
 
 A stored race (`hydrate`, `server/src/races/raceStore.js:536-578`) has these fields: `id, clientRaceId,
@@ -941,7 +949,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 - **Who:** any signed-in user (operator+). The prefix is deliberately left out of `ROUTE_POLICY`
   (`server/src/routes/races.js:38-42`). The race is filed under the caller's team, and a `team` in
-  the body is overwritten (`:132`).
+  the body is overwritten (`:133`).
 - **Request:** a JSON race record. The store requires (`server/src/races/raceStore.js:322-373`, `:299-307`, `:441-450`):
   - `names`: a non-empty array with no name twice.
   - `results` and `winners`: arrays.
@@ -954,9 +962,9 @@ racerTypeOverrides, effectiveRacerTypes`.
     unrecognised `raceSource` is stored with no marker, which counts as a test race (`:414-423`).
 - **Response:**
   - 201 `{id, shortKey, alreadyStored}`: newly stored, or identical content was already there
-    (`server/src/routes/races.js:131-138`).
+    (`server/src/routes/races.js:132-139`).
   - 200 `{id, shortKey, alreadyStored: true}`: the same `clientRaceId` was already stored, i.e. a
-    retry (`:120-129`). **The check is within the caller's team** (`server/src/races/raceStore.js:593-604`,
+    retry (`:121-130`). **The check is within the caller's team** (`server/src/races/raceStore.js:593-604`,
     and the store's own check at `:392`): another team's `clientRaceId` is not recognised, and the
     race is stored as usual (201). The id is unique per team in the table
     (`UNIQUE (team_normalized, client_race_id)`, `:195`); a database from before this was rebuilt
@@ -964,12 +972,12 @@ racerTypeOverrides, effectiveRacerTypes`.
     *(Until SERVER-DEFECTS-1, 2026-10-06, the check looked across every team and answered another
     team's id with that team's `id` and `shortKey`.)*
 - **Errors:**
-  - 503: the caller's account has no team (`server/src/routes/races.js:107-117`).
+  - 503: the caller's account has no team (`server/src/routes/races.js:108-118`).
   - 400 `{error, code}` with `code` one of `INVALID_RACE`, `INVALID_ROSTER`, `INVALID_RESULTS` or
-    `INVALID_TEAM` (`:143-150`). A 400 means do not retry.
-  - 500 `internal error` for anything else, which is retryable (`:152-155`).
+    `INVALID_TEAM` (`:144-151`). A 400 means do not retry.
+  - 500 `internal error` for anything else, which is retryable (`:153-156`).
   - 401. CSRF 403.
-  - With `clientRaceId` missing, `getRaceByClientId(undefined)` runs first (`:121`); the store
+  - With `clientRaceId` missing, `getRaceByClientId(undefined)` runs first (`:122`); the store
     binds it as an empty string (`server/src/races/raceStore.js:602`), which matches no row, so the
     request falls through to the intended
     400 `INVALID_RACE` (`server/src/races/raceStore.js:441`). Settled 2026-10-06 against
@@ -977,83 +985,83 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 ### `GET /api/races`
 
-- **Who:** any signed-in user; it returns **the caller's team only** (`server/src/routes/races.js:163-181`).
+- **Who:** any signed-in user; it returns **the caller's team only** (`server/src/routes/races.js:164-182`).
 - **Request:** query `limit?`, clamped to 1–100 with a default of 20, and `offset?`, at least 0 with
   a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:684-692`).
 - **Response:** 200 `{races: [race…], hasMore, offset, limit, team}`, newest first
-  (`server/src/routes/races.js:176-180`, `server/src/races/raceStore.js:631-639`). A user with no
-  team gets `{races: [], hasMore: false, offset: 0, limit: 0, team: null}` (`server/src/routes/races.js:167-174`).
+  (`server/src/routes/races.js:177-181`, `server/src/races/raceStore.js:631-639`). A user with no
+  team gets `{races: [], hasMore: false, offset: 0, limit: 0, team: null}` (`server/src/routes/races.js:168-175`).
 - **Errors:** 401.
 
 ### `GET /api/races/evaluation`
 
-- **Who:** any signed-in user; it covers the caller's team only (`server/src/routes/races.js:204-205`).
+- **Who:** any signed-in user; it covers the caller's team only (`server/src/routes/races.js:205-206`).
 - **Request:** query `from` and `to`, both required, each parsable by `Date.parse`, with
   `from < to` and a span of at most 366 days. The window is half-open: `from <= finishedAt < to`
-  (`server/src/routes/races.js:187-199`, `:80`, `server/src/races/raceStore.js:662-672`). The races are read one at a time, two fields each (BOUNDED-EVAL-1, 2026-10-07).
+  (`server/src/routes/races.js:188-200`, `:81`, `server/src/races/raceStore.js:662-672`). The races are read one at a time, two fields each (BOUNDED-EVAL-1, 2026-10-07).
 - **Response:** 200 `{from: <ISO>, to: <ISO>, counted, quickTestsExcluded, rows: [{name, races, wins,
-  podiums, places: {<place>: count}}]}` (`server/src/routes/races.js:203-207`,
+  podiums, places: {<place>: count}}]}` (`server/src/routes/races.js:204-208`,
   `server/src/races/periodEvaluation.js:55-91`). A user with no team gets an evaluation of zero races.
-- **Errors:** 400 for a missing, invalid or reversed period (`server/src/routes/races.js:190-194`).
-  400 for a period longer than 366 days (`:195-199`). 401.
+- **Errors:** 400 for a missing, invalid or reversed period (`server/src/routes/races.js:191-195`).
+  400 for a period longer than 366 days (`:196-200`). 401.
 
 ### `GET /api/races/evaluation/points-rule`
 
-- **Who:** any signed-in user. The policy entry gates only `PUT` (`server/src/auth/guards.js:78-85`, `:177`).
+- **Who:** any signed-in user. The policy entry gates only `PUT` (`server/src/auth/guards.js:87-94`, `:193`).
 - **Request:** none.
 - **Response:** 200 `{pointsEnabled: boolean, pointsPerPlace: number[]}`. With no file, or an invalid
   one, the answer is the default `{pointsEnabled: false, pointsPerPlace: []}`
-  (`server/src/routes/races.js:212`, `server/src/races/pointsRule.js:26`, `:64-72`,
+  (`server/src/routes/races.js:213`, `server/src/races/pointsRule.js:26`, `:64-72`,
   `server/utils/jsonSettingStore.js:32-40`).
 - **Errors:** 401.
 
 ### `PUT /api/races/evaluation/points-rule`
 
-- **Who:** admin only (`server/src/auth/guards.js:80-85`). The rule applies server-wide, not per team
+- **Who:** admin only (`server/src/auth/guards.js:89-94`). The rule applies server-wide, not per team
   (`server/src/races/pointsRule.js:13-14`).
 - **Request:** body `{pointsEnabled: boolean, pointsPerPlace: number[]}`. The list holds at most 100
   values, each a finite number from 0 to 1,000,000 (`server/src/races/pointsRule.js:38-55`, `:29-30`).
   Extra fields are dropped (`:54`).
-- **Response:** 200 with the stored rule (`server/src/routes/races.js:215-219`, `server/utils/jsonSettingStore.js:42-46`).
-- **Errors:** 400 `{error}` with the validator's sentence (`server/src/routes/races.js:217-218`). 401. 403
-  (`server/src/auth/guards.js:232-233`). CSRF 403.
+- **Response:** 200 with the stored rule (`server/src/routes/races.js:216-220`, `server/utils/jsonSettingStore.js:42-46`).
+- **Errors:** 400 `{error}` with the validator's sentence (`server/src/routes/races.js:218-219`). 401. 403
+  (`server/src/auth/guards.js:248-249`). CSRF 403.
 
 ### `GET /api/races/:shortKey`
 
 - **Who:** any signed-in user. It finds only races of the caller's team; another team's key gets the
-  same 404 as a key that was never issued (`server/src/routes/races.js:221-234`,
+  same 404 as a key that was never issued (`server/src/routes/races.js:222-235`,
   `server/src/races/raceStore.js:614-622`).
 - **Request:** path `shortKey`. It is normalised by trimming, upper-casing and removing spaces and
   hyphens, and must then be 6 characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ`
   (`shared/raceShortKey.mjs:54`, `:60`, `:68-76`).
-- **Response:** 200 with the race object (`server/src/routes/races.js:234`).
+- **Response:** 200 with the race object (`server/src/routes/races.js:235`).
 - **Errors:** 404 `No race with that key.`: no team, a malformed key, another team's race, or no
-  such race (`server/src/routes/races.js:229-232`). 401.
+  such race (`server/src/routes/races.js:230-233`). 401.
 
 ### `POST /api/races/:shortKey/verify`
 
-- **Who:** admin only (`server/src/auth/guards.js:72-77`). The lookup is team-scoped like the GET, so
-  an admin can verify only **their own team's** races (`server/src/routes/races.js:256-260`).
+- **Who:** admin only (`server/src/auth/guards.js:81-86`). The lookup is team-scoped like the GET, so
+  an admin can verify only **their own team's** races (`server/src/routes/races.js:257-261`).
 - **Request:** path `shortKey`; no body. It runs a full race replay on a **worker thread**, one at a
   time per server (`server/src/races/verifyOffMainThread.js`, `verifyReplay.worker.js`), so other
   requests are answered while it runs. *(Until VERIFY-OFF-MAIN-1, 2026-10-07, it ran on the server's
   own thread, and every other request waited for it: 1.5–5.4 s, reports/release/SOAK-1.md.)*
 - **Response:** 200 `{shortKey, identical: boolean, positions: {match, of}, finishTimes: {match, of},
-  firstDiff: string|null, track: <track id>, racers: <number>, ms}` (`server/src/routes/races.js:279-289`,
+  firstDiff: string|null, track: <track id>, racers: <number>, ms}` (`server/src/routes/races.js:280-290`,
   `scripts/lib/storedRaceReplay.mjs:193-204`).
 - **Errors:**
-  - 404 `No race with that key.` (`server/src/routes/races.js:258-260`).
-  - 429 `{error}`: another verify is running on this server (`:266-270`).
-  - 501: the race engine module is not present in this install (`:272-276`; the worker reports it,
+  - 404 `No race with that key.` (`server/src/routes/races.js:259-261`).
+  - 429 `{error}`: another verify is running on this server (`:267-271`).
+  - 501: the race engine module is not present in this install (`:273-277`; the worker reports it,
     `server/src/races/verifyReplay.worker.js`).
   - 422 `{error}`: `StoredRaceRefusal`, meaning the record cannot be replayed honestly — no matching
-    `geometryId`, a lap mismatch, or a missing world block (`:277`,
+    `geometryId`, a lap mismatch, or a missing world block (`:278`,
     `scripts/lib/storedRaceReplay.mjs:42`, `:55-63`, `:84-111`).
-  - 401. 403 (`server/src/auth/guards.js:232-233`). CSRF 403.
+  - 401. 403 (`server/src/auth/guards.js:248-249`). CSRF 403.
   - 500 `{ error: 'internal error' }`: any other error, including one thrown by `readInstallTracks`
-    on a malformed track file (`server/src/routes/races.js:68-73`), read on the server's thread
-    before the worker starts (`:263`). An error inside the worker is rethrown (`:278`) and `asyncRoute`
-    answers it (`:255`, `server/utils/asyncRoute.js:38-39`): logged server-side
+    on a malformed track file (`server/src/routes/races.js:69-74`), read on the server's thread
+    before the worker starts (`:264`). An error inside the worker is rethrown (`:279`) and `asyncRoute`
+    answers it (`:256`, `server/utils/asyncRoute.js:38-39`): logged server-side
     with the route, and the server keeps running. *(Until SERVER-DEFECTS-1, 2026-10-06, the rethrow
     escaped the async handler: the request got no answer and the process exited.)*
 
@@ -1063,14 +1071,14 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 Installation-wide settings, one JSON file each in the data folder — two: the test-aids switch
 (`server/src/settings/testAids.js`) and the operator's legal pages (`server/src/settings/legalPages.js`),
-both in `server/src/routes/settings.js`. Mounted at `server/src/app.js:90`. Written by admins only,
+both in `server/src/routes/settings.js`. Mounted at `server/src/app.js:110`. Written by admins only,
 the same shape as the points rule above. The test-aids switch is read by every signed-in user
 (TEST-AIDS-1, the owner's decision of 2026-10-04); the legal pages are read by ANYONE, signed in or
 not (LEGAL-PAGES-1, the owner's decision of 2026-10-18).
 
 ### `GET /api/settings/test-aids`
 
-- **Who:** any signed-in user (operator+); not in `ROUTE_POLICY` for GET (`server/src/auth/guards.js:86-93`).
+- **Who:** any signed-in user (operator+); not in `ROUTE_POLICY` for GET (`server/src/auth/guards.js:95-102`).
   Every gate in the client reads it (`client/src/modules/testAids.js`).
 - **Request:** none.
 - **Response:** 200 `{ enabled: boolean }` (`server/src/routes/settings.js:44`). **No file — a fresh
@@ -1080,14 +1088,14 @@ not (LEGAL-PAGES-1, the owner's decision of 2026-10-18).
 
 ### `PUT /api/settings/test-aids`
 
-- **Who:** admin only (`server/src/auth/guards.js:86-93`).
+- **Who:** admin only (`server/src/auth/guards.js:95-102`).
 - **Request:** JSON `{ enabled: boolean }` — nothing else is accepted (`server/src/settings/testAids.js:32-37`).
 - **Response:** 200 `{ enabled }`, the value as stored (`server/src/routes/settings.js:46-50`), written
   atomically (`server/utils/jsonSettingStore.js:42-46`) to `<data folder>/test-aids.json`
   (`server/src/settings/testAids.js:40`).
 - **Errors:** 400 `{ error }` when the body is not `{ enabled: <boolean> }`
   (`server/src/routes/settings.js:48`, `server/src/settings/testAids.js:34`). 401. 403 (operator,
-  `server/src/auth/guards.js:232-233`). CSRF 403.
+  `server/src/auth/guards.js:248-249`). CSRF 403.
 
 ### `GET /api/settings/legal-pages`
 
@@ -1105,7 +1113,7 @@ not (LEGAL-PAGES-1, the owner's decision of 2026-10-18).
 
 ### `PUT /api/settings/legal-pages`
 
-- **Who:** admin only (`server/src/auth/guards.js:96-101`).
+- **Who:** admin only (`server/src/auth/guards.js:105-110`).
 - **Request:** JSON `{ legalNotice?: string, privacyPolicy?: string }` — a text left out keeps its
   stored value; each sent text is a string of at most 20,000 characters; no other key is accepted
   (`server/src/settings/legalPages.js:45-58`, the shared checks `checkString` and `unknownFields` of
@@ -1114,7 +1122,72 @@ not (LEGAL-PAGES-1, the owner's decision of 2026-10-18).
   written atomically to `<data folder>/legal-pages.json` (`server/src/settings/legalPages.js:68-81`).
 - **Errors:** 400 `{ error }` for a body that is not an object, an unknown key, a text that is not a
   string or is longer than the bound (`server/src/routes/settings.js:61-62`). 401. 403 (operator,
-  `server/src/auth/guards.js:232-233`). CSRF 403.
+  `server/src/auth/guards.js:248-249`). CSRF 403.
+
+---
+
+## Player registration (`/api/registrations`, `/api/join`, `/api/integrations`)
+
+REGISTRATION-1, the owner's decisions of 2026-10-20. A director opens a registration for a track;
+players add their own names through a public link until the deadline; the director then loads the
+names into the Players tab. Stored in `<data folder>/registrations.sqlite`
+(`server/src/registrations/registrationStore.js`), taken by `npm run backup`. **The server's clock
+decides** whether a registration is open (closed early, or now ≥ `closesAt`), on every read and every
+attempt; nothing runs at the deadline. A registration as the director sees it:
+
+`{ id, code, team, createdBy, trackId, trackName, capacity, eventName, createdAt, opensAt, closesAt,
+closedEarlyAt, state: 'open'|'closed', taken, placesLeft, entries? }`, each entry
+`{ id, name, source: 'public'|'integration', externalId?, createdAt }` in the order it arrived.
+
+### The director's routes — `server/src/routes/registrations.js`
+
+Signed in, operator+ (not in `ROUTE_POLICY`), mounted at `server/src/app.js:107`. The team is the
+session's (`req.authUser.team`); **another team's registration is 404, the same answer as an unknown
+id**. A user with no team gets 503. A body with a field not listed is 400 (`unknownFields`).
+
+- **`POST /api/registrations`** `{ trackId, capacity, eventName?, closesAt }` — open one, now.
+  `trackId` must name an installed track (its name is stored with the registration); `capacity` a
+  whole number 1–100 (the client sends the track's Players-tab limit); `eventName` at most 100
+  characters or null; `closesAt` an instant at least 1 minute from now and at most 30 days away.
+  201 with the registration and `entries: []`. 400 for each rule, with its sentence.
+- **`GET /api/registrations`** — the team's registrations, newest first, at most 50, without entries:
+  200 `{ registrations: [...] }`.
+- **`GET /api/registrations/:id`** — one, with its entries. 404.
+- **`POST /api/registrations/:id/close`** — closed now; closing a closed one changes nothing. 200, 404.
+- **`POST /api/registrations/:id/extend`** `{ closesAt }` — a later deadline, at most 30 days from
+  creation, **only while open**. 200; 400 (not later, too far, under a minute from now); 409 closed; 404.
+- **`DELETE /api/registrations/:id/entries/:entryId`** — remove one name; its place is free again.
+  200 with the registration; 404.
+- **`DELETE /api/registrations/:id`** — delete it and every name in it. 204; 404.
+
+### The join link — `server/src/routes/join.js`
+
+**Public**: on `PUBLIC_PATHS` as an anchored pattern, exactly `/api/join/` plus 22 URL-safe characters
+(`server/src/auth/guards.js:31-32`). Mounted at `server/src/app.js:109`, with a 1 KB body limit
+(`:55`). The code is 128 random bits.
+
+- **`GET /api/join/:code`** — 200 `{ eventName, trackName, capacity, placesLeft, state, closesAt, you }`.
+  **Never another player's name, the director, the team or the registration's id.** `you` is null, or
+  — for a device whose cookie names an entry still in the list — `{ name, number, capacity, message }`,
+  `message` being "You're in! You are number N of M.". 404 for an unknown code.
+- **`POST /api/join/:code`** `{ name }` — register one name from this device. The player-name rules
+  (`shared/nameLimits.mjs`), and a name already registered is refused **ignoring case and spaces**
+  (`shared/playerNames.mjs`). 201 `{ you }`, and the cookie `ra_join` (httpOnly, SameSite=Lax,
+  path `/api/join/<code>`, 31 days, `Secure` by `RA_COOKIE_SECURE`'s rule) carrying the entry's id.
+  Errors `{ error, code }`: 400 `INVALID_NAME`; 404 `NOT_FOUND`; 409 `CLOSED` ("Registration is
+  closed."), `FULL` ("This race is full."), `DUPLICATE_NAME`, `ALREADY_REGISTERED` ("You are already
+  registered as <name>.", with `you`); 413 over 1 KB; 429 over 60 attempts a minute from one address
+  (`joinLimiter`, `server/src/auth/rateLimit.js`). CSRF applies as to every POST.
+
+### The integration seam — `server/src/routes/integrations.js`
+
+`POST /api/integrations/registrations/:code/entries` with `Authorization: Bearer <RA_INTEGRATION_KEY>`,
+body `{ name, externalId }`. Mounted **before the session and the guards** (`server/src/app.js:56`),
+answering every request itself: **404 as an unknown route while `RA_INTEGRATION_KEY` is unset**, 401
+for a missing or wrong key (constant-time compare), then the same rules as the join link plus a
+required `externalId` that registers once (409 `DUPLICATE_EXTERNAL_ID`). 201
+`{ entry: { id, name, externalId }, number, capacity }`. The contract for an external site:
+[INTEGRATIONS.md](INTEGRATIONS.md).
 
 ---
 
@@ -1212,6 +1285,16 @@ Read-only facts about the installation for the status box at the top of the Dev 
 | 66 | GET | `/api/settings/legal-pages` | **public** |
 | 67 | PUT | `/api/settings/legal-pages` | admin |
 | 68 | GET | `/api/admin/status` | admin |
+| 69 | POST | `/api/registrations` | signed-in (own team) |
+| 70 | GET | `/api/registrations` | signed-in (own team) |
+| 71 | GET | `/api/registrations/:id` | signed-in (own team) |
+| 72 | POST | `/api/registrations/:id/close` | signed-in (own team) |
+| 73 | POST | `/api/registrations/:id/extend` | signed-in (own team) |
+| 74 | DELETE | `/api/registrations/:id/entries/:entryId` | signed-in (own team) |
+| 75 | DELETE | `/api/registrations/:id` | signed-in (own team) |
+| 76 | GET | `/api/join/:code` | **public** (the join link) |
+| 77 | POST | `/api/join/:code` | **public** (the join link, rate-limited) |
+| 78 | POST | `/api/integrations/registrations/:code/entries` | `RA_INTEGRATION_KEY` holder; 404 while unset |
 ---
 
 ## Planned (Phase 5)
