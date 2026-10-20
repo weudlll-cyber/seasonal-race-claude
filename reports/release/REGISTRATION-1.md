@@ -321,6 +321,35 @@ check (`scripts/audit-bundle-address.mjs`) passes: "no deployment address".
   `qrcode-generator` 2.0.4, `lean-qr` 2.7.4), it is the most recently maintained, and its plain
   matrix API lets the code be drawn as SVG elements with no markup injection.
 
+## P5 — privacy and documents
+
+- **Privacy**:
+  - `docs/PRIVACY-FACTS.md`: two table rows (the registrations with their names, kept until the
+    director deletes the registration; the `ra_join` device cookie), a removal row, the "whose
+    data" line, and the template section naming the new sentence.
+  - The privacy template (`client/src/modules/legal/legalNoticeTemplate.js`, section "3. Player
+    names in races") gets one sentence: players may also register themselves through a link the
+    director shares; their names are kept with the registration until the organiser deletes it;
+    registering sets one technically necessary cookie per registration that only marks the device.
+    Its header names the new fact, so the two stay in step.
+- **`docs/OPERATOR-GUIDE.md`**: a new part, *Player registration* (how it works, the public page, at
+  the venue, `RA_INTEGRATION_KEY`). Also:
+  - a row in *Several organisers* (registrations are per team);
+  - a row in *A damaged data file*, **measured 2026-10-21** on a scratch data folder: the server
+    starts and health answers 200; only the registration routes answer 500; everything else works;
+  - the footer sentence (three screens now).
+- **`docs/ARCHITECTURE.md`**: a section *Player registration*, with a diagram of the three doors
+  onto the one store.
+- `CHANGELOG.md` (Added, on the branch, not merged); `README.md` and `docs/DEPLOYMENT.md` (the data
+  root and per-team scope include registrations).
+- **`docs/BACKLOG.md` PART ONE**: the row REGISTRATION-1 in *Delivering to someone else*, open until
+  the owner accepts it.
+- **`docs/OPEN.md` re-derived**: three rows (lines 15–1847); §0 renumbered (REGISTRATION-1 is row 2,
+  the SECURITY.md e-mail row 3); the header and §1's reference updated.
+- Already done with P2: `docs/API.md`, `docs/AUTH.md`, `docs/ENVIRONMENT.md`, `docs/INTEGRATIONS.md`
+  and `docs/PROJECT-PRINCIPLES.md` §11 (the standing principle, dated).
+- Check: `LegalPagesSection.test.jsx` 12 / 12 with the changed template.
+
 ## Refusals
 
 | when | what was refused | what was done instead |

@@ -823,6 +823,19 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       names one command instead of "read the migrations section and decide". Verified against the
       live `server/data/`: `node scripts/migrate.mjs --status` reads `teams-1: backfilled-from-state`.
 
+- [ ] ★ **REGISTRATION-1 — player registration. BUILT on `feat/registration`, NOT merged; stays open
+      until the owner accepts it.** The owner's decisions of 2026-10-20, to ship before going online:
+      a second way to fill a race — the director opens a registration without names for a track and a
+      window the director chooses (1 minute to 30 days); players register themselves through a public link
+      (path A); when it closes the director starts the race with them, nothing starts by itself. The
+      director sees the list live, removes names, closes early and extends; never more players than the
+      race has places. A site with signed-in players (path B) is provided for as an integration seam
+      only (`RA_INTEGRATION_KEY`, [INTEGRATIONS.md](INTEGRATIONS.md)), under the standing principle
+      recorded the same day ([PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) §11). What was built, the
+      checks and the decisions taken by rule: [reports/release/REGISTRATION-1.md](../reports/release/REGISTRATION-1.md).
+      *(verify: the owner has looked at the branch on the production preview and accepted it, and it
+      is merged)*
+
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
 ## Before the VPS migration

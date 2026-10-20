@@ -131,7 +131,8 @@ and what a public install would need.
 
 A finished race is stored by the backend in `races.sqlite` inside the data root, together with the
 roster, the finishing order and the whole resolved world configuration the race ran under. Accounts,
-sessions, tracks, brands, player groups and uploaded images live in that same data root. **With the
+sessions, tracks, brands, player groups, player registrations and uploaded images live in that same
+data root. **With the
 shipped `docker-compose.yml` the data root is `./server/data` in your checkout**, bind-mounted into
 the container; [DEPLOYMENT.md](docs/DEPLOYMENT.md) describes a production layout.
 

@@ -182,8 +182,9 @@ fresh install on the new one.
 
 ### Legal pages and the source-code link
 
-The sign-in screen and the setup screen carry a slim footer bar fixed to the bottom of the window, so
-it is visible without scrolling (not on the race screen). **"Source code" is always there**; **"Legal
+The sign-in screen, the setup screen and the public join page of a player registration carry a slim
+footer bar fixed to the bottom of the window, so it is visible without scrolling (not on the race
+screen). **"Source code" is always there**; **"Legal
 notice" and "Privacy policy" appear only once you have filled them in.** Both pages are public — a
 visitor reads them at `/legal-notice` and `/privacy` without signing in.
 
@@ -206,6 +207,47 @@ everyone who uses it is offered its source. By default the link opens the upstre
 the commit the app was built from (the repository's front page when the build names no commit, and
 the link says so). **If you run a modified copy, set `RA_SOURCE_URL` to the address of your own
 source** ([ENVIRONMENT.md](ENVIRONMENT.md)); a value that is not an http(s) address stops the start.
+
+### Player registration
+
+A second way to fill a race (since 2026-10-21, REGISTRATION-1): instead of typing the names, a
+director opens a **registration** and the players add their own names from their phones.
+
+**How it works.**
+
+1. Setup screen → *Players* tab → **Open registration**. Choose the track, how long registration
+   stays open (5 min, 15 min, 1 hour, 1 day, 3 days, 7 days, or a date and time of your own — at
+   least 1 minute, at most 30 days) and, if you like, an event name. **The number of places is the
+   track's own player limit**, the same number the Players tab allows; it is fixed when you open.
+2. Share the **join link**: copy it, or show its **QR code** — **Show QR full screen** fills the
+   screen for a projector or TV.
+3. While it is open you see the names arrive (the list updates every few seconds), can **remove** a
+   name (✕), **close it now** or **extend** it (later, at most 30 days after you opened it). Nobody can
+   register once every place is taken.
+4. It closes by itself at the deadline — the server decides by its own clock, also when nobody has
+   the page open or the server was restarted in between. A closed registration stays closed.
+5. **Use these players** puts the registered names into the Players tab and selects the track, then
+   you start the race as usual. Nothing starts by itself.
+6. **Delete registration** when you are done: the names are kept until you do (see
+   [PRIVACY-FACTS.md](PRIVACY-FACTS.md)).
+
+**The public page.** The link opens `/join/<code>` — no sign-in, made for a phone. A player sees the
+event, the track, the places left and a countdown, types a name and presses *Join*, and is told
+"You're in! You are number N of M." The same name twice is refused (capitals and extra spaces do not
+make a name different), and so is a second name from the same phone. The link is the only thing a
+player needs; the code in it cannot be guessed. The page never shows the other players' names. Its
+footer carries your legal pages like the sign-in screen does.
+
+**At the venue.** All phones on the venue's Wi-Fi may share one internet address; the join page allows
+60 attempts a minute per address, enough for a room registering at once. The players' phones must
+reach your server's address — a server only on `localhost` cannot be joined from a phone.
+
+**An external site with its own players** (optional): set `RA_INTEGRATION_KEY` and that site can add
+its signed-in players to an open registration through a documented interface,
+[INTEGRATIONS.md](INTEGRATIONS.md). Without it the route does not exist, and nothing else changes —
+the game never needs such a site.
+
+The registrations live in `registrations.sqlite` in the data folder; every backup carries them.
 
 ---
 
@@ -335,6 +377,7 @@ account on every request, never from what the browser sends (`server/src/auth/gu
 | the test-aids switch | every signed-in user (`server/src/routes/settings.js:44`) | admins only (`server/src/auth/guards.js:95-102`) |
 | the warning about re-delivered built-in records | every signed-in user (`server/src/routes/seedNotices.js:31`) | any signed-in user dismisses it, for everyone (`server/src/routes/seedNotices.js:36-39`) |
 | **stored races** | **only users of the team that ran them** — the list, a race by its short key and the period evaluation (`server/src/routes/races.js:165-182`, `:189-207`, `:229-231`) | every signed-in user stores the races they run, filed under their own team (`server/src/routes/races.js:102-133`); nobody changes or deletes a stored race ([PRIVACY-FACTS.md](PRIVACY-FACTS.md)); re-checking one on demand is admin-only and also limited to the admin's own team (`server/src/auth/guards.js:81-86`, `server/src/routes/races.js:254-258`) |
+| **player registrations** and the names in them | **only users of the team that opened them** (`server/src/routes/registrations.js`); a player sees only the public view and their own name (`server/src/routes/join.js`) | every signed-in user of that team opens, closes, extends, removes names from and deletes them; players add their own name through the public link |
 | accounts | admins only, **every account on the install, whatever its team** (`server/src/auth/guards.js:39-44`) | admins only; each user changes their own password |
 | the admin status box | admins only (`server/src/auth/guards.js:111-119`) | nobody; it reads only |
 | the Dev Screen's race settings (behaviour, camera and the rest) | **not shared**: kept in each browser's local storage (`client/src/modules/storage/storage.js:15`, `:18-24`; §1, the Dev Screen's "Backup and reset") | whoever uses that browser |
@@ -443,6 +486,7 @@ nothing deletes them. Copy them off the server before deleting them.
 | --- | --- | --- |
 | `users.json` | starts; **health answers `503`, status `error`**, naming the account store (so `npm run status` and the container's health check fail); **sign-in and every signed-in page fail** | restore from a backup (§2) |
 | `races.sqlite` | starts; only the race history fails; tracks and everything else work | restore from a backup |
+| `registrations.sqlite` | starts; health answers `200`; **only player registration fails** — the director's panel and the join page answer `500`; races, tracks and everything else work (measured 2026-10-21) | restore from a backup; or, if no registration in it is still needed, move the file aside and a fresh one is started at the next registration |
 | `sessions.sqlite` | **starts anyway** (since AUDIT-1 A10-07): the damaged file is renamed `sessions.sqlite.damaged-<time>` beside it, a fresh one is started and one log line says so — **everybody has to sign in again**, nothing else is lost | nothing; delete the renamed file once you no longer want it |
 | one track file | starts; that track is skipped with a warning, the others are served | restore from a backup, or re-save the track |
 

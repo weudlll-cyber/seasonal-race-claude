@@ -103,7 +103,9 @@ answer every caller with the whole collection (`server/src/routes/tracks.js:571`
 `server/src/routes/racers.js:190`). **An `admin` manages every user on the installation**, whatever
 their team (`server/src/auth/guards.js:39-44`, `server/src/auth/usersRouter.js:21-24`). **Race lists are
 per team**: a user sees only the races stored by their own team (`server/src/routes/races.js:165-182`).
-Decided on 2026-10-01; there is no per-organizer separation beyond races.
+Decided on 2026-10-01; there is no per-organizer separation beyond races — and, since 2026-10-21
+(REGISTRATION-1), player registrations, which are kept per team exactly as races are
+(`server/src/routes/registrations.js`).
 
 ### Test aids — off as an installation ships
 

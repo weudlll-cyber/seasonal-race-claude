@@ -1054,6 +1054,45 @@ as before. The address is set with `npm run configure`, which writes `RA_PUBLIC_
 `VITE_API_URL` still exists but is for harnesses only and must not be used for a deployment. See
 [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## Player registration (REGISTRATION-1, 2026-10-21)
+
+A second way to fill a race, beside typing names (the owner's decisions of 2026-10-20). Routes and
+answers are in [API.md](API.md), *Player registration*; the public path's reasoning is in
+[AUTH.md](AUTH.md) §5.
+
+```
+director (Setup → Players → Open registration)          player's phone (/join/<code>, no sign-in)
+  RegistrationPanel.jsx ──/api/registrations──┐          JoinPage.jsx ──/api/join/<code>──┐
+                                              ▼                                           ▼
+                              routes/registrations.js                         routes/join.js
+                              (signed in, own team)                    (PUBLIC_PATHS pattern, cookie,
+                                              │                          joinLimiter, 1 KB body)
+                                              ▼                                           │
+                           registrations/registrationStore.js  ◄────────────────────────────┘
+                           DATA_ROOT/registrations.sqlite      ◄── routes/integrations.js
+                                                                   (RA_INTEGRATION_KEY; mounted
+                                                                    before the session and guards)
+```
+
+- **One store, three doors.** The store holds every rule — the window (1 minute to 30 days, the
+  deadline decided by the server's clock on every read), the fixed capacity (one IMMEDIATE
+  transaction, so concurrent registrations cannot over-fill), the player-name rules and the
+  duplicate refusal (`shared/nameLimits.mjs`, `shared/playerNames.mjs`). The three routers only map
+  requests onto it, so the public link and the integration seam cannot disagree.
+- **The capacity comes from the client**, computed for the chosen track exactly as the Players tab's
+  limit (`client/src/screens/SetupScreen/fieldCap.js`, `isTrackOpen` + `fieldCapFor`); the server
+  bounds it to 1–100 and keeps it fixed.
+- **No new transport.** The director's panel polls the shown registration every 5 s, and the join
+  page polls every 10 s; both count down locally between answers.
+- **Into a race through the existing roster path.** "Use these players" calls the Setup screen's
+  own `setPlayers` with the names and `setSelectedTrackId` with the track, and switches the tab back
+  to typing names; Start Race is then the normal flow. Nothing in the registration code can start or
+  change a race, and none of it is inside the race hull (`scripts/engine-reach.mjs`).
+- **The QR code is drawn on the device** (`client/src/components/QrCode/QrCode.jsx`, `lean-qr`
+  as an SVG path); no service is asked.
+- **The game stands on its own** ([PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) §11): the
+  integration seam is off unless `RA_INTEGRATION_KEY` is set ([INTEGRATIONS.md](INTEGRATIONS.md)).
+
 ## Track Lifecycle and Hybrid Persistence
 
 See `docs/TRACK_LIFECYCLE.md` for the full lifecycle spec. This section summarises the key architectural decisions agreed in the Track Lifecycle Hybrid (TLH) concept phase (2026-05-01).

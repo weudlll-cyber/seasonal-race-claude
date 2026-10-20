@@ -18,7 +18,9 @@ is marked as such. Where this page and the code disagree, the code is right.
 ## In short
 
 - **Whose data:** the race directors who have accounts, and the **players whose names are typed into
-  races and player groups**. Players have no account and never sign in.
+  races and player groups**, or that players register themselves through a registration's public
+  link (since 2026-10-21, REGISTRATION-1 — kept until the director deletes the registration).
+  Players have no account and never sign in.
 - **Where:** in one data folder on the server, and in the browser of each person who uses the app.
 - **Nothing goes to any third party** — no analytics, no external fonts or scripts. The server's one
   outbound call is the admin status box's release check: it asks GitHub's public API for the
@@ -37,6 +39,8 @@ is marked as such. Where this page and the code disagree, the code is right.
 | stored races | **player names** (the roster), finishing order and times, the team that ran the race (not the user name) | `races.sqlite` in the data folder | **forever** — the database refuses changes to a stored race, and no route deletes one | every signed-in user of that team |
 | race history in the browser | player names, results, seed | the browser's local storage (`racearena:raceHistory`) | until that browser's storage is cleared | that browser |
 | last signed-in user *(found in the client code for this page; not in the audit's table)* | the user name and role | the browser's local storage (`racearena:lastUser`), written by `client/src/contexts/AuthContext.jsx` | removed at sign-out and when the server says the session is gone | that browser |
+| player registrations *(added 2026-10-21, REGISTRATION-1)* | **the names players register with** through a registration's public link (or an integrated site, which also sends its own id for the player); the event name, the track, the deadline, the team and the user name of the director who opened it | `registrations.sqlite` in the data folder | **until the director deletes the registration** — closing it does not delete the names; deleting it deletes every name in it | the director's team, signed in. A player sees only their own name and number, and nobody else's, without signing in |
+| registration device cookie *(added 2026-10-21, REGISTRATION-1)* | an opaque entry id — no name, no other data | the player's browser (`ra_join`), one per registration, sent only to that registration's join address; not readable by page scripts | 31 days | that browser |
 | player groups | **player names** | `player-groups/` in the data folder | until deleted | **every signed-in user** — groups are shared by the whole installation, not per team |
 | brands, racer types, tracks | organisation names, logos and pictures an operator uploads | `brands/`, `brand-logos/`, `racers/`, `racer-sprites/`, `tracks/`, `backgrounds/`, `tracks-backups/` | until deleted; `tracks-backups/` keeps the newest 20 copies of each track | every signed-in user |
 | admin recovery log | the time and the recovered user name — never a password or hash | `recover-admin-audit.log` in the data folder | forever (it is only appended to) | the host account |
@@ -80,6 +84,7 @@ address to GitHub).
 | --- | --- |
 | an account | an admin deletes it in the Dev Screen, *Accounts and system → Race directors* (the last admin cannot be deleted) |
 | a name in a player group | edit or delete the group in the Dev Screen |
+| a name in a player registration | the director removes the name (✕) or deletes the registration — Setup screen, *Players* tab, *Open registration*. A name already loaded into a race that was then run is a name in a stored race (next row) |
 | a name in a stored race | **not possible in the app.** Stored races cannot be changed, and no route deletes one. The only way would be editing `races.sqlite` directly, which the project neither documents nor tests |
 | a name in a browser's race history | clear that browser's site data |
 | a name in a backup | delete the backup; an archive cannot be edited |
@@ -108,7 +113,9 @@ pages* → *Insert template* under the privacy-policy field; added 2026-10-18, P
 lives in `client/src/modules/legal/legalNoticeTemplate.js`, beside the legal-notice template, and is
 **derived from this page**: the 30-day session cookie and the session holding no IP address or
 browser details, no IP addresses recorded by the app and no access log, player names kept for good
-in stored races and not removable in the app, what the browser stores, no third parties, and the
-daily release check to GitHub. **Keep the two in step** — when a fact here changes, the template
+in stored races and not removable in the app, the names players register with kept until the
+registration is deleted together with the one device-marker cookie per registration (in its section
+"3. Player names in races", since 2026-10-21, REGISTRATION-1), what the browser stores, no third
+parties, and the daily release check to GitHub. **Keep the two in step** — when a fact here changes, the template
 changes in the same commit. What only the operator knows (their proxy's logs, their hosting, how long
 they keep backups) is left in brackets for them to fill in.
