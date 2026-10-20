@@ -17,9 +17,9 @@ signed-in players) is an integration seam only.
 
 | piece | what | SHA | checks |
 | --- | --- | --- | --- |
-| P1 | server data, director routes, capacity and deadline, backup and restore | see the branch log | below |
-| P2 | public routes, device cookie, rate limiter, integration seam, security tests | — | — |
-| P3 | the public join page | — | — |
+| P1 | server data, director routes, capacity and deadline, backup and restore | `3c7aa4f2` | below |
+| P2 | public routes, device cookie, rate limiter, integration seam, security tests | `81ba1a2b` | below |
+| P3 | the public join page | see the branch log | below |
 | P4 | the director UI, QR, stage view, "Use these players" | — | — |
 | P5 | privacy and documents | — | — |
 | P6 | end-to-end playthrough on the production preview | — | — |
@@ -207,6 +207,50 @@ databases are three) and `docs/OPERATOR-GUIDE.md` (the data-folder table). The r
   reason.
 - **GET is not rate-limited**, like every other read; the page polls it for the countdown and places
   left.
+
+## P3 — the public join page
+
+**Built.**
+
+- `client/src/screens/Join/JoinPage.jsx` + `.module.css` (new) — `/join/<code>`, public (App.jsx
+  mounts it outside `ProtectedRoute`), mobile first. It shows:
+  - the event name (or "Race registration") and the track;
+  - places left as "N of M" and the time left as a live countdown, ticking every second from the
+    device's clock;
+  - a name field (stops at the shared 32-character limit) and Join;
+  - "You're in! You are number N of M." with "Registered as <name>", also on every revisit from
+    the same device;
+  - "This race is full.", "Registration is closed." and "This registration link is not valid.";
+  - the server's refusal sentence for a doubled name or a second attempt from the device.
+
+  The server decides every state; the page asks again every 10 s, after every refusal and when the
+  countdown reaches zero. When the server does not answer it says "The server could not be
+  reached…" rather than the app banner's sentence, since there is no banner on this page. The
+  footer bar (Source code / Legal notice / Privacy policy) is the existing `LegalFooter`.
+- `client/src/services/registrationApi.js` (new) — the public calls (`_skipAuthRedirect`) and the
+  director's calls, through the existing `apiCall`.
+- `client/src/modules/registration/timeLeft.js` (new) — the countdown text, shared with the
+  director's view (P4).
+
+**Reused, and named.** `LegalFooter` (header updated: it is now on three screens), `apiCall` /
+`API_BASE_URL` (`services/apiClient.js`, `services/api.js`, unchanged — they are inside the race
+hull, so they were deliberately not touched), `PLAYER_NAME_MAX_LENGTH` (`shared/nameLimits.mjs`),
+the app's colour tokens.
+
+**Tests.**
+
+- `JoinPage.test.jsx` (9): the open, registered, full, closed and unknown states; joining; a
+  doubled name; already registered, followed by the page asking again; the server not answering.
+- `timeLeft.test.js` (3).
+- Browser gate, production arm, `e2e/join-page.spec.js` (3, at **390 × 844**, signed out):
+  - a phone joins, is told "number 1 of 3", and sees the same after a reload;
+  - the page is no wider than the phone and raises no CSP violation;
+  - the same name in another case from a second phone is refused, the second phone joins with
+    another name, and a third phone sees "This race is full." with "0 of 2";
+  - closed, and an unknown code.
+- `e2e/csp-no-violations.spec.js`: the join page added to the main screens, still zero violations.
+- `docs/SHIP-CEREMONY.md` counts regenerated: 85/29 → 86/30, because of the new modules file. The
+  race hull is unchanged at 231 files, so no fingerprint guard is selected.
 
 ## Refusals
 
