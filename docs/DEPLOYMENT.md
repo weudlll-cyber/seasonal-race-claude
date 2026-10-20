@@ -328,10 +328,10 @@ tool prints the totals so you can compare them.
 Linux, `sha256sum -c racearena-backup-<UTC timestamp>.tar.sha256`, run in the directory that holds
 both, prints `OK` when the archive is unchanged. `npm run status` checks the newest one for you.
 
-★ **Why you cannot simply copy the folder.** `sessions.sqlite` and `races.sqlite` are live
-databases. A file copy taken while the server is writing can capture a half-finished transaction,
-and the damaged file **looks perfectly normal** until the day you restore it. The tool copies
-those two through SQLite's own online backup instead.
+★ **Why you cannot simply copy the folder.** `sessions.sqlite`, `races.sqlite` and
+`registrations.sqlite` are live databases. A file copy taken while the server is writing can capture
+a half-finished transaction, and the damaged file **looks perfectly normal** until the day you
+restore it. The tool copies those three through SQLite's own online backup instead.
 
 **Check the install:**
 

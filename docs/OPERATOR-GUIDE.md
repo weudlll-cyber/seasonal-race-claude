@@ -40,6 +40,7 @@ install. What is in it:
 | `users.json` | accounts: user name, team, role and a password hash |
 | `sessions.sqlite` | who is signed in |
 | `races.sqlite` | every stored race |
+| `registrations.sqlite` | player registrations and the names players registered with, until a director deletes the registration |
 | `tracks/`, `backgrounds/`, `tracks-backups/` | tracks, their pictures, and the newest copies of each track |
 | `racers/`, `racer-sprites/`, `brands/`, `brand-logos/`, `player-groups/` | racer types, brands and player groups |
 | `surface-classes/`, `period-points-rule.json` | custom surface classes, and the period evaluation's points rule |

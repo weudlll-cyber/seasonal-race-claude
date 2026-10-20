@@ -6,7 +6,7 @@
 //              consistently, while the server is running.
 //
 // ── ★★★ WHY A FILE COPY OF THE SQLITE FILES IS NOT ACCEPTABLE ──────────────────────────────────
-// `sessions.sqlite` and `races.sqlite` are live databases. SQLite writes a page at a time and keeps
+// `sessions.sqlite`, `races.sqlite` and `registrations.sqlite` (`SQLITE_FILES`) are live databases. SQLite writes a page at a time and keeps
 // a rollback journal / WAL beside the file; a plain `copyFile` of a database that is being written
 // can capture a torn page set — half of one transaction and none of the next. **The result is a
 // file that looks perfectly normal**: right size, right extension, opens without complaint, and
@@ -92,8 +92,12 @@ function writePrivate(path, bytes) {
   chmodSync(path, PRIVATE_MODE);
 }
 
-/** The databases that must go through SQLite's own backup API rather than a file copy. */
-export const SQLITE_FILES = ['sessions.sqlite', 'races.sqlite'];
+/**
+ * The databases that must go through SQLite's own backup API rather than a file copy.
+ * `registrations.sqlite` since REGISTRATION-1 (2026-10-21): it is written while players register,
+ * so a file copy could tear it exactly like the other two. It has no per-store override.
+ */
+export const SQLITE_FILES = ['sessions.sqlite', 'races.sqlite', 'registrations.sqlite'];
 
 /** Transient SQLite side files: never archived, and they may vanish while we are listing. */
 export const SQLITE_SIDE = /(^|\/)[^/]+\.sqlite-(journal|wal|shm)$|(^|\/)[^/]+-(journal|wal|shm)$/;

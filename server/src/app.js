@@ -16,6 +16,7 @@ import brandsRouter from './routes/brands.js';
 import racersRouter from './routes/racers.js';
 import seedNoticesRouter from './routes/seedNotices.js';
 import racesRouter from './routes/races.js';
+import registrationsRouter from './routes/registrations.js';
 import settingsRouter from './routes/settings.js';
 import adminStatusRouter from './routes/adminStatus.js';
 import { createSessionMiddleware } from './auth/session.js';
@@ -94,6 +95,8 @@ export function createApp() {
   app.use('/api/racers', racersRouter);
   app.use('/api/seed-notices', seedNoticesRouter);
   app.use('/api/races', racesRouter);
+  // REGISTRATION-1: the director's registrations — signed in, operator+, team-scoped like races.
+  app.use('/api/registrations', registrationsRouter);
   app.use('/api/settings', settingsRouter);
   // AUDIT-1 D2: the admin status box — read-only, admin-only by ROUTE_POLICY (all of /api/admin).
   app.use('/api/admin', adminStatusRouter);
