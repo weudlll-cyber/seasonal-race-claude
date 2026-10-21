@@ -242,7 +242,7 @@ the app's colour tokens.
 - `JoinPage.test.jsx` (9): the open, registered, full, closed and unknown states; joining; a
   doubled name; already registered, followed by the page asking again; the server not answering.
 - `timeLeft.test.js` (3).
-- Browser gate, production arm, `e2e/join-page.spec.js` (3, at **390 × 844**, signed out):
+- The production arm (run by name; not in the Browser gate's curated list — see the checks below), `e2e/join-page.spec.js` (3, at **390 × 844**, signed out):
   - a phone joins, is told "number 1 of 3", and sees the same after a reload;
   - the page is no wider than the phone and raises no CSP violation;
   - the same name in another case from a second phone is refused, the second phone joins with
@@ -302,7 +302,7 @@ check (`scripts/audit-bundle-address.mjs`) passes: "no deployment address".
   - Delete asks, and deletes only on yes;
   - the QR stage opens and closes with Escape.
 - SetupScreen's 15 test files: 182 / 182, the tab unchanged when "Enter names" is the default.
-- Browser gate, production arm, `e2e/registration-director.spec.js` (1), on the built app:
+- The production arm (run by name; not in the Browser gate's curated list), `e2e/registration-director.spec.js` (1), on the built app:
   - opening from the Players tab; the link and the QR code;
   - the stage view's code taller than half the window, closed by Escape;
   - two phones (390 × 844, signed out) join through the shown link, and the director's list shows
@@ -507,7 +507,7 @@ built.
 | `QrShareButtons.test.jsx` (3, new) | copied note; the fallback sentence; download file name | the fallback sentence replaced |
 | `playersMode.test.js` (3, new) | remembered for the session; only real modes; blocked storage neither throws nor remembers | the write made a no-op |
 | `playersModeOnLoad.test.jsx` (5, new) | none open → names; one open → shown directly; several → list; open beats a remembered "names"; none open → the remembered mode | the mode effect not switching |
-| Browser gate `e2e/registration-list.spec.js` (3, new) | two open → after a reload the list is on top, both highlighted, each opens; one open → shown directly after a reload; at 390 × 844 the cards stack, equally wide, inside the window | auto-show off and the list below the form (a separate build): the first two went red |
+| production arm, by name: `e2e/registration-list.spec.js` (3, new) | two open → after a reload the list is on top, both highlighted, each opens; one open → shown directly after a reload; at 390 × 844 the cards stack, equally wide, inside the window | auto-show off and the list below the form (a separate build): the first two went red |
 | `e2e/registration-director.spec.js` | reopening by its card | (updated) |
 
 All of them are green again after the restore. The restored build's bundle is byte-identical to the
@@ -554,8 +554,17 @@ downloaded PNG are under `C:\Users\weudl\ra-measure\REGISTRATION-1-shots\followu
   samples ≤ 25 %, the others 36 % and 39 %).
 - **Run 2, quiet**: 26 / 1 — a **real flake in this branch's own test**. `RegistrationPanel.test.jsx`
   "extends by the chosen amount" computed the fixture's deadline anew for each mocked answer, so one
-  hour came out as 3,600,001 ms. Fixed by one deadline for the whole file (`CLOSES_AT`). Then run 3,
-  below.
+  hour came out as 3,600,001 ms. Fixed by one deadline for the whole file (`CLOSES_AT`).
+- **Run 3, on the new head: 27 / 0.** It includes the client suite and the server suite.
+- **The full Browser gate** (`npm run test:e2e:prod:fast`): **127 / 0**.
+- **The registration browser specs are NOT in that gate.** `test:e2e:prod:fast` is a curated list
+  of spec files in `client/package.json`, and its widening has been recorded as the owner's
+  decision (`.github/workflows/browser-gate.yml`). The three new specs were therefore run by name on
+  the same production arm: `join-page`, `registration-director` and `registration-list`, **7 / 7**.
+  - **Decided by rule**: the gate's list is left unchanged.
+  - **For the owner**: whether these three specs join the gate (about 1 minute more), which would
+    also make them run in CI's daily browser gate. Where this sheet said "Browser gate" for them in
+    P3, P4 and above, it now says "production arm, by name".
 
 The decoder, **jsQR 1.4.0**, was installed into the scratch folder
 `C:\Users\weudl\ra-measure\REGISTRATION-1-decoder\`, outside the repository and not a dependency
