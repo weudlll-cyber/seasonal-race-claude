@@ -562,9 +562,48 @@ downloaded PNG are under `C:\Users\weudl\ra-measure\REGISTRATION-1-shots\followu
   decision (`.github/workflows/browser-gate.yml`). The three new specs were therefore run by name on
   the same production arm: `join-page`, `registration-director` and `registration-list`, **7 / 7**.
   - **Decided by rule**: the gate's list is left unchanged.
-  - **For the owner**: whether these three specs join the gate (about 1 minute more), which would
-    also make them run in CI's daily browser gate. Where this sheet said "Browser gate" for them in
+  - **Answered by the owner on 2026-10-21**: they run **only when something relevant to
+    registration changed**, in `verify` and in the Browser gate workflow. Built as below
+    ("Conditional registration browser checks"). Where this sheet said "Browser gate" for them in
     P3, P4 and above, it now says "production arm, by name".
+
+### Conditional registration browser checks (the owner's decision of 2026-10-21)
+
+- **`scripts/check-registration-browser.mjs`** (new, 134 lines). Its `GUARD` declaration is the ONE
+  statement of what selects the three specs (the paths are in `docs/VERIFY-RULES.md`, *QUALIFIED
+  2026-10-21*). Run plain, it runs the three specs on the production arm; `--declare` prints the
+  declaration; `--selects` answers true or false for the push range or for the paths given.
+- **verify / premerge — the existing diff-based selection, reused**:
+  - discovered as a `check-*.mjs` guard and routed by `routing.mjs` (`resolveGuard`), like every
+    guard;
+  - `verify.mjs`: the guard runs **exclusive**, and the producer pull-in that served
+    only `check-image-starts` now serves both consumers of `client/dist` (a loop; +16 / −3 lines in all).
+- **The Browser gate workflow** (`.github/workflows/browser-gate.yml`, +49 lines):
+  - the checkout gets `fetch-depth: 0`;
+  - a push-only scope step runs `--selects` against `event.before..sha`, through `changedFiles`
+    from `scripts/ci-docs-only.mjs` (now exported, +2 lines), which computes CI's own push-range
+    diff;
+  - a conditional step runs the guard;
+  - the phase table, the artefact and the fail step include it.
+  - **No new action** (the three SHA-pinned ones as before). **The quick set is unchanged.**
+- **Proof by dry run**, nothing executed:
+
+  | changed path | `--selects` | verify `plan()` |
+  | --- | --- | --- |
+  | `docs/VERIFY-RULES.md` (+ `reports/…`) | false | the guard and `check-client-build` both skipped |
+  | `client/src/screens/SetupScreen/RegistrationPanel.jsx` | true | both run |
+  | `client/e2e/join-page.spec.js` | — | the guard runs; `check-client-build` PULLED IN (it excludes `client/e2e/`) |
+
+- **Test**: `scripts/verify.test.mjs` "REGISTRATION: …" (+24 lines):
+  - docs-only selects neither;
+  - RegistrationPanel, the store, `guards.js` and a spec file each select the guard and the build;
+  - an unrelated client file (`TrackEditor.jsx`) does not;
+  - the guard runs exclusive.
+
+  Broken once on purpose (RegistrationPanel.jsx taken out of the declaration): red; restored:
+  green. `verify.test.mjs` and `ci-docs-only.test.mjs` are 64 / 64.
+- **The guard run for real once**: 10 / 10 — the 7 registration tests and the arm's 3 setup
+  projects, 1.3 min.
 
 The decoder, **jsQR 1.4.0**, was installed into the scratch folder
 `C:\Users\weudl\ra-measure\REGISTRATION-1-decoder\`, outside the repository and not a dependency

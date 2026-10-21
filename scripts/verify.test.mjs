@@ -1103,3 +1103,27 @@ test("THE SHIP GATE IS INVOKED WITH --gate, ALONE — not as the nightly sweep",
   // It builds the client, boots an API and a preview server on fixed ports and drives Chromium.
   assert.equal(cmd.exclusive, true, "the gate owns the machine while it runs");
 });
+
+// REGISTRATION-1 (the owner's decision of 2026-10-21): the three registration browser specs run
+// only when the diff reaches registration — selected by THIS routing, from the guard's own
+// declaration, and with the client build pulled in because they serve the built client.
+test("REGISTRATION: the browser specs run only when registration changed, with the build pulled in", () => {
+  const run = (f) => new Set(plan([f]).filter((t) => t.run).map((t) => t.id));
+  const docs = run("docs/VERIFY-RULES.md");
+  assert.ok(!docs.has("check-registration-browser"), "a docs-only change must not select them");
+  assert.ok(!docs.has("check-client-build"), "nor the build they need");
+  for (const f of [
+    "client/src/screens/SetupScreen/RegistrationPanel.jsx",
+    "server/src/registrations/registrationStore.js",
+    "server/src/auth/guards.js",
+    "client/e2e/join-page.spec.js",
+  ]) {
+    const got = run(f);
+    assert.ok(got.has("check-registration-browser"), `${f} must select them`);
+    assert.ok(got.has("check-client-build"), `${f} must bring the build (pulled in where needed)`);
+  }
+  // An unrelated client file does not: the selection is registration's, not "anything client".
+  assert.ok(!run("client/src/screens/TrackEditor/TrackEditor.jsx").has("check-registration-browser"));
+  const cmd = commandFor({ id: "check-registration-browser", source: "scripts/check-registration-browser.mjs" });
+  assert.equal(cmd.exclusive, true, "a browser run owns the machine while it runs");
+});

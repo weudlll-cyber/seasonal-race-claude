@@ -545,6 +545,48 @@ deliberately, as this rule says, and [NIGHT-RUN.md](NIGHT-RUN.md) remains their 
 green, no retries. Had it flapped it would have shipped report-only. See
 `reports/evolution/DELIVERY-BROWSER-GATE-1.md`.
 
+★★ **QUALIFIED 2026-10-21 (REGISTRATION-1, the owner's decision of that day): THE REGISTRATION
+BROWSER SPECS RUN ONLY WHEN REGISTRATION CHANGED — in `verify` too.** Three spec files —
+`client/e2e/join-page.spec.js`, `registration-director.spec.js` and `registration-list.spec.js`,
+about one minute on the production arm — are NOT in the fast set and are not run on every change.
+They run when the change reaches player registration, and **what reaches it is declared once**, in
+`scripts/check-registration-browser.mjs` (`GUARD`):
+
+- `client/src/screens/Join/`, `client/src/modules/registration/` and `server/src/registrations/`;
+- `RegistrationPanel.jsx` / `.module.css` / `.test.jsx` and `SetupScreen.jsx`;
+- `client/src/services/registrationApi.js`;
+- the registration, join and integration route files with their tests;
+- `server/src/auth/guards.js`, `server/src/auth/rateLimit.js` and `server/src/app.js`;
+- `scripts/backup.mjs`;
+- the three spec files, and `client/playwright.prod.config.js` with the two modules it imports
+  (`e2e/prod-ports.js`, `e2e/e2e-env.js`);
+- like every guard, the script's own import closure.
+
+**Two readers, one declaration:**
+
+1. **`npm run verify` and `--premerge`** discover the file like every other `check-*.mjs` guard and
+   select it by the diff, with **the existing selection**, not a second selector.
+   - It runs **exclusive**: it boots a server on a fixed port and opens Chromium.
+   - It **pulls in `check-client-build`**, by the same producer edge `check-image-starts` uses,
+     because it serves the built client.
+2. **The Browser gate workflow** has a step after the fast set that runs only on a **push**.
+   - `node scripts/check-registration-browser.mjs --selects` resolves the same declaration with the
+     same resolver against `git diff --name-only event.before..sha`, through `changedFiles` from
+     `scripts/ci-docs-only.mjs`, which is reused.
+   - It runs the three specs when selected. A failure fails the push run like the fast set's.
+   - An uncomputable range (an all-zero base) runs them: fail open. The schedule and the hand crank
+     do not run them, because there is no push to diff.
+
+So this qualifies the rule above in one place: a browser run can now be part of `verify` — **but
+only when the diff reaches registration**, never for an unrelated change. **Proved by dry run on
+2026-10-21** (`plan()` and `--selects`, nothing executed):
+
+| changed path | the guard |
+| --- | --- |
+| `docs/VERIFY-RULES.md` alone | not selected — and neither is `check-client-build` |
+| `client/src/screens/SetupScreen/RegistrationPanel.jsx` | selected, `check-client-build` with it |
+| `client/e2e/join-page.spec.js` alone | selected; `check-client-build` PULLED IN, since it does not cover `client/e2e/` |
+
 **The command and the full reason live in [NIGHT-RUN.md](NIGHT-RUN.md), which is their one home.**
 Not repeated here.
 
