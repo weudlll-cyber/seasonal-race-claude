@@ -1242,27 +1242,31 @@ function SetupScreen() {
         <section className={styles.panel}>
           {activeTab === 0 && (
             <>
-              <h2 className={styles.panelTitle}>Players</h2>
               {/* REGISTRATION-1: two ways to fill the race — typing the names (with saved groups),
                   or a registration the players fill themselves. Typing is the default, so the tab
-                  opens exactly as before. */}
-              <div className={styles.playersMode} role="group" aria-label="How to fill the race">
-                <button
-                  type="button"
-                  aria-pressed={playersMode === 'names'}
-                  className={playersMode === 'names' ? styles.playersModeActive : ''}
-                  onClick={() => setPlayersMode('names')}
-                >
-                  Enter names
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={playersMode === 'registration'}
-                  className={playersMode === 'registration' ? styles.playersModeActive : ''}
-                  onClick={() => setPlayersMode('registration')}
-                >
-                  Player registration
-                </button>
+                  opens exactly as before. The switch is placed OUT OF THE FLOW on the title's line,
+                  so the title and the tab are exactly as tall as before: the setup screen fits a
+                  900 px desktop window (legal-pages.spec.js). */}
+              <div className={styles.playersHeader}>
+                <h2 className={styles.panelTitle}>Players</h2>
+                <div className={styles.playersMode} role="group" aria-label="How to fill the race">
+                  <button
+                    type="button"
+                    aria-pressed={playersMode === 'names'}
+                    className={playersMode === 'names' ? styles.playersModeActive : ''}
+                    onClick={() => setPlayersMode('names')}
+                  >
+                    Enter names
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={playersMode === 'registration'}
+                    className={playersMode === 'registration' ? styles.playersModeActive : ''}
+                    onClick={() => setPlayersMode('registration')}
+                  >
+                    Player registration
+                  </button>
+                </div>
               </div>
               {playersMode === 'registration' ? (
                 <RegistrationPanel

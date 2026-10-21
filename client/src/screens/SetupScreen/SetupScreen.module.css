@@ -97,11 +97,19 @@
   color: var(--color-text);
 }
 
-/* REGISTRATION-1: the Players tab's two ways to fill the race, as a two-button switch. */
+/* REGISTRATION-1: the Players tab's two ways to fill the race, as a two-button switch at the right
+   end of the title's line, positioned out of the flow — the title keeps its exact box, so the tab
+   keeps its exact height. */
+.playersHeader {
+  position: relative;
+}
+
 .playersMode {
+  position: absolute;
+  top: 0;
+  right: 0;
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.4rem;
 }
 
 .playersMode button {
@@ -109,7 +117,9 @@
   border: 1px solid var(--color-muted);
   border-radius: var(--radius);
   color: var(--color-text);
-  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+  line-height: 1.1;
+  padding: 0 0.6rem;
   cursor: pointer;
 }
 
