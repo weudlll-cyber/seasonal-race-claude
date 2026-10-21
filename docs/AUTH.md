@@ -193,10 +193,36 @@ GET  /api/auth/setup-needed
 POST /api/auth/setup
 POST /api/auth/login
 GET  /api/settings/legal-pages
+GET  /api/join/<code>          (a pattern: exactly 22 URL-safe characters after /api/join/)
+POST /api/join/<code>
 ```
 
 `GET /api/settings/legal-pages` joined the list on 2026-10-18 (LEGAL-PAGES-1): the operator's legal
 notice and privacy policy are read before anyone signs in. Setting them is admin-only.
+
+**The join link joined it on 2026-10-21 (REGISTRATION-1, the owner's decisions of 2026-10-20).** A
+player at the venue registers a name for a race without an account, so reading a registration's
+public view and registering one name need none. Why this is narrow enough to be public:
+
+- **The entry is an anchored pattern, not a prefix** — `/api/join/` plus exactly 22 characters of
+  `[a-z0-9_-]`, tested on the same lower-cased, slash-trimmed path as the exact entries. Anything
+  under it (`/api/join/<code>/x`), beside it, shorter, longer or encoded is not public. `GET` admits
+  `HEAD` like every GET entry; `PUT`, `DELETE` and `PATCH` are not admitted.
+- **The code is the permission**: 128 random bits per registration, so it cannot be guessed.
+- **What it can do is bounded in the route and the store** (`server/src/routes/join.js`): read the
+  event, track, places left, state and deadline — **never another player's name, the director, the
+  team or the registration's id** — and add one name, under the player-name rules, while the
+  registration is open and has a place.
+- **One registration per device** by an httpOnly, SameSite=Lax cookie scoped to that code's path —
+  a courtesy against double sign-ups, not a boundary; the director sees every name and can remove it.
+- **Limits**: 60 POSTs a minute per address (generous, because a venue's phones may share one), a
+  1 KB body. No per-address cap on entries; the registration's capacity is the cap.
+- The CSRF origin check applies to the POST as to every other.
+
+The director's routes (`/api/registrations`) are NOT public: signed in, operator+, team-scoped like
+races. **The integration seam** (`POST /api/integrations/registrations/<code>/entries`) is not on
+the list either: it takes no session, so it is mounted ahead of the session and the guards and checks
+its own key, `RA_INTEGRATION_KEY` — off (404) while unset ([INTEGRATIONS.md](INTEGRATIONS.md)).
 
 Everything else needs a session; an unauthenticated request gets **`401`**. A second layer,
 `requireAdmin`, raises specific routes to admin via one central policy: all of `/api/users`, the

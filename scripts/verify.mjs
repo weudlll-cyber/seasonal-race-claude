@@ -485,6 +485,12 @@ export function commandFor(g) {
   // no bind mounts, and both still fail on their own subject. Only WHEN they run changes.
   if (g.id === "check-client-build")
     return { cmd: ["node", g.source], exclusive: true };
+  // REGISTRATION-1 (the owner's decision of 2026-10-21): the three registration browser specs, on
+  // the production arm. EXCLUSIVE for the reason the ship gate above is: it boots a server on a
+  // fixed port and opens Chromium, and sharing the machine with the suites is how a browser run
+  // and vitest's timeouts have already failed each other.
+  if (g.id === "check-registration-browser")
+    return { cmd: ["node", g.source], exclusive: true };
   // FP-COMPARE-1: the world fingerprint must COMPARE against the record, not print and pass. It
   // measured-and-did-not-check until 2026-08-14, when a renamed column moved the hash, verify
   // printed the new value and reported PASS, and the defect reached master green. `--check` is
@@ -650,12 +656,15 @@ export function plan(
   //
   // NEVER SILENT, per the constraint at the head of this file: the pull-in states itself in the
   // guard's own reason line, the same way a skip and a --premerge force do.
-  const img = tasks.find((t) => t.id === "check-image-starts");
+  // REGISTRATION-1: `check-registration-browser` reads `client/dist` too (the production arm serves
+  // the BUILT client), so it pulls the producer in by the same edge.
   const bld = tasks.find((t) => t.id === "check-client-build");
-  if (img?.run && bld && !bld.run) {
-    bld.run = true;
-    bld.reason +=
-      "  ·  PULLED IN: check-image-starts consumes `client/dist`, which this guard produces";
+  for (const consumer of ["check-image-starts", "check-registration-browser"]) {
+    const c = tasks.find((t) => t.id === consumer);
+    if (c?.run && bld && !bld.run) {
+      bld.run = true;
+      bld.reason += `  ·  PULLED IN: ${consumer} consumes \`client/dist\`, which this guard produces`;
+    }
   }
   return tasks;
 }

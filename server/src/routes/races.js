@@ -64,8 +64,9 @@ import { verifyOffMainThread, BUSY } from '../races/verifyOffMainThread.js';
  * This installation's track records, read from ITS data directory — the tracks its races ran on.
  * Read per verify, not cached: an admin may have edited a track since boot, and a verify is rare.
  * The replay matches by `geometryId`, so an edited shape is a different track and is refused there.
+ * Also read by routes/registrations.js (REGISTRATION-1), to name the track a registration is for.
  */
-function readInstallTracks(dir = join(DATA_ROOT, 'tracks')) {
+export function readInstallTracks(dir = join(DATA_ROOT, 'tracks')) {
   return readdirSync(dir)
     .filter((f) => f.endsWith('.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')))

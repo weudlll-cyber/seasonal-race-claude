@@ -102,6 +102,14 @@ admin/DevScreen concern; the shipped product exposes intent (how much drama), no
 PULK-phase consolidation (one PULK Phase card, 5 visible controls + pinned internals) is the
 current realisation of this goal.
 
+## 11. The game stands on its own
+
+*The owner's decision of 2026-10-20 (REGISTRATION-1), a standing principle.* The game must always be
+installable and fully functional on its own. An external site — for example one with its own
+signed-in players — may use it through **documented interfaces** ([INTEGRATIONS.md](INTEGRATIONS.md)),
+but **no feature may require such a site**. An interface for one is off until an operator turns it on,
+and the game with it off is the complete game.
+
 ---
 
 ## The fixed points — what nobody may casually break

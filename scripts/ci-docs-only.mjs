@@ -77,7 +77,9 @@ export function decide(files, { computed = true, why = "" } = {}) {
   };
 }
 
-function changedFiles(base, head) {
+// EXPORTED (REGISTRATION-1, 2026-10-21): `check-registration-browser.mjs --selects` computes the push
+// range with this same function, so the Browser gate and CI read one diff the same way.
+export function changedFiles(base, head) {
   if (!base || !head) return { computed: false, why: "no BASE_SHA/HEAD_SHA in the environment" };
   if (base === ZERO)
     return { computed: false, why: "the base is the all-zero SHA (first push or new branch)" };

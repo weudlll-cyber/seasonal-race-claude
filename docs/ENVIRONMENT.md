@@ -84,6 +84,16 @@ so a container rebuild does not take it with it.
 Raising these weakens brute-force protection on the two endpoints that most need it. Non-numeric
 values become `NaN` and the limiter's behaviour is then undefined — set a number or leave it alone.
 
+The join link's limiter (`POST /api/join/<code>`, REGISTRATION-1) has no setting: 60 attempts a
+minute per address, generous because every phone at a venue may share one address
+(`server/src/auth/rateLimit.js`).
+
+## Integrations — optional
+
+| variable | when unset | when set |
+| --- | --- | --- |
+| `RA_INTEGRATION_KEY` | **off**: `POST /api/integrations/registrations/<code>/entries` answers `404`, exactly like a path that does not exist. The game is complete without it. | An external site with its own signed-in players may add a player to an open registration, sending `Authorization: Bearer <this value>`. Use a long random value (32 characters or more), keep it secret like a password, and change it by setting a new value and restarting. Read per request; compared in constant time. What it allows and how to call it: [INTEGRATIONS.md](INTEGRATIONS.md). Added 2026-10-21, REGISTRATION-1. |
+
 ## Build identity — optional, and only affects a status line
 
 `RA_BUILD_COMMIT`, `RA_BUILD_BRANCH`, `RA_BUILD_DIRTY` supply what `GET /api/health` reports as the

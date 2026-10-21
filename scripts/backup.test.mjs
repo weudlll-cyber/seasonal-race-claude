@@ -184,6 +184,37 @@ test('ROUND TRIP: a database with rows survives backup → destroy → restore',
   }
 });
 
+// ── REGISTRATION-1: the registration store is the third database ───────────────────────────────
+// Taken through the online backup like the other two (not as a file copy), and restored with its
+// rows — while a "server" keeps it open, as it does while players register.
+test('REGISTRATIONS: registrations.sqlite is backed up through SQLite and restored with its rows', async (t) => {
+  if (!Database) return t.skip('better-sqlite3 is not installed in server/node_modules');
+  const s = scratch();
+  const root = join(s, 'data');
+  const back = join(s, 'restored');
+  seedRoot(root);
+  const live = new Database(join(root, 'registrations.sqlite'));
+  try {
+    live.exec('CREATE TABLE registration_entries (id TEXT PRIMARY KEY, name TEXT)');
+    const ins = live.prepare('INSERT INTO registration_entries (id, name) VALUES (?, ?)');
+    for (let i = 0; i < 7; i++) ins.run(`e${i}`, `Player ${i}`);
+    const res = await backup({ dataRoot: root, outDir: join(s, 'archives') });
+    const item = res.items.find((i) => i.name === 'registrations.sqlite');
+    assert.equal(item?.how, 'sqlite .backup()', 'registrations.sqlite must go through the online backup');
+    restore({ archivePath: res.archivePath, into: back });
+    const db = new Database(join(back, 'registrations.sqlite'), { readonly: true });
+    try {
+      assert.equal(db.pragma('integrity_check', { simple: true }), 'ok');
+      assert.equal(db.prepare('SELECT COUNT(*) AS n FROM registration_entries').get().n, 7);
+    } finally {
+      db.close();
+    }
+  } finally {
+    live.close();
+    rmSync(s, { recursive: true, force: true });
+  }
+});
+
 // ── AUDIT-1 A10-02: the race store in WAL mode (RA_RACES_WAL=1) ───────────────────────────────
 // With WAL on, a committed race can live ONLY in `races.sqlite-wal` until a checkpoint, and the
 // side file is never archived. The online backup API reads through the WAL, so the snapshot must

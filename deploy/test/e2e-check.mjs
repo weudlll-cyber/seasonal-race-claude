@@ -12,6 +12,10 @@
 //   signin <user>             sign in; exit 1 unless it works
 //   setup-refused             POST /api/auth/setup again; exit 0 when it is refused (the token is gone)
 //   test-aids-off <user>      sign in; exit 1 unless the test-aids switch reads OFF (a fresh install)
+//   open-registration <user>  sign in, open a player registration, register one player ANONYMOUSLY
+//                             through the public join route; print its code (REGISTRATION-1)
+//   read-registration <code>  anonymously: the public join route still holds that one player, and
+//                             /join/<code> is served the app's page — through Caddy (REGISTRATION-1)
 // ============================================================
 
 import https from 'node:https';
@@ -108,6 +112,32 @@ const commands = {
     if (r.status !== 200) throw new Error(`test-aids: ${r.status} ${r.data}`);
     if (JSON.parse(r.data).enabled !== false) throw new Error(`test-aids is ON on a fresh install: ${r.data}`);
     console.log('test-aids switch on the fresh install: OFF');
+  },
+  // REGISTRATION-1 (2026-10-22): a registration is data in `registrations.sqlite`, which the backup
+  // must carry, and its two public paths — the page /join/<code> and the route /api/join/<code> —
+  // must reach the app through the proxy like everything else.
+  async 'open-registration'(user) {
+    const { cookie } = await signIn(user);
+    const closesAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const r = await req('POST', '/api/registrations', {
+      body: { trackId: 'dirt-oval', capacity: 3, eventName: 'VPS e2e', closesAt },
+      cookie,
+    });
+    if (r.status !== 201) throw new Error(`open registration: ${r.status} ${r.data}`);
+    const { code } = JSON.parse(r.data);
+    const joined = await req('POST', `/api/join/${code}`, { body: { name: 'Vic' } });
+    if (joined.status !== 201) throw new Error(`join: ${joined.status} ${joined.data}`);
+    console.log(code);
+  },
+  async 'read-registration'(code) {
+    const info = await req('GET', `/api/join/${code}`);
+    if (info.status !== 200) throw new Error(`public info ${code}: ${info.status} ${info.data}`);
+    const body = JSON.parse(info.data);
+    if (body.capacity !== 3 || body.placesLeft !== 2) throw new Error(`registration ${code}: not the one opened (${info.data})`);
+    const page = await req('GET', `/join/${code}`);
+    if (page.status !== 200 || !/text\/html/.test(page.headers['content-type'] ?? ''))
+      throw new Error(`/join/${code}: ${page.status} ${page.headers['content-type']}`);
+    console.log(`registration ${code}: 1 player, 2 of 3 places left; /join page served (${page.status})`);
   },
   async 'setup-refused'() {
     const r = await req('POST', '/api/auth/setup', { body: { username: 'x', password: 'xxxxxxxxxxxx' }, headers: { 'x-bootstrap-token': 'anything' } });

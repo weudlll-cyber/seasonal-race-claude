@@ -1901,6 +1901,26 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **REGISTRATION-1 · player registration — CLOSED 2026-10-21: accepted by the owner and
+      merged.** The owner's decisions of 2026-10-20, to ship before going online: a second way to fill
+      a race — the director opens a registration without names for a track and a window the director
+      chooses (1 minute to 30 days); players register themselves through a public link (path A); when
+      it closes the director starts the race with them, nothing starts by itself. The director sees
+      the list live, removes names, closes early and extends; never more players than the race has
+      places. A site with signed-in players (path B) is provided for as an integration seam only
+      (`RA_INTEGRATION_KEY`, [INTEGRATIONS.md](INTEGRATIONS.md)), under the standing principle recorded
+      the same day ([PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) §11). **Decided 2026-10-21:** in the
+      game players register by name only; joining with an account happens through an external site
+      via the seam, which carries the site's display name and account id (`externalId`) and answers
+      with the entry's number and the places left. The owner's look at `0c879057` on 2026-10-21 asked
+      for six changes (follow-up 1: the 1-minute preset, the date-and-time field, Copy QR code /
+      Download QR, coming back after a reload, the numbered list, the accounts decision); **he looked
+      at the follow-up the same day and accepted REGISTRATION-1.** Also decided that day: the three
+      registration browser specs run only when registration changed, in `verify` and in the Browser
+      gate ([VERIFY-RULES.md](VERIFY-RULES.md), *QUALIFIED 2026-10-21*). What was built, every check
+      and every decision taken by rule:
+      [reports/release/REGISTRATION-1.md](../reports/release/REGISTRATION-1.md).
+
 - [x] **AUDIT-1 A7-03 · the major upgrades — CLOSED 2026-10-19: four merged before going online,
       better-sqlite3 stays on 12 by the owner's decision.** Opened by AUDIT-1 (2026-10-09) as "after
       v1.0.0, one package at a time" (decided 2026-10-12). **On 2026-10-18 the owner decided to do them

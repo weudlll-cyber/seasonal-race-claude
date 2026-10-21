@@ -40,6 +40,13 @@ vi.mock('../../services/seedNoticeApi.js', () => ({
 vi.mock('../../services/playerGroupApi.js', () => ({
   fetchPlayerGroups: vi.fn().mockResolvedValue([]),
 }));
+// REGISTRATION-1 follow-up 1: the Setup Screen asks the server for the team's registrations on
+// mount, to open the Players tab on a running one. Replaced like the other services above, with
+// none open, so the tab opens on the names exactly as these tests expect.
+vi.mock('../../services/registrationApi.js', () => ({
+  listRegistrations: vi.fn().mockResolvedValue([]),
+}));
+
 forbidNetwork();
 
 const { default: SetupScreen } = await import('./SetupScreen.jsx');

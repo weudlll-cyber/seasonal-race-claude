@@ -92,6 +92,11 @@ KEY="$(printf '%s\n' "$ADMIN_PW" | visitor store-race "$ADMIN")"
 check "a race is stored over https ($KEY)" test -n "$KEY"
 check "the race reads back" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
 
+echo "── a player registration through the proxy (REGISTRATION-1)"
+REG="$(printf '%s\n' "$ADMIN_PW" | visitor open-registration "$ADMIN")"
+check "a registration is opened and a player joins anonymously over https ($REG)" test -n "$REG"
+check "the public join route and the /join page reach the app through Caddy" visitor read-registration "$REG"
+
 echo "── backup → delete the data → restore"
 check "racearena backup" "${RACEARENA[@]}" backup
 ARCHIVE="$(cat "$RA_ETC/state/last-backup")"
@@ -101,6 +106,7 @@ check "the data directory is empty (deleted)" bash -c "[ -z \"\$(ls -A '$RA_DATA
 check "racearena restore $ARCHIVE" "${RACEARENA[@]}" restore "$ARCHIVE"
 check "the race is back after the restore" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
 check "the admin is back after the restore" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $ADMIN"
+check "the registration and its player are back after the restore (registrations.sqlite)" visitor read-registration "$REG"
 
 echo "── racearena update A → B runs B's migration"
 check "the ledger does not hold e2e-test-1 before the update" bash -c "! grep -q e2e-test-1 '$RA_DATA/migrations.json' 2>/dev/null"

@@ -15,8 +15,10 @@
 //
 //              ★ THE PRIVACY POLICY IS DERIVED FROM docs/PRIVACY-FACTS.md and must stay in step
 //              with it: every factual sentence (the 30-day session cookie, no IP addresses stored
-//              by the app, no access log, player names kept permanently in stored races, what the
-//              browser stores, the daily GitHub release check) states what that page states.
+//              by the app, no access log, player names kept permanently in stored races, names
+//              registered through a link kept until the registration is deleted and its one
+//              device-marker cookie (REGISTRATION-1), what the browser stores, the daily GitHub
+//              release check) states what that page states.
 //              When the facts change, both change in the same commit.
 // ============================================================
 
@@ -104,6 +106,10 @@ may save them in player groups. Players have no account. Finished races are
 stored with the players' names, finishing order and times, and are kept
 permanently as a record of the results. Player groups are kept until a race
 director deletes them.
+Players may also register themselves through a link the race director
+shares; their names are kept with the registration until the organiser
+deletes it, and registering sets one technically necessary cookie per
+registration that only marks this device as already registered.
 [If you do not want real names stored, use nicknames.]
 
 4. Data stored in your browser

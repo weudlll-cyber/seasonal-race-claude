@@ -68,6 +68,7 @@ What a stranger needs in order to understand and change RaceArena.
 | [API.md](API.md)                   | The backend HTTP endpoints.                                        |
 | [AUTH.md](AUTH.md)                 | Authentication as it is BUILT: what an operator supplies, what is protected. |
 | [ENVIRONMENT.md](ENVIRONMENT.md)   | Every environment variable, and what happens when one is missing or wrong. |
+| [INTEGRATIONS.md](INTEGRATIONS.md) | The documented interfaces an external site may use (today: adding a player to a registration), and the principle that the game never needs one. |
 | [DEPLOYMENT.md](DEPLOYMENT.md)     | Public same-origin hosting and the environment it needs.           |
 | [DEPLOY-NOTES.md](DEPLOY-NOTES.md) | What stands between here and a one-command deploy, priced — and which choices are the owner's. Not how-to; that is DEPLOYMENT.md's. |
 | [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) | Running a server day to day, task by task, for each install path: health and outside monitoring, logs, backups, restore, updates and how to hear of new versions, accounts and what several organisers on one install share, trouble, uninstalling. |

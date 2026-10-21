@@ -3,7 +3,8 @@
 // Path:        server/src/auth/rateLimit.js
 // Project:     RaceArena
 // Created:     2026-06-13
-// Description: Per-IP rate limiters for login + setup endpoints (§7.1)
+// Description: Per-IP rate limiters for login + setup endpoints (§7.1), the per-user one for
+//              change-password, and the per-IP one for the public join link (REGISTRATION-1).
 //              Uses express-rate-limit v8 (option: `limit`, not `max`).
 // ============================================================
 
@@ -84,8 +85,37 @@ export function createChangePasswordLimiter(opts = {}) {
   });
 }
 
+// ── Join limiter (REGISTRATION-1) ─────────────────────────────────────────────
+
+/**
+ * `POST /api/join/:code` — a player registering a name through the public link.
+ *
+ * PER IP, AND GENEROUS ON PURPOSE: 60 a minute. At a venue every phone may share ONE address (the
+ * venue's Wi-Fi behind one router), so this bucket is the whole room's, and a room of 60 people
+ * registering in the same minute must all get through. What it stops is one script hammering the
+ * route. It caps REQUESTS, never entries: the number of names is bounded by the registration's own
+ * capacity, and there is deliberately no per-IP cap on entries (the owner's decision of 2026-10-20).
+ * Every attempt counts, successful or not — a registration is not a secret to guess at, so there is
+ * no reason to treat failures differently.
+ */
+export function createJoinLimiter(opts = {}) {
+  return rateLimit({
+    windowMs: opts.windowMs ?? 60 * 1000,
+    limit: opts.limit ?? 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: opts.skip ?? (() => isTest),
+    validate: { trustProxy: false },
+    handler: (_req, res) =>
+      res
+        .status(429)
+        .json({ error: 'Too many attempts from this network. Please try again in a minute.' }),
+  });
+}
+
 // ── Default singleton instances (skip in test env) ────────────────────────────
 
 export const loginLimiter = createLoginLimiter();
 export const setupLimiter = createSetupLimiter();
 export const changePasswordLimiter = createChangePasswordLimiter();
+export const joinLimiter = createJoinLimiter();
