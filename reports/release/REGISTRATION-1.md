@@ -350,6 +350,63 @@ check (`scripts/audit-bundle-address.mjs`) passes: "no deployment address".
   and `docs/PROJECT-PRINCIPLES.md` §11 (the standing principle, dated).
 - Check: `LegalPagesSection.test.jsx` 12 / 12 with the changed template.
 
+## P6 — the end-to-end playthrough (production preview, throwaway data)
+
+**Setup.**
+
+- One server on port **4612**, serving the built client (`client/dist`) and a scratch data folder
+  (`C:\Users\weudl\ra-measure\REGISTRATION-1-data`), started hidden.
+- A director in a 1280 × 800 window; every player in its own **390 × 844** context, signed out.
+- The script is `C:\Users\weudl\ra-measure\REGISTRATION-1-playthrough.mjs`; its output is
+  `REGISTRATION-1-playthrough-run5.txt` beside it.
+
+**Result: 24 of 24 checks passed (run 5).**
+
+| step | result |
+| --- | --- |
+| a 2-minute registration (Until… a time 2–3 min ahead) on Dirt Oval, "Playthrough cup" | opened, 40 places |
+| Show QR full screen | the code 528 px tall in an 800 px window; Escape closed it |
+| 5 players from separate phone contexts | Ada, Bob, Cy, Dee, Eve; the fifth told "number 5" |
+| a doubled name ("  ADA ") from a sixth phone | refused: "The name "Ada" is already registered…" |
+| a second registration from Ada's phone | 409 "You are already registered as Ada."; after a reload the phone shows "You're in! You are number 1 of 40." |
+| the director's live list | Ada, Bob, Cy, Dee, Eve within a poll |
+| remove one name; extend +5 min | Eve removed; time left 2 min 21 s → 7 min 19 s |
+| **server restart mid-registration** | the registration, its four names and its open state were still there; Ada's phone still recognised |
+| a small-capacity track filled to full | a director window with the operator's closed-track limit at 2 opened "Small cup" with 2 places; two phones joined, the third saw "This race is full."; deleted through the panel, its link then 404 |
+| **expire by time with the director page closed** | "Expiring cup" (2–3 min) with one name; the director page closed; after the deadline a new phone saw "Registration is closed."; the director page reopened showed it closed with its one name; deleted |
+| unknown code | "This registration link is not valid."; page 390 px wide, no sideways scroll |
+| **Use these players → Start Race** | A closed now; the roster was exactly Ada, Bob, Cy, Dee; Dirt Oval, 1 lap; **the result screen showed exactly Ada, Bob, Cy, Dee** |
+| delete a registration | A deleted through the panel, its link then 404; **0 registrations left** on the server |
+| CSP on the join page | 0 violations |
+
+**Screenshots**, all under `C:\Users\weudl\ra-measure\REGISTRATION-1-shots\`:
+
+- the director view: `director-view-empty.png`, `director-view-live.png`,
+  `director-after-restart.png`;
+- the QR stage view: `qr-stage.png`;
+- the join page at 390 × 844: `join-open.png`, `join-success.png`, `join-revisit.png`,
+  `join-duplicate.png`, `join-full.png`, `join-closed.png`, `join-unknown.png`;
+- the result: `result-screen.png`.
+
+**Failures on the way, all in the playthrough script, none in the product.** Each was fixed, and
+the whole playthrough was re-run from the start.
+
+- **Run 1**: a name clash in the script (`join`).
+- **Run 2: hung for hours at its first step.** The script started the server through PowerShell and
+  waited for PowerShell's output, which the server inherited and held open. It now starts the
+  server directly, hidden and detached, with its output going to a log file.
+- **Run 3**: 15 checks passed, then the script tried to open the next registration while the panel
+  was still showing the last one. The script now presses "← All registrations" first.
+- **Run 4**: the reused scratch folder already had its admin (setup 409), and the interrupted run 3
+  had left registration A behind. The script now accepts 409 and deletes leftovers at the start.
+- **Run 5**: 24 / 24.
+
+**Throwaway data.** Every registration was deleted (0 left). Players' names are therefore gone
+from the registration store. The **one race** that was run is stored in the scratch folder's
+`races.sqlite`: stored races cannot be deleted in the app, by design. The scratch folder itself is
+left in place under the no-recursive-deletes rule and is listed with the scratch folders in the
+final report.
+
 ## Refusals
 
 | when | what was refused | what was done instead |
