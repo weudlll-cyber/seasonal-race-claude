@@ -8,7 +8,7 @@
 //              password stored before the rule still signs in.
 // ============================================================
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import session from 'express-session';
@@ -22,12 +22,13 @@ import defaultStore, {
   createUsersStore,
   assertNewPassword,
   PASSWORD_MIN_LENGTH,
+  BCRYPT_COST,
 } from './usersStore.js';
 import { createAuthRouter } from './authRouter.js';
 import { adminAgent, operatorAgent } from '../../test/authAgent.js';
 
-// bcrypt at cost 12, several hashes per test — the same budget changePassword.test.js states.
-vi.setConfig({ testTimeout: 30_000 });
+// No budget of its own any more: bcrypt runs at the tests' low cost (test/env-setup.js,
+// fix/test-bcrypt-cost, 2026-10-22). The one hash below at the PRODUCTION cost is deliberate.
 
 const SHORT = 'nine-char'; // 9 characters
 const LONG_ENOUGH = 'ten-chars!'; // 10 characters
@@ -137,7 +138,8 @@ describe('first-admin setup and sign-in, on a store of its own', () => {
           id: randomUUID(),
           username: 'veteran',
           usernameNormalized: 'veteran',
-          passwordHash: await bcrypt.hash('old', 12),
+          // At the PRODUCTION cost on purpose: a password stored before the rule, by a real server.
+          passwordHash: await bcrypt.hash('old', BCRYPT_COST),
           role: 'admin',
           team: 'Seasonal Entertainment',
           teamNormalized: 'seasonal entertainment',

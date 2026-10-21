@@ -980,6 +980,39 @@ fifth number.
 
 ---
 
+## R21 — SERVER TESTS HASH AT BCRYPT'S MINIMUM; A REAL SERVER NEVER DOES — AND THE LOAD RULE
+
+**Rule.** Every server test hashes passwords at bcrypt cost **4**; production hashes at **12**. One
+switch does it, for the whole suite: `test/env-setup.js` sets `RA_BCRYPT_COST_FOR_TESTS`, and
+`bcryptCost()` in `server/src/auth/usersStore.js` reads it **only when `NODE_ENV` is `test`** (vitest
+sets that) — anywhere else it returns `BCRYPT_COST`, whatever the variable says. The timing-dummy hash
+the login path compares against on an unknown user comes from the same place (`timingDummyHash()`),
+so a user-miss and a password-miss still cost the same, in production and under tests.
+(fix/test-bcrypt-cost, 2026-10-22.)
+
+**Why.** A test that signs in spends one hash and one compare. At 12 that is about half a second of
+CPU, and with three projects' checks on one machine the auth files' setup ran past its timeout again
+and again — each time green alone. The answer had been per-file: a bcrypt mock in one file, a 30 s
+budget in three others. Both are gone; **do not add a per-file budget or a bcrypt mock back** — a
+slow auth test now has a different cause, and that cause is the finding.
+
+**What must never move, pinned by `server/src/auth/bcryptCost.test.js`**, each assertion broken once
+on purpose when written:
+
+- a `NODE_ENV=production` child process hashes at 12 although the switch says 4;
+- a hash made at 12 — every existing user's — still verifies (bcrypt reads the cost from the hash);
+- the password minimum (10) and the four rate limiters' limits and windows are unchanged.
+
+A test that needs a hash at the production cost on purpose makes it with `BCRYPT_COST` directly
+(`passwordMinLength.test.js` does, for a password stored before the length rule).
+
+**THE LOAD RULE (the owner's decision of 2026-10-22).** If a premerge fails **only** on a timeout in a
+test file the branch does not touch, run that one file alone. If it passes alone, proceed — do not
+wait for a quiet machine — and let GitHub's CI on the merge commit decide. If CI is then red on
+something the branch caused, revert the merge with a normal revert commit and report it.
+
+---
+
 ## The instruments, and what each costs
 
 Timings on the owner's machine, and they vary with load — treat them as the right order of magnitude,

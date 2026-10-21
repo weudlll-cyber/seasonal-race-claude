@@ -21,23 +21,11 @@
 //              WHAT BREAKS IF EACH TEST IS DELETED is written above each one.
 // ============================================================
 
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
-
-// ── BCRYPT AT A LOW COST, FOR THIS FILE ONLY (2026-10-18) ─────────────────────────────────────
-// Measured alone, each test here took 1.0–2.6 s, almost all of it bcrypt at the production cost of
-// 12 (`usersStore.js` BCRYPT_COST, ~247 ms a call — server/vitest.config.js): every test creates
-// users, logs in and changes a password, six to ten hashes and compares. Twice on 2026-10-18 two of
-// them crossed vitest's 5 s limit in premerge's server suite (BACKLOG PART TWO). What this file
-// proves is that a password change ENDS SESSIONS — the epoch check in guards.js — not how strong a
-// hash is, which `usersStore.test.js` holds at the real cost. So `bcrypt.hash` runs at cost 4 here;
-// `compare` reads the cost from the hash itself and follows. Production cost is untouched — this
-// mock exists only in this file's module graph.
-vi.mock('bcrypt', async (importOriginal) => {
-  const real = (await importOriginal()).default;
-  const TEST_COST = 4;
-  return { default: { ...real, hash: (plain) => real.hash(plain, TEST_COST) } };
-});
+// bcrypt runs at the tests' low cost here as everywhere in the server suite — set once in
+// test/env-setup.js (fix/test-bcrypt-cost, 2026-10-22); the file-local mock that did it from
+// 2026-10-18 is gone.
 import { createApp } from '../app.js';
 import { adminAgent } from '../../test/authAgent.js';
 import defaultStore from './usersStore.js';
