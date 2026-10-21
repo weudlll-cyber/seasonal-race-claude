@@ -343,7 +343,9 @@ export function createRegistrationStore(
    *
    * @param {string} code
    * @param {{ name: unknown, source: 'public'|'integration', externalId?: unknown }} input
-   * @returns {{ entry: {id: string, name: string}, number: number, capacity: number }}
+   * @returns {{ entry: {id: string, name: string}, number: number, capacity: number,
+   *            placesLeft: number }}  `number` is the new entry's place in the list, which is the
+   *            count after the insert, since a new name is always the last to arrive
    */
   const addEntryTransaction = db.transaction((code, { name, source, externalId }) => {
     const row = rowByCode(code);
@@ -391,7 +393,13 @@ export function createRegistrationStore(
       `INSERT INTO registration_entries (id, registration_id, name, name_key, source, external_id,
          created_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).run(id, row.id, trimmed, key, source, external, at);
-    return { entry: { id, name: trimmed }, number: countOf(row.id), capacity: row.capacity };
+    const taken = countOf(row.id);
+    return {
+      entry: { id, name: trimmed },
+      number: taken,
+      capacity: row.capacity,
+      placesLeft: row.capacity - taken,
+    };
   });
   // ★ IMMEDIATE: the write lock is taken BEFORE the count is read. A deferred transaction would let
   // a second connection read the same count and then fail its write with SQLITE_BUSY instead of

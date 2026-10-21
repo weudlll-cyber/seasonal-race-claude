@@ -16,6 +16,20 @@ use it through documented interfaces, and no feature may require one. So every i
 **off unless the operator sets `RA_INTEGRATION_KEY`**, and an installation without it is complete:
 players register through the public link (OPERATOR-GUIDE.md, "Player registration").
 
+**Accounts belong to the external site, not to the game** (the owner's decision of 2026-10-21). In
+the game itself players register **by name only** — there are no player accounts in RaceArena. A
+player who joins *with an account* does so on an external site with signed-in players, and that
+site passes its account data through this interface:
+
+| the site sends | stored with the entry | the site gets back |
+| --- | --- | --- |
+| `name` — the display name shown in the race | `name` | `entry.name` |
+| `externalId` — the player's account id on the site | `externalId`, beside `source: "integration"` | `entry.externalId` |
+| — | the entry's own id and arrival time | `entry.id`, `number` (place in the list), `capacity`, `placesLeft` |
+
+The director sees these entries in the same live list as everyone else's, marked as coming from the
+integration. Nothing else about the site's account is sent or kept.
+
 ## Turning it on
 
 Set `RA_INTEGRATION_KEY` to a long random value (32 characters or more) in the server's environment
@@ -47,11 +61,13 @@ Content-Type: application/json
 **Answer `201`:**
 
 ```json
-{ "entry": { "id": "…", "name": "Ada", "externalId": "your-user-id-42" }, "number": 3, "capacity": 20 }
+{ "entry": { "id": "…", "name": "Ada", "externalId": "your-user-id-42" },
+  "number": 3, "capacity": 20, "placesLeft": 17 }
 ```
 
 `number` is the player's place in the list (in the order names arrived), `capacity` the number of
-places.
+places, `placesLeft` how many are still free after this one — enough for the site to show "You're
+in, number 3 of 20" (`placesLeft` added 2026-10-21).
 
 **Errors** — every refusal is JSON `{ "error": "<sentence for a person>", "code": "<CODE>" }`:
 

@@ -407,6 +407,28 @@ from the registration store. The **one race** that was run is stored in the scra
 left in place under the no-recursive-deletes rule and is listed with the scratch folders in the
 final report.
 
+## Follow-up 1 — the owner's look at `0c879057` (2026-10-21)
+
+The owner tried the flow on 4173 at `0c879057` on 2026-10-21 and registered from a private window with
+a name only. The flow worked. He asked for six things the same day; each is recorded below as it is
+built.
+
+### Item 6 — accounts (record), and the seam's answer
+
+- **Decision recorded** (the owner's, 2026-10-21): in the game players register **by name only**;
+  joining with an account happens through an external site with signed-in players, via the
+  integration seam. It is now in `docs/INTEGRATIONS.md` (with a table of what the site sends, what
+  is stored and what comes back) and in the BACKLOG row.
+- **Verified**: the seam already took and stored the display name (`name`) and the site's account
+  id (`externalId`, beside `source: 'integration'`), and already returned `number` and `capacity`.
+  **Places left were missing**, so `placesLeft` is added to the answer (`registrationStore.addEntry`
+  returns it; `routes/integrations.js` passes it on). Nothing else about the seam changed.
+- Test: `joinSecurity.integration.test.js` asserts `number`, `capacity` and `placesLeft` on the
+  first entry (1, 2, 1) and the second (2, 2, 0). Broken once on purpose (`placesLeft` left out of
+  the answer): red, then restored and green.
+- `docs/API.md` (the answer), `docs/OPEN.md` (PART ONE's line range, now 15–1852, after the BACKLOG
+  row grew).
+
 ## The checks before handing over
 
 | check | result |

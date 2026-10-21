@@ -1186,7 +1186,7 @@ body `{ name, externalId }`. Mounted **before the session and the guards** (`ser
 answering every request itself: **404 as an unknown route while `RA_INTEGRATION_KEY` is unset**, 401
 for a missing or wrong key (constant-time compare), then the same rules as the join link plus a
 required `externalId` that registers once (409 `DUPLICATE_EXTERNAL_ID`). 201
-`{ entry: { id, name, externalId }, number, capacity }`. The contract for an external site:
+`{ entry: { id, name, externalId }, number, capacity, placesLeft }`. The contract for an external site:
 [INTEGRATIONS.md](INTEGRATIONS.md).
 
 ---

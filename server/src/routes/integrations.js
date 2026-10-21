@@ -90,6 +90,8 @@ export function createIntegrationsRouter({ store, env = process.env } = {}) {
         entry: { id: added.entry.id, name: added.entry.name, externalId: req.body.externalId },
         number: added.number,
         capacity: added.capacity,
+        // So the external site can say "You're in, number N of M" and how many places are left.
+        placesLeft: added.placesLeft,
       });
     } catch (err) {
       const status = REFUSAL_STATUS[err.code];

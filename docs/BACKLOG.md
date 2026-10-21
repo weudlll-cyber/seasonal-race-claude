@@ -831,7 +831,12 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       director sees the list live, removes names, closes early and extends; never more players than the
       race has places. A site with signed-in players (path B) is provided for as an integration seam
       only (`RA_INTEGRATION_KEY`, [INTEGRATIONS.md](INTEGRATIONS.md)), under the standing principle
-      recorded the same day ([PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) §11). What was built, the
+      recorded the same day ([PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) §11). **Decided 2026-10-21:**
+      in the game players register by name only — there are no player accounts in the game; joining
+      with an account happens through an external site with signed-in players, via the seam, which
+      carries the site's display name and account id (`externalId`) and answers with the entry's
+      number and the places left ([INTEGRATIONS.md](INTEGRATIONS.md)). The owner's look at
+      `0c879057` on 2026-10-21 asked for six changes (follow-up 1, the morning sheet). What was built, the
       checks and the decisions taken by rule: [reports/release/REGISTRATION-1.md](../reports/release/REGISTRATION-1.md).
       *(verify: the owner has looked at the branch on the production preview and accepted it, and it
       is merged)*

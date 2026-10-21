@@ -252,10 +252,18 @@ describe('the integration seam', () => {
         .send({ name, externalId });
     const ok = await add('Ada', 'site-7');
     expect(ok.status).toBe(201);
-    expect(ok.body).toMatchObject({ entry: { name: 'Ada', externalId: 'site-7' }, number: 1 });
+    // What a site needs to say "You're in, number N of M": the number, the capacity, places left.
+    expect(ok.body).toMatchObject({
+      entry: { name: 'Ada', externalId: 'site-7' },
+      number: 1,
+      capacity: 2,
+      placesLeft: 1,
+    });
     expect((await add('Other Name', 'site-7')).status).toBe(409);
     expect((await add('ada', 'site-8')).body.code).toBe('DUPLICATE_NAME');
-    expect((await add('Bob', 'site-9')).status).toBe(201);
+    const second = await add('Bob', 'site-9');
+    expect(second.status).toBe(201);
+    expect(second.body).toMatchObject({ number: 2, capacity: 2, placesLeft: 0 });
     expect((await add('Cy', 'site-10')).body.code).toBe('FULL');
     const entries = (await director.get(`/api/registrations/${r.id}`)).body.entries;
     expect(entries.map((e) => [e.name, e.source, e.externalId])).toEqual([
