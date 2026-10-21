@@ -853,7 +853,9 @@ are in PART TWO with what closed them; these are the ones still standing.
       passing in the second. Run again after master `fbcbe1e7` was merged in: 71 of 71 on the first
       run; and on 2026-10-19 after the major upgrades (master `d80dc945`), again after better-sqlite3 13
       was reverted (master `faf2387f`), and after React 19 (master `e371938b`): 71 of 71 on the first
-      run each time. What it cannot show is the copy itself to another machine.
+      run each time. On 2026-10-22, after player registration (master `6470e2e6`), with three new
+      checks — a registration through Caddy, and back after the restore: 74 of 74 on the first run.
+      What it cannot show is the copy itself to another machine.
       **verify:** a backup archive exists somewhere other than the server, newer than 2 days.
 - [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
       deliberately does not change the SSH configuration: a mistake there locks the owner out of his

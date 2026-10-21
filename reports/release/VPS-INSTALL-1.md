@@ -202,6 +202,29 @@ and Express 5; no container left.
 **2026-10-19, after React 19 and the A7-03 close were merged** (master `e371938b`): merged in
 (`b118c5e6`) and run again the same way — **71 of 71 on the first run**; no container left.
 
+## 2026-10-22 — the test again after player registration was merged in (master `6470e2e6`)
+
+Master `6470e2e6` (REGISTRATION-1, player registration, accepted by the owner on 2026-10-21) merged
+in as `f7ddd528`; the only conflicts were the two count lines of `docs/OPEN.md`, resolved to this
+branch's four rows.
+
+**Checked against the merged tree:**
+- **The VPS backup and restore cover `registrations.sqlite`**: `racearena backup` / `restore` run the
+  project's own `scripts/backup.mjs`, which the image carries, and its database list now names the
+  file.
+- **The Caddy configuration serves `/join/*` and the public registration routes like the rest**: it
+  proxies every path to the app (`reverse_proxy app:4000`, no path filter).
+
+Both were made checks of the test, three new:
+- a registration is opened over https and one player joins **anonymously** through
+  `/api/join/<code>`;
+- the public route and the `/join/<code>` page are served through Caddy;
+- after the backup → delete → restore, the registration and its player are back.
+
+Run the same way as before (A = `f7ddd528`; B = A plus `e2e-test-1`; C = A with a server that exits
+at start; B and C throwaway local branches, deleted after the run): **74 of 74 on the first run**.
+Every backup took `registrations.sqlite` through SQLite's online backup.
+
 ## What could NOT be tested here — on the owner's VPS, at the first install
 
 - the system detection on the real machine (the dry run checked the parser on Debian 12);
