@@ -520,6 +520,31 @@ is additions only), so it predates the branch. With test aids off, as an install
 row is narrower; not measured here. The phone check in `registration-list.spec.js` therefore
 measures the cards themselves.
 
+### The follow-up playthrough (Edge, production build, throwaway data)
+
+`C:\Users\weudl\ra-measure\REGISTRATION-1-followup-playthrough.mjs`, run in **Microsoft Edge**
+(headless) against one throwaway server on 4612. **Run 2: 22 of 22 checks passed**; run 1 stopped
+on a locator in the script that also matched the new cards' "Open registration N: …" buttons, which
+was fixed in the script, and then everything was re-run from the start. Screenshots and the
+downloaded PNG are under `C:\Users\weudl\ra-measure\REGISTRATION-1-shots\followup-1\`.
+
+| request | result |
+| --- | --- |
+| 1 · a 1-minute registration | "1 min" first; opened with "1 min 05 s" left (the 5 s allowance); **closed by itself** — the open view showed "Registration is closed." after the minute |
+| 2 · "Until…" two days ahead | under the field: "Closes Fr., 23. Okt., 20:34 (in 2 days 0 h)" — **in the browser's locale** (this Edge runs in German); the field draws with `color-scheme: dark` |
+| 2 · an invalid past date | "This time is in the past." under the field, the Open button disabled |
+| 3 · **Copy QR code in Edge** | the clipboard held **`image/png`**; that picture, decoded with jsQR, is **the join link** (518 × 518 px) |
+| 3 · **Download QR** | `racearena-join-two-day-cup.png`, 518 × 518 px, **decoded with jsQR to the join link**; both buttons in the full-screen view too |
+| 4 · reload with one open registration | shown directly |
+| 4 + 5 · reload with two open | "Player registration", the numbered list **above** the form (208 px vs 433 px): 1 open, 2 open, 3 closed; each open card opened and "Back to all registrations" returned |
+| 5 · the list at 390 × 844 | the cards end at 334 px, inside the window |
+| 6 · **the seam with a throwaway test key** | the server restarted with the key; `201 {"entry":{…,"name":"Site Player","externalId":"site-account-42"},"number":1,"capacity":100,"placesLeft":99}`; the director's list showed "Site Player"; the server restarted **without** the key: the same call answers 404 |
+| throwaway data | all three registrations deleted (0 left); the test key exists only in that one server process's environment, which was stopped |
+
+The decoder, **jsQR 1.4.0**, was installed into the scratch folder
+`C:\Users\weudl\ra-measure\REGISTRATION-1-decoder\`, outside the repository and not a dependency
+of the project, for this proof only.
+
 **Documents**: `docs/OPERATOR-GUIDE.md` (*Player registration*: the 1-minute preset, the date field
 and its sentence, Copy QR code / Download QR, the numbered list and coming back; also the stale
 "Open registration" button name corrected), `docs/ARCHITECTURE.md`, `CHANGELOG.md`.
