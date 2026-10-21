@@ -613,6 +613,17 @@ of the project, for this proof only.
 and its sentence, Copy QR code / Download QR, the numbered list and coming back; also the stale
 "Open registration" button name corrected), `docs/ARCHITECTURE.md`, `CHANGELOG.md`.
 
+### The merge (accepted by the owner, 2026-10-21)
+
+- Premerge on the final branch head: **27 / 1**.
+  - **The new `check-registration-browser` guard was selected by the branch's 30 registration
+    paths and passed** (86.9 s, `check-client-build` before it).
+  - The one red: `server-suite`, a bcrypt-bound 10 s hook timeout in `src/routes/seedNotices.test.js`,
+    which this branch does not touch, while other projects ran eslint and prettier (CPU up to 99 %).
+  - **That file alone: 5 / 5.**
+- By the owner's instruction of 2026-10-22 the merge went ahead on that, with GitHub's CI and
+  Browser gate for the merge SHA as the authority.
+
 ## The checks before handing over
 
 | check | result |
