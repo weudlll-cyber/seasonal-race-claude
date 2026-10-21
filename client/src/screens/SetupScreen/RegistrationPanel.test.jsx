@@ -39,6 +39,10 @@ const TRACKS = [
   { id: 'unloaded', name: 'Not loaded', geometryId: 'geo-missing' },
 ];
 const inMinutes = (m) => new Date(Date.now() + m * 60 * 1000).toISOString();
+// ONE deadline for the whole file: every mocked answer about the same registration must carry the
+// same instant, or an "extend by 1 hour" compared across two answers is off by the milliseconds
+// between them (it was: 3,600,001 ms in a premerge run on 2026-10-21).
+const CLOSES_AT = inMinutes(15);
 const registration = (over = {}) => ({
   id: 'r1',
   code: 'Ab3_-xYz0123456789AbCd',
@@ -47,7 +51,7 @@ const registration = (over = {}) => ({
   capacity: 40,
   eventName: 'Friday cup',
   state: 'open',
-  closesAt: inMinutes(15),
+  closesAt: CLOSES_AT,
   taken: 2,
   placesLeft: 38,
   entries: [

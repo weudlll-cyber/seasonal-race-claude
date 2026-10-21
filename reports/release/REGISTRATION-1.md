@@ -541,6 +541,22 @@ downloaded PNG are under `C:\Users\weudl\ra-measure\REGISTRATION-1-shots\followu
 | 6 · **the seam with a throwaway test key** | the server restarted with the key; `201 {"entry":{…,"name":"Site Player","externalId":"site-account-42"},"number":1,"capacity":100,"placesLeft":99}`; the director's list showed "Site Player"; the server restarted **without** the key: the same call answers 404 |
 | throwaway data | all three registrations deleted (0 left); the test key exists only in that one server process's environment, which was stopped |
 
+**Premerge after follow-up 1.**
+
+- **Run 1, under heavy load** from other projects on the machine (another project's vitest,
+  Playwright and build runs; CPU 50–100 %): 26 / 1. The server suite failed on two bcrypt-bound
+  5 s timeouts in `recoverAdmin.test.js` and `races.test.js` (not changed by this branch); the two
+  files alone: 41 / 41.
+- The re-run was **held until the machine was quiet**, by the owner's instruction of 2026-10-21. A
+  watcher checked every 5 minutes (other projects' test/build processes, CPU over 2 minutes) and
+  found it busy 14 times from 20:52 to 21:55. The re-run started after the owner said the other
+  project had finished and one check showed no other test process, with CPU mostly idle (10 of 12
+  samples ≤ 25 %, the others 36 % and 39 %).
+- **Run 2, quiet**: 26 / 1 — a **real flake in this branch's own test**. `RegistrationPanel.test.jsx`
+  "extends by the chosen amount" computed the fixture's deadline anew for each mocked answer, so one
+  hour came out as 3,600,001 ms. Fixed by one deadline for the whole file (`CLOSES_AT`). Then run 3,
+  below.
+
 The decoder, **jsQR 1.4.0**, was installed into the scratch folder
 `C:\Users\weudl\ra-measure\REGISTRATION-1-decoder\`, outside the repository and not a dependency
 of the project, for this proof only.
