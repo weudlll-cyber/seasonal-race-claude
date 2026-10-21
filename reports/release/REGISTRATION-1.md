@@ -2,8 +2,8 @@
 
 **Owns:** the record of the night chain of 2026-10-20/21 that built player registration on the
 branch `feat/registration` (from `origin/master` `e371938b`). The decisions it builds are the
-owner's of 2026-10-20; the row is REGISTRATION-1 in [docs/BACKLOG.md](../../docs/BACKLOG.md). **Not
-merged** — the owner looks at it when the chain is done.
+owner's of 2026-10-20; the row is REGISTRATION-1 in [docs/BACKLOG.md](../../docs/BACKLOG.md). **Accepted
+by the owner on 2026-10-21 and merged** (PART TWO of the backlog; the merge below).
 
 **What it is, in one paragraph.** A second way to fill a race. The director opens a registration
 for a track — no names — and chooses how long it stays open (1 minute to 30 days). Players open a
