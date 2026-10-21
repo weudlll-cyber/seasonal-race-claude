@@ -18,6 +18,7 @@ import DistributionDiagnostics from './screens/DistributionDiagnostics/Distribut
 import LoginScreen from './screens/Auth/LoginScreen.jsx';
 import SetupAdminScreen from './screens/Auth/SetupAdminScreen.jsx';
 import LegalPage from './screens/Legal/LegalPage.jsx';
+import JoinPage from './screens/Join/JoinPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { TransitionProvider } from './contexts/TransitionContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
@@ -158,6 +159,9 @@ function App() {
                 policy are read before anyone signs in (footer: components/LegalFooter). */}
             <Route path="/legal-notice" element={<LegalPage kind="legalNotice" />} />
             <Route path="/privacy" element={<LegalPage kind="privacyPolicy" />} />
+            {/* REGISTRATION-1: PUBLIC — no ProtectedRoute. A player registers through the join
+                link on a phone, without an account (screens/Join/JoinPage.jsx). */}
+            <Route path="/join/:code" element={<JoinPage />} />
           </Routes>
         </TransitionProvider>
       </AuthProvider>

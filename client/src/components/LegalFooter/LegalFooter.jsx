@@ -2,7 +2,8 @@
 // File:        LegalFooter.jsx
 // Path:        client/src/components/LegalFooter/LegalFooter.jsx
 // Project:     RaceArena — LEGAL-PAGES-1 (the owner's decision of 2026-10-18)
-// Description: The small footer of the sign-in screen and the setup screen:
+// Description: The small footer of the sign-in screen, the setup screen and the public join page
+//              (REGISTRATION-1, screens/Join/JoinPage.jsx):
 //                · "Source code" — ALWAYS. The game is AGPL-3.0-or-later; the link offers the
 //                  source of the running version (where it points: modules/legal/sourceCodeUrl.js).
 //                · "Legal notice" and "Privacy policy" — only when the operator has filled them in

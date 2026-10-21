@@ -20,7 +20,10 @@ import LegalFooter from '../../components/LegalFooter/LegalFooter.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
 import PlayerGroupPicker from './PlayerGroupPicker.jsx';
 import { sectionsOf } from './rosterGroups.js';
-import { fieldCapFor, quickTestFieldSize } from './fieldCap.js';
+import { fieldCapFor, isTrackOpen, quickTestFieldSize } from './fieldCap.js';
+import RegistrationPanel from './RegistrationPanel.jsx';
+import { readPlayersMode, writePlayersMode } from './playersMode.js';
+import { listRegistrations } from '../../services/registrationApi.js';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
@@ -243,6 +246,40 @@ function SetupScreen() {
   const [racePlanMinDur] = useState(() => loadRaceDynamicsConfig().racePlanMinDurationSec ?? 30);
 
   const [selectedTrackId, setSelectedTrackId] = useState(null);
+  // REGISTRATION-1: 'names' (type them, or load a saved group) or 'registration' (the players
+  // register themselves through a link — RegistrationPanel.jsx).
+  //
+  // FOLLOW-UP 1 (the owner's request of 2026-10-21): a reload must not hide a running registration.
+  // When the team has an OPEN registration the tab opens in 'registration', whatever was chosen
+  // before; otherwise in the mode last chosen in this tab (remembered for the session in
+  // sessionStorage, which may throw in a private window — then not remembered), else 'names' as
+  // before.
+  const [playersMode, setPlayersModeState] = useState(() => readPlayersMode() ?? 'names');
+  function setPlayersMode(mode) {
+    setPlayersModeState(mode);
+    writePlayersMode(mode);
+  }
+  useEffect(() => {
+    let live = true;
+    listRegistrations()
+      .then((list) => {
+        if (live && list.some((r) => r.state === 'open')) setPlayersModeState('registration');
+      })
+      // Not reachable, or no team: the tab stays on the names, as before.
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  // "Use these players": the registered names become the roster — through the same `setPlayers`
+  // every other way of filling the field uses, REPLACING what was there (a registration is a way
+  // to fill the race, not to add to it) — and the registration's track is selected. The tab goes
+  // back to the names, where the roster can be checked before Start Race.
+  function handleUseRegisteredPlayers({ names, trackId }) {
+    setPlayers(names.map((name) => ({ name })));
+    setSelectedTrackId(trackId);
+    setPlayersMode('names');
+  }
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
   // CLOSED tracks: the operator picks LAPS and the duration is derived. OPEN tracks: the operator
   // picks SECONDS and the finish line is derived. There is no closed-track duration control any
@@ -333,11 +370,7 @@ function SetupScreen() {
   }, [players.length, selectedTrack, geometricRacersPerRow]);
 
   // Detect open/closed from the geometry's closed flag directly (isOpen = !closed)
-  const trackIsOpen = useMemo(() => {
-    if (!selectedTrack?.geometryId) return false;
-    const geom = getTrack(selectedTrack.geometryId);
-    return geom ? !geom.closed : false;
-  }, [selectedTrack]);
+  const trackIsOpen = useMemo(() => isTrackOpen(selectedTrack, getTrack), [selectedTrack]);
 
   // PLAYER-GROUPS-1: the field cap, resolved ONCE. It was computed inline at the one place that
   // needed it; two components need it now, and two copies of a `??` chain is how they drift apart.
@@ -614,11 +647,7 @@ function SetupScreen() {
   // QUICKTEST-CAP-1: the Quick Test track's own open/closed flag, at RENDER time. `handleQuickTest`
   // already derived it from the geometry at click time; the cap has to be known before the click, to
   // clamp the N input and to refuse before the button is pressed rather than after.
-  const quickTrackIsOpen = useMemo(() => {
-    if (!quickTrack?.geometryId) return false;
-    const geom = getTrack(quickTrack.geometryId);
-    return geom ? !geom.closed : false;
-  }, [quickTrack]);
+  const quickTrackIsOpen = useMemo(() => isTrackOpen(quickTrack, getTrack), [quickTrack]);
 
   // THE SAME AUTHORITY THE NORMAL PATH READS — `maxPlayersOpen`/`maxPlayersClosed`, through the one
   // expression in `fieldCap.js`. Quick Test used to cap itself at a hardcoded 100 whatever the track
@@ -1237,21 +1266,57 @@ function SetupScreen() {
         <section className={styles.panel}>
           {activeTab === 0 && (
             <>
-              <h2 className={styles.panelTitle}>Players</h2>
-              {/* PLAYER-GROUPS-1: the picker sits ABOVE the name input, because filling the field
-                  from a saved group is the common case and typing thirty names is not. It writes
-                  into the SAME roster the input below writes into — there is one field, and both
-                  doors lead to it. */}
-              <PlayerGroupPicker
-                players={players}
-                onChange={setPlayers}
-                maxPlayers={effectiveMaxPlayers}
-              />
-              <PlayerSetup
-                players={players}
-                onChange={setPlayers}
-                maxPlayers={effectiveMaxPlayers}
-              />
+              {/* REGISTRATION-1: two ways to fill the race — typing the names (with saved groups),
+                  or a registration the players fill themselves. Typing is the default, so the tab
+                  opens exactly as before. The switch is placed OUT OF THE FLOW on the title's line,
+                  so the title and the tab are exactly as tall as before: the setup screen fits a
+                  900 px desktop window (legal-pages.spec.js). */}
+              <div className={styles.playersHeader}>
+                <h2 className={styles.panelTitle}>Players</h2>
+                <div className={styles.playersMode} role="group" aria-label="How to fill the race">
+                  <button
+                    type="button"
+                    aria-pressed={playersMode === 'names'}
+                    className={playersMode === 'names' ? styles.playersModeActive : ''}
+                    onClick={() => setPlayersMode('names')}
+                  >
+                    Enter names
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={playersMode === 'registration'}
+                    className={playersMode === 'registration' ? styles.playersModeActive : ''}
+                    onClick={() => setPlayersMode('registration')}
+                  >
+                    Player registration
+                  </button>
+                </div>
+              </div>
+              {playersMode === 'registration' ? (
+                <RegistrationPanel
+                  tracks={tracks}
+                  raceDefaults={raceDefaults}
+                  selectedTrackId={selectedTrackId}
+                  onUsePlayers={handleUseRegisteredPlayers}
+                />
+              ) : (
+                <>
+                  {/* PLAYER-GROUPS-1: the picker sits ABOVE the name input, because filling the
+                      field from a saved group is the common case and typing thirty names is not.
+                      It writes into the SAME roster the input below writes into — there is one
+                      field, and both doors lead to it. */}
+                  <PlayerGroupPicker
+                    players={players}
+                    onChange={setPlayers}
+                    maxPlayers={effectiveMaxPlayers}
+                  />
+                  <PlayerSetup
+                    players={players}
+                    onChange={setPlayers}
+                    maxPlayers={effectiveMaxPlayers}
+                  />
+                </>
+              )}
             </>
           )}
           {activeTab === 1 && (

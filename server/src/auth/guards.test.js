@@ -43,6 +43,34 @@ describe('isPublicPath — HEAD is judged as GET', () => {
     expect(isPublicPath('HEAD', '/api/tracks')).toBe(false));
 });
 
+// REGISTRATION-1: the join link is an anchored PATTERN — exactly /api/join/<22 URL-safe characters>.
+describe('isPublicPath — the join link pattern', () => {
+  const code = 'Ab3_-xYz0123456789AbCd'; // 22 characters, mixed case as a real code is
+  it('GET, HEAD and POST /api/join/<code> → true, in any case, with a trailing slash', () => {
+    expect(isPublicPath('GET', `/api/join/${code}`)).toBe(true);
+    expect(isPublicPath('HEAD', `/api/join/${code}`)).toBe(true);
+    expect(isPublicPath('POST', `/api/join/${code}`)).toBe(true);
+    expect(isPublicPath('GET', `/API/Join/${code}/`)).toBe(true);
+  });
+  it('PUT, DELETE, PATCH → false', () => {
+    for (const m of ['PUT', 'DELETE', 'PATCH'])
+      expect(isPublicPath(m, `/api/join/${code}`)).toBe(false);
+  });
+  it('anything under, beside or shorter → false', () => {
+    for (const p of [
+      '/api/join',
+      `/api/join/${code}/entries`,
+      `/api/join/${code}x`,
+      `/api/join/${code.slice(1)}`,
+      `/api/joinx/${code}`,
+      `/x/api/join/${code}`,
+      `/api/join/${code.slice(0, 20)}%2`,
+    ]) {
+      expect(isPublicPath('GET', p), p).toBe(false);
+    }
+  });
+});
+
 describe('requiredRole', () => {
   it('POST /api/surface-classes → admin', () =>
     expect(requiredRole('POST', '/api/surface-classes')).toBe('admin'));

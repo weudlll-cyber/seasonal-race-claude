@@ -48,6 +48,11 @@
 # before `race-fullscreen`).
 # STILL ONE LIST: widening it widens this gate and nothing else, and there is no second "wider" set
 # to keep in step.
+# ★ PLUS, CONDITIONALLY (REGISTRATION-1, the owner's decision of 2026-10-21): the three registration
+# specs, run after the quick set only on a PUSH whose commits touch registration — decided inside
+# the job from `git diff --name-only` of the push range against the one declaration in
+# `scripts/check-registration-browser.mjs`, the same one `npm run verify` routes by. Not a second
+# list: the quick set above is unchanged, and the conditional set is that file's, not this one's.
 # ★ The three prod-arm specs that FAIL today — `arrival-shape`, `comeback-precedence`,
 # `garden-path-finishes` — are deliberately NOT in it. All three wait for a real race, all three are
 # red, and a gate that is red on arrival is one nobody believes. It runs against `playwright.prod.config.js`, the PRODUCTION arm
@@ -115,7 +120,11 @@ jobs:
     timeout-minutes: 25
 
     steps:
+      # fetch-depth 0 so the registration scope step below can diff the push range — the same depth
+      # and the same reason as ci.yml's scope steps.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -192,6 +201,36 @@ jobs:
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           exit 0
 
+      # ── REGISTRATION-1: THE REGISTRATION SPECS, ONLY WHEN THE PUSH REACHES REGISTRATION ──────────
+      # The owner's decision of 2026-10-21. The quick set above is unchanged; these three specs run
+      # in ADDITION, and only on a PUSH whose commits touch registration. WHAT counts as touching it
+      # is declared once, in `scripts/check-registration-browser.mjs` (`GUARD`), the same declaration
+      # `npm run verify` routes by; `--selects` resolves it against `git diff --name-only` of the
+      # push range (`event.before..sha`, computed by `changedFiles` in scripts/ci-docs-only.mjs).
+      # When the range cannot be computed (an all-zero base) it answers true and says why — fail
+      # open, as the docs-only decision does. Not on the schedule or the hand crank: there is no
+      # push to diff, and the quick set covers those runs.
+      - name: Does this push touch player registration?
+        id: reg_scope
+        if: github.event_name == 'push'
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: echo "selected=$(node scripts/check-registration-browser.mjs --selects)" >> "$GITHUB_OUTPUT"
+
+      - name: Run the registration browser specs (selected by the push)
+        id: reg_e2e
+        if: steps.reg_scope.outputs.selected == 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          START=$(date +%s)
+          node scripts/check-registration-browser.mjs 2>&1 | tee registration-output.txt
+          STATUS=${PIPESTATUS[0]}
+          echo "seconds=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
       - name: Phase timings
         if: always()
         run: |
@@ -205,6 +244,7 @@ jobs:
             echo "| install chromium + system deps | ${{ steps.browser_install.outputs.seconds || '—' }} |"
             echo "| build client | ${{ steps.build.outputs.seconds || '—' }} |"
             echo "| run the fast set | ${{ steps.e2e.outputs.seconds || '—' }} |"
+            echo "| registration specs (selected: ${{ steps.reg_scope.outputs.selected || 'not a push' }}) | ${{ steps.reg_e2e.outputs.seconds || '—' }} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # The transcript and the Playwright report survive the run, so "what did it see" is answerable
@@ -216,6 +256,7 @@ jobs:
           name: browser-gate-${{ github.run_id }}
           path: |
             e2e-output.txt
+            registration-output.txt
             client/playwright-report/
             client/test-results/
           retention-days: 14
@@ -279,9 +320,16 @@ jobs:
         if: always() && github.event_name != 'schedule'
         env:
           E2E_STATUS: ${{ steps.e2e.outputs.status }}
+          REG_SELECTED: ${{ steps.reg_scope.outputs.selected }}
+          REG_STATUS: ${{ steps.reg_e2e.outputs.status }}
         run: |
           if [ "${E2E_STATUS:-1}" != "0" ]; then
             echo "The production browser arm failed for this commit. Transcript is in the run artefacts."
             exit 1
           fi
-          echo "the production browser arm passed"
+          # Selected and then not finished (no status) counts as failed, never as passed.
+          if [ "${REG_SELECTED}" = "true" ] && [ "${REG_STATUS:-1}" != "0" ]; then
+            echo "The registration browser specs failed for this commit. Transcript: registration-output.txt in the run artefacts."
+            exit 1
+          fi
+          echo "the production browser arm passed (registration specs: ${REG_SELECTED:-not a push}${REG_STATUS:+, status $REG_STATUS})"

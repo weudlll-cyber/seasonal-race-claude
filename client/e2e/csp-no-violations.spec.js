@@ -55,6 +55,8 @@ test('no Content-Security-Policy violation on any main screen or during a race',
     '/racer-editor',
     '/legal-notice',
     '/privacy',
+    // REGISTRATION-1: the public join page (an unknown code still draws the whole page).
+    `/join/${'x'.repeat(22)}`,
   ]) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');

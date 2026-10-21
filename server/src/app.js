@@ -16,6 +16,9 @@ import brandsRouter from './routes/brands.js';
 import racersRouter from './routes/racers.js';
 import seedNoticesRouter from './routes/seedNotices.js';
 import racesRouter from './routes/races.js';
+import registrationsRouter from './routes/registrations.js';
+import joinRouter from './routes/join.js';
+import integrationsRouter from './routes/integrations.js';
 import settingsRouter from './routes/settings.js';
 import adminStatusRouter from './routes/adminStatus.js';
 import { createSessionMiddleware } from './auth/session.js';
@@ -45,6 +48,12 @@ export function createApp() {
     })
   );
   app.use(cors(corsOptions));
+  // REGISTRATION-1: the two routes open to callers without a session get a 1 KB body limit, read
+  // BEFORE the app's 1 MB parser (a body is parsed once; the first parser wins). The integration
+  // seam is mounted here whole, ahead of the session and every guard, because its caller is a
+  // server with a key and no session; it answers every request itself (routes/integrations.js).
+  app.use('/api/join', express.json({ limit: '1kb' }));
+  app.use('/api/integrations', express.json({ limit: '1kb' }), integrationsRouter);
   app.use(express.json({ limit: '1mb' }));
   // ★ EXPRESS 5 LEAVES `req.body` UNDEFINED when no parser read a body (its migration guide,
   // "req.body"); Express 4 gave `{}`. Every route here was written against `{}` — their validators
@@ -94,6 +103,10 @@ export function createApp() {
   app.use('/api/racers', racersRouter);
   app.use('/api/seed-notices', seedNoticesRouter);
   app.use('/api/races', racesRouter);
+  // REGISTRATION-1: the director's registrations — signed in, operator+, team-scoped like races.
+  app.use('/api/registrations', registrationsRouter);
+  // REGISTRATION-1: the join link — PUBLIC by an anchored pattern on PUBLIC_PATHS (guards.js).
+  app.use('/api/join', joinRouter);
   app.use('/api/settings', settingsRouter);
   // AUDIT-1 D2: the admin status box — read-only, admin-only by ROUTE_POLICY (all of /api/admin).
   app.use('/api/admin', adminStatusRouter);

@@ -27,6 +27,22 @@ import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import { playerNameKey } from '../../../../shared/playerNames.mjs';
 
 /**
+ * Is this track OPEN (a finish line) rather than CLOSED (laps)? Read from its cached geometry's
+ * `closed` flag; an unknown geometry answers `false`, the Players tab's answer since QUIET-FAILURES-1
+ * (whose start paths refuse such a track rather than race it). One home since REGISTRATION-1: the
+ * Players tab's limit and a registration's place count must be the same number for the same track.
+ *
+ * @param {object|null|undefined} track  a track record with `geometryId`
+ * @param {(geometryId: string) => object|null} getTrack  the geometry lookup (trackStorage.js)
+ * @returns {boolean}
+ */
+export function isTrackOpen(track, getTrack) {
+  if (!track?.geometryId) return false;
+  const geom = getTrack(track.geometryId);
+  return geom ? !geom.closed : false;
+}
+
+/**
  * The hard field cap for a track, in racers.
  *
  * @param {boolean} isOpen        true for an open track, false for a closed one

@@ -21,6 +21,15 @@ export const PUBLIC_PATHS = [
   // policy, and the source-code link, are shown BEFORE anyone signs in — the start screen's footer
   // and the two public pages read them. GET only; setting them is admin-only (ROUTE_POLICY below).
   { method: 'GET', path: '/api/settings/legal-pages' },
+  // REGISTRATION-1 (the owner's decisions of 2026-10-20): the join link. A player at the venue has
+  // no account, so reading a registration's public view and registering a name need none. A
+  // PATTERN, because the code is part of the path — anchored, on the lower-cased path, admitting
+  // exactly `/api/join/` plus 22 URL-safe characters (a 128-bit code) and nothing under or beside
+  // it. What the routes reveal and allow is bounded in routes/join.js. GET admits HEAD as every GET
+  // entry does; nothing admits PUT or DELETE. The integration seam is NOT here: it is mounted ahead
+  // of this guard and checks its own key (routes/integrations.js).
+  { method: 'GET', pattern: /^\/api\/join\/[a-z0-9_-]{22}$/ },
+  { method: 'POST', pattern: /^\/api\/join\/[a-z0-9_-]{22}$/ },
 ];
 
 // ── Role-elevation policy (operator+ by default; explicit entries raise to admin) ─
@@ -146,10 +155,16 @@ function findPolicyEntry(routePolicy, method, path) {
 // the allow-list matched the method exactly, and `HEAD /api/health` answered 401 while `GET`
 // answered 200, so an uptime checker sending HEAD saw a healthy server as down. POST entries are
 // untouched: HEAD maps to GET, never to POST.
+// An entry is an exact `path`, or (REGISTRATION-1) an anchored `pattern` tested against the same
+// lower-cased, trailing-slash-free path — never a prefix.
 function matchesPublicPath(publicPaths, method, path) {
   const m = policyMethod(method);
   const p = normalizePath(path);
-  return publicPaths.some((e) => normalizeMethod(e.method) === m && normalizePath(e.path) === p);
+  return publicPaths.some(
+    (e) =>
+      normalizeMethod(e.method) === m &&
+      (e.pattern ? e.pattern.test(p) : normalizePath(e.path) === p)
+  );
 }
 
 export function isPublicPath(method, path) {
@@ -168,7 +183,8 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
     const path = normalizePath(req.path);
 
     // Scope: this guard only governs /api/*. Non-/api requests pass through.
-    // This is scoping, NOT an auth wildcard — the allowlist is still exact-match on the path.
+    // This is scoping, NOT an auth wildcard — the allowlist is exact-match on the path, or an
+    // anchored pattern for the join link (PUBLIC_PATHS above).
     // In ANY letter case: `/API/users` is routed to the users router too (AUDIT-1 A5M-01).
     if (!isApiPath(path)) return next();
 

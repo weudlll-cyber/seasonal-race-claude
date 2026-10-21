@@ -7,7 +7,7 @@
 //
 // ── WHY A SEED IS NOT ENOUGH, at source ─────────────────────────────────────────────────────────
 //
-// `SetupScreen.jsx:997` fixes the plan seed into the race payload, and the race is a pure function
+// `SetupScreen.jsx:1026` fixes the plan seed into the race payload, and the race is a pure function
 // of what it is given. But `resolveRaceWorld` (called at `RaceScreen/index.jsx:626`) reads the
 // action stage (`raceWorldSetup.js:129`) and gathers the whole config world (`raceWorldSetup.js:144`)
 // — both from THE HOST'S OWN STORAGE at the moment the race starts. So the same
@@ -178,7 +178,7 @@ export function encodeRaceIdentifier({
     s: racePlanSeed,
     a: raceActionStage,
     p: racePlanEnabled ? 1 : 0,
-    // Exactly one of these is meaningful per race mode, which is the shape `SetupScreen.jsx:669-670`
+    // Exactly one of these is meaningful per race mode, which is the shape `SetupScreen.jsx:1017-1018`
     // already writes. The absent one is omitted rather than nulled, so it round-trips as absent.
     ...(targetLaps == null ? {} : { l: targetLaps }),
     ...(targetDurationSec == null ? {} : { d: targetDurationSec }),
