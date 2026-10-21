@@ -19,10 +19,10 @@ signed-in players) is an integration seam only.
 | --- | --- | --- | --- |
 | P1 | server data, director routes, capacity and deadline, backup and restore | `3c7aa4f2` | below |
 | P2 | public routes, device cookie, rate limiter, integration seam, security tests | `81ba1a2b` | below |
-| P3 | the public join page | see the branch log | below |
-| P4 | the director UI, QR, stage view, "Use these players" | — | — |
-| P5 | privacy and documents | — | — |
-| P6 | end-to-end playthrough on the production preview | — | — |
+| P3 | the public join page | `864bf6a5` | below |
+| P4 | the director UI, QR, stage view, "Use these players" | `85ce467b` | below |
+| P5 | privacy and documents | `aa436dfe` | below |
+| P6 | end-to-end playthrough on the production preview | the branch log | below |
 
 ## P1 — server data, director routes, capacity and deadline, backup
 
@@ -406,6 +406,17 @@ from the registration store. The **one race** that was run is stored in the scra
 `races.sqlite`: stored races cannot be deleted in the app, by design. The scratch folder itself is
 left in place under the no-recursive-deletes rule and is listed with the scratch folders in the
 final report.
+
+## The checks before handing over
+
+| check | result |
+| --- | --- |
+| `npm run verify -- --premerge` against `origin/master` `e371938b` | **first run 25 / 2**: `server-format-check` (one test file unformatted — fixed and committed) and `check-image-starts` (`docker build`: "no such job", a Docker Desktop fault; re-run alone it built in 91 s and the image answered health); **second run 27 / 0**; **after the layout fix below, third run 27 / 0** |
+| the full Browser gate (production arm) | **first run 126 / 1**: `legal-pages.spec.js` "the setup screen fits a 900 px desktop window" — the Players tab's new switch added a row and the screen scrolled 26 px at 1900 × 900. **A real regression of this branch**, fixed (the switch is placed out of the flow on the title's line; the tab is exactly as tall as before). **Second run 127 / 0** |
+| client suite (in the premerge) | green |
+| server suite (in the premerge, run alone) | green |
+| `npm audit` | server 0; client the one high advisory that was there before this chain (vite 8.0.0–8.1.5, launch-editor) — **not worse** |
+| fingerprints | none moved; nothing in the race hull changed (231 files); none minted, `docs/fingerprints.json` untouched |
 
 ## Refusals
 
