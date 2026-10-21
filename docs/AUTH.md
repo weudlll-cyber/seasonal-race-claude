@@ -155,7 +155,7 @@ both return `401 invalid credentials` — deliberately indistinguishable. On suc
 **regenerated** (so a pre-login session cannot be fixated), the user is written into the session, and
 the response is `{ username, role }`.
 
-**Passwords** are hashed with **bcrypt at cost 12**. **A new password must be at least 10 characters**
+**Passwords** are hashed with **bcrypt at cost 12** (only the server tests hash at bcrypt's minimum, 4, and a real server never can — `docs/VERIFY-RULES.md`). **A new password must be at least 10 characters**
 (AUDIT-1 A5M-15, decided 2026-10-12) — at setup, when an admin creates a user or resets a password,
 when you change your own, and in the recovery CLI; the refusal names the rule. One constant,
 `PASSWORD_MIN_LENGTH` in `server/src/auth/usersStore.js`; the VPS installer asks for the same 10 in

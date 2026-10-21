@@ -16,7 +16,42 @@ import { normalizeTeam, isWellFormedTeam } from './teams.js';
 
 const DEFAULT_USERS_PATH = process.env.RA_USERS_DB ?? join(DATA_ROOT, 'users.json');
 
-const BCRYPT_COST = 12;
+// ── The bcrypt cost — ONE place (fix/test-bcrypt-cost, the owner's decision of 2026-10-21) ──────
+//
+// PRODUCTION IS 12, about 250 ms a hash, and nothing below can lower it outside the tests.
+//
+// UNDER TESTS ONLY it is the value `RA_BCRYPT_COST_FOR_TESTS` names (4: bcrypt's minimum, about a
+// millisecond), set by the server's test setup (`server/test/env-setup.js`). The variable is
+// IGNORED unless `NODE_ENV === 'test'`, so a stray setting on a real server changes nothing, and it
+// is read per call. A hash made at cost 4 verifies like any other — bcrypt stores the cost in the
+// hash — and a hash made at 12 still verifies under tests, so existing users keep working either
+// way. Why: three projects running checks on one machine at once pushed the auth tests' setup —
+// one hash and one compare at 12 — past its timeout again and again (docs/VERIFY-RULES.md).
+export const BCRYPT_COST = 12;
+const MIN_BCRYPT_COST = 4;
+
+/** The cost `hashPassword` uses: 12, or the test setup's lower value under `NODE_ENV=test` only. */
+export function bcryptCost(env = process.env) {
+  if (env.NODE_ENV !== 'test') return BCRYPT_COST;
+  const asked = Number(env.RA_BCRYPT_COST_FOR_TESTS);
+  return Number.isInteger(asked) && asked >= MIN_BCRYPT_COST && asked <= BCRYPT_COST
+    ? asked
+    : BCRYPT_COST;
+}
+
+// The timing-equalisation dummy for a sign-in with an unknown name (`authRouter.js`): it must cost
+// what a REAL user's hash costs, or a miss is measurably faster or slower than a wrong password.
+// Fixed hashes, one per cost this module can use; the plaintext behind them is never authenticated.
+const TIMING_DUMMY_HASHES = {
+  12: '$2b$12$bZsIjjH3iRDdWBkesqmTUuYehFIs0VBb6IEEfKooA.ki5Ey67uJsS',
+};
+
+/** A real bcrypt hash at the cost `hashPassword` uses now. */
+export function timingDummyHash(env = process.env) {
+  const cost = bcryptCost(env);
+  TIMING_DUMMY_HASHES[cost] ??= bcrypt.hashSync('timing-dummy-never-authenticated', cost);
+  return TIMING_DUMMY_HASHES[cost];
+}
 
 // ── Username normalization ────────────────────────────────────────────────────
 
@@ -54,7 +89,7 @@ export function assertNewPassword(plain) {
 
 export async function hashPassword(plain) {
   assertNewPassword(plain);
-  return bcrypt.hash(plain, BCRYPT_COST);
+  return bcrypt.hash(plain, bcryptCost());
 }
 
 export async function verifyPassword(plain, hash) {

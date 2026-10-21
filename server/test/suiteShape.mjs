@@ -34,7 +34,8 @@ export const SERVER_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * THE TWO DOORS TO BCRYPT.
  *
- * `auth/usersStore.js` owns `BCRYPT_COST` and is the only module in the tree that calls bcrypt.
+ * `auth/usersStore.js` owns `BCRYPT_COST` (and `bcryptCost()`, which the tests lower to 4 since
+ * 2026-10-22, see `test/env-setup.js`) and is the only module in the tree that calls bcrypt.
  * `test/authAgent.js` is the only helper that drives it on every call — it mints a user (one hash)
  * and logs in (one compare).
  *

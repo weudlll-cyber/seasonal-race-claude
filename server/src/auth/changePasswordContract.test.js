@@ -35,12 +35,8 @@ import defaultStore from './usersStore.js';
 // The REAL client function, imported across the tree on purpose.
 import { changePassword } from '../../../client/src/services/authApi.js';
 
-// bcrypt at cost 12 is deliberately slow, and each test here performs several logins plus a
-// password change — four to eight hashes apiece. Alone that is ~2 s per test; under the full
-// suite's contention it crosses vitest's 5 s default and times out. This file therefore states
-// its own WALL-CLOCK budget. It weakens no assertion: nothing here retries, tolerates a failure,
-// or skips a case — the tests are identical, they are merely allowed to take the time bcrypt costs.
-vi.setConfig({ testTimeout: 30_000 });
+// No budget of its own any more: bcrypt runs at the tests' low cost (test/env-setup.js,
+// fix/test-bcrypt-cost, 2026-10-22), so the 30 s this file needed at cost 12 is gone.
 
 const app = createApp();
 

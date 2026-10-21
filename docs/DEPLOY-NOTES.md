@@ -175,7 +175,7 @@ returns **nothing**. `server/src/index.js:64` is `listenOn(app, PORT, bindAddres
 So the intended arrangement is: **a reverse proxy terminates TLS and forwards; the app never sees a
 certificate.** That is the ordinary and correct shape, and it is why there is no TLS code to find.
 
-**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:212` reads
+**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:218` reads
 `username` and `password` from `req.body`), and the session cookie carries the session. Over plain
 HTTP both are readable by anything on the path. **`Secure` cookies are not sent over HTTP at all**,
 so an install that sets `NODE_ENV=production` without HTTPS in front does not merely become

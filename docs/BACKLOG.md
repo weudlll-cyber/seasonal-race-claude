@@ -1841,6 +1841,19 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **fix/test-bcrypt-cost · the server tests hash at bcrypt's minimum — CLOSED 2026-10-22,
+      merged.** The cause of the auth files' repeated setup timeouts under load, measured on
+      `seedNotices.test.js` before the change: its setup is one hash and one compare at cost 12
+      (a bare hash 736 ms, a compare 676 ms on the loaded machine; `createUser` 556 ms, a sign-in
+      734 ms). Built: one switch, `RA_BCRYPT_COST_FOR_TESTS`, set to 4 in `server/test/env-setup.js`
+      and honoured by `bcryptCost()` (`server/src/auth/usersStore.js`) only under `NODE_ENV=test`;
+      the login path's timing-dummy hash follows the same cost (`timingDummyHash()`). Removed: the
+      bcrypt mock in `sessionInvalidation.test.js` and the 30 s budgets in `changePassword.test.js`,
+      `changePasswordContract.test.js` and `passwordMinLength.test.js`; no global timeout changed.
+      Production stays at 12, pinned with existing hashes and the password and rate limits by
+      `server/src/auth/bcryptCost.test.js`. The rule and the owner's LOAD RULE of the same day:
+      [VERIFY-RULES.md](VERIFY-RULES.md) R21.
+
 - [x] **REGISTRATION-1 · player registration — CLOSED 2026-10-21: accepted by the owner and
       merged.** The owner's decisions of 2026-10-20, to ship before going online: a second way to fill
       a race — the director opens a registration without names for a track and a window the director
@@ -2668,7 +2681,7 @@ proposal arriving again in six months looking new.
       shows the server's message. Test: `server/src/auth/passwordMinLength.test.js` (all four
       routes, and a pre-rule 3-character password still signing in); the short password literals of eight
       test files were lengthened. The row as it stood: **AUDIT-1 A5M-15 · the only password rule is
-      "not blank".** `usersStore.js:30`; the installer asks for 10 characters. *(verify: `POST
+      "not blank".** `usersStore.js:65`; the installer asks for 10 characters. *(verify: `POST
       /api/users` with a 3-character password refused 400)*
 
 - [x] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone — CLOSED 2026-10-12 (AUDIT-1
@@ -3068,7 +3081,7 @@ proposal arriving again in six months looking new.
       `races.results`, `races.winners` and `rosters` (`races.sqlite`) — `server/src/routes/races.js`
       has POST and GET only, and nothing issues a DELETE; (2) the **admin-recovery audit log**,
       append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
-      `createdBy`** on the users they created (`usersStore.js:275`; `updateUser` never touches it).
+      `createdBy`** on the users they created (`usersStore.js:310`; `updateUser` never touches it).
       Also: deleting a user leaves their sessions in place until each one's next request
       (`guards.js:181-185`), and backups and exports have no retention. No email, no request log
       and no stored IP address exist. **Whether any of this must change is the owner's question.**
