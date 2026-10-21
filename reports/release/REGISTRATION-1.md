@@ -429,6 +429,101 @@ built.
 - `docs/API.md` (the answer), `docs/OPEN.md` (PART ONE's line range, now 15–1852, after the BACKLOG
   row grew).
 
+### Item 1 — a 1-minute registration
+
+- "1 min" is the first preset. **The server's bounds were verified, not changed**:
+  `MIN_WINDOW_MS` = 1 minute and `MAX_WINDOW_MS` = 30 days (`registrationStore.js`, refused under
+  1 minute from the request's arrival).
+- **Decided by rule**: every preset is sent with a **5-second allowance** (`PRESET_GRACE_MS`).
+  Without it, "1 min" sent as exactly 60 s from the click would always arrive under 60 s and be
+  refused. Five seconds is invisible in every preset, and the server's bounds stay as they were.
+
+### Item 2 — "Until…" and "Extend until"
+
+- `DeadlineField.jsx` (new): the browser's own `datetime-local` input, themed with the Setup screen's
+  existing `playerInput` class (**reused**, not copied) plus `color-scheme: dark`, so Chrome and Edge
+  draw their picker dark too. No date library was added, because the native input could be themed;
+  the date + time fallback was not needed.
+- Under the field, live: **"Closes Thu 22 Oct, 19:45 (in 1 day 2 h)"** in the browser's locale.
+  `formatDeadline` and `closesSentence` are new in `modules/registration/timeLeft.js`; the "in …"
+  part is the existing `formatTimeLeft`.
+- An invalid choice is said inline before submitting, and the button is disabled:
+  - in the past;
+  - under 1 minute ahead;
+  - beyond 30 days;
+  - for an extension, not later than the current deadline, or more than 30 days after opening.
+
+  `deadlineProblem` in `timeLeft.js` restates the server's rules only in order to warn early; the
+  server still decides. The picker's `min` / `max` attributes offer the same range.
+- `useNow.js` (new): the clock as state that an interval moves forward, because reading
+  `Date.now()` during render is impure (lint `react-hooks/purity`).
+
+### Item 3 — Copy QR code, Download QR
+
+- `modules/registration/qrImage.js` (new) and `components/QrCode/QrShareButtons.jsx` (new):
+  - **Copy QR code** writes a PNG with `navigator.clipboard.write([new ClipboardItem(…)])`;
+  - **Download QR** saves the same PNG as `racearena-join-<event or track>.png`;
+  - the PNG is black on white, with the four-module white quiet zone and whole pixels per module,
+    **at least 512 px**;
+  - where the browser cannot copy an image, Copy says *"This browser cannot copy a picture. Use
+    "Download QR" and send the file instead."*;
+  - both appear beside *Copy link* on the registration view and in the full-screen QR view;
+  - no network call.
+- **Reused**: `lean-qr` through one `qrMatrix`, which the on-screen SVG (`QrCode.jsx`, now reading
+  it) and the PNG both draw from, so they are the same code.
+
+### Item 4 — coming back after a reload
+
+- `SetupScreen.jsx` asks for the team's registrations on mount: **with any OPEN one the Players tab
+  opens on "Player registration"**. The panel then shows exactly one open registration directly,
+  and with several it shows the list **above** the form. With none open, the tab opens in the mode
+  last chosen in this browser tab's session (`playersMode.js`, sessionStorage, every access in
+  try/catch), else on "Enter names" as before.
+- **Decided by rule** — the two halves of the request read together: an open registration wins over
+  a remembered "Enter names", and the remembered mode applies when none is open.
+- The ten Setup-screen test files that render the screen forbid network calls (TEARDOWN-INFLIGHT-1).
+  Each now replaces the registration service with "none open", **the pattern they already use**
+  for every other service; their tests are unchanged.
+
+### Item 5 — the list, clearly selectable
+
+- *Your registrations* shows **numbered cards** (1, 2, 3 …):
+  - open ones first, with an accent border and a coloured **Open** badge;
+  - then closed ones, most recent first, at most 10 (`RECENT_CLOSED`, the existing limit);
+  - each card shows its number, the event (or track) name, the track, the badge, "N of M places",
+    and the time left (open) or "closed Thu 22 Oct, 19:45" (closed);
+  - each has an **Open** button (the keyboard's way in, labelled "Open registration N: <name>"), and
+    the whole card is clickable too.
+- The view of one registration starts with a visible **"← Back to all registrations"** button.
+- At 390 px the cards stack full width.
+
+### Tests (items 1–5), each new test broken once on purpose
+
+| test | what it holds | sabotage that turned it red |
+| --- | --- | --- |
+| `RegistrationPanel.test.jsx` (17, 9 new) | 1 min first and sent ≥ 60 s; "Closes … (in 2 days 0 h)", past and > 30 days refused with the button disabled; extend not later than the deadline refused; cards numbered, open first and highlighted, list above the form; each card opens; one open shown directly; none open → form first; Back at the top; Copy / Download beside Copy link and in the stage | the 1 min preset removed; the past check removed; open cards after closed; the single-open auto-show off |
+| `timeLeft.test.js` (+6) | "Thu 22 Oct, 19:45" (en-GB), "Closes … (in 1 day 2 h)", local ↔ instant, every `deadlineProblem` rule | the past check removed |
+| `qrImage.test.js` (5, new) | white quiet zone, finder pattern, PNG ≥ 512 px with whole pixels, file name, no image clipboard → false | `pngScale` rounding down |
+| `QrShareButtons.test.jsx` (3, new) | copied note; the fallback sentence; download file name | the fallback sentence replaced |
+| `playersMode.test.js` (3, new) | remembered for the session; only real modes; blocked storage neither throws nor remembers | the write made a no-op |
+| `playersModeOnLoad.test.jsx` (5, new) | none open → names; one open → shown directly; several → list; open beats a remembered "names"; none open → the remembered mode | the mode effect not switching |
+| Browser gate `e2e/registration-list.spec.js` (3, new) | two open → after a reload the list is on top, both highlighted, each opens; one open → shown directly after a reload; at 390 × 844 the cards stack, equally wide, inside the window | auto-show off and the list below the form (a separate build): the first two went red |
+| `e2e/registration-director.spec.js` | reopening by its card | (updated) |
+
+All of them are green again after the restore. The restored build's bundle is byte-identical to the
+build before the sabotage (`index-BeU6ffpS.js`).
+
+**Noticed, left (not this branch's).** At 390 px with **test aids on**, the Setup screen's
+start-buttons row (`startButtons`, Start Race + Quick Test) is 654 px wide, so the page scrolls
+sideways. This branch changes no CSS of that row (`git diff e371938b` of `SetupScreen.module.css`
+is additions only), so it predates the branch. With test aids off, as an installation ships, the
+row is narrower; not measured here. The phone check in `registration-list.spec.js` therefore
+measures the cards themselves.
+
+**Documents**: `docs/OPERATOR-GUIDE.md` (*Player registration*: the 1-minute preset, the date field
+and its sentence, Copy QR code / Download QR, the numbered list and coming back; also the stale
+"Open registration" button name corrected), `docs/ARCHITECTURE.md`, `CHANGELOG.md`.
+
 ## The checks before handing over
 
 | check | result |

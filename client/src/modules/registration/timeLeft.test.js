@@ -7,7 +7,15 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { formatTimeLeft, msUntil } from './timeLeft.js';
+import {
+  closesSentence,
+  deadlineProblem,
+  formatDeadline,
+  formatTimeLeft,
+  localFromMs,
+  msFromLocal,
+  msUntil,
+} from './timeLeft.js';
 
 const S = 1000;
 const M = 60 * S;
@@ -34,5 +42,51 @@ describe('msUntil', () => {
     expect(msUntil('2026-10-21T10:05:00Z', now)).toBe(5 * M);
     expect(msUntil('2026-10-21T09:00:00Z', now)).toBe(0);
     expect(msUntil('not a date', now)).toBe(0);
+  });
+});
+
+// Follow-up 1 (2026-10-21): the director's date fields.
+describe('a chosen deadline, said plainly', () => {
+  const at = new Date(2026, 9, 22, 19, 45).getTime(); // Thu 22 Oct 2026, 19:45 local time
+
+  it('reads "Thu 22 Oct, 19:45" in English, in the given locale', () => {
+    expect(formatDeadline(at, 'en-GB')).toBe('Thu 22 Oct, 19:45');
+  });
+
+  it('"Closes … (in …)" uses the countdown text', () => {
+    expect(closesSentence(at, at - (D + 2 * H), 'en-GB')).toBe(
+      'Closes Thu 22 Oct, 19:45 (in 1 day 2 h)'
+    );
+  });
+
+  it('a datetime-local value and an instant convert both ways, to the minute', () => {
+    expect(localFromMs(at)).toBe('2026-10-22T19:45');
+    expect(msFromLocal('2026-10-22T19:45')).toBe(at);
+    expect(Number.isNaN(msFromLocal(''))).toBe(true);
+  });
+});
+
+describe('deadlineProblem — the server rules, checked before submitting', () => {
+  const now = Date.parse('2026-10-21T10:00:00Z');
+
+  it('accepts a time between 1 minute and 30 days ahead', () => {
+    expect(deadlineProblem(now + M + S, { now })).toBeNull();
+    expect(deadlineProblem(now + 30 * D, { now })).toBeNull();
+  });
+
+  it('names what is wrong: empty, past, under a minute, over 30 days', () => {
+    expect(deadlineProblem(NaN, { now })).toBe('Choose a date and a time.');
+    expect(deadlineProblem(now - M, { now })).toBe('This time is in the past.');
+    expect(deadlineProblem(now + 30 * S, { now })).toMatch(/at least 1 minute/);
+    expect(deadlineProblem(now + 30 * D + M, { now })).toMatch(/at most 30 days/);
+  });
+
+  it('an extension must be later than the current deadline and within 30 days of opening', () => {
+    const rules = { now, openedAt: now - 2 * D, after: now + H };
+    expect(deadlineProblem(now + 30 * M, rules)).toBe(
+      'Choose a time later than the current deadline.'
+    );
+    expect(deadlineProblem(now + 2 * H, rules)).toBeNull();
+    expect(deadlineProblem(now + 29 * D, rules)).toMatch(/more than 30 days after/);
   });
 });

@@ -83,7 +83,10 @@ test('open, share, watch, remove, close, use the players, delete', async ({ page
 
   // Delete it again through the panel.
   await page.getByRole('button', { name: 'Player registration' }).click();
-  await page.getByRole('button', { name: 'E2E director cup' }).first().click();
+  await page
+    .getByRole('button', { name: /^Open registration \d+: E2E director cup$/ })
+    .first()
+    .click();
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Delete registration' }).click();
   await expect(page.getByTestId('registration-view')).toHaveCount(0);

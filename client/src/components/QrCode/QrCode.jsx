@@ -2,11 +2,12 @@
 // File:        QrCode.jsx
 // Path:        client/src/components/QrCode/QrCode.jsx
 // Project:     RaceArena — REGISTRATION-1
-// Description: A QR code for a text (the registration's join link), drawn on THIS device. The
-//              matrix comes from `lean-qr` (MIT, no dependencies, pure JavaScript); it is drawn here
-//              as one SVG path of dark squares on a white field with the standard four-module quiet
-//              zone. No external service is asked, nothing is injected as markup, and no inline style
-//              or script is needed, so the Content-Security-Policy is untouched.
+// Description: A QR code for a text (the registration's join link), drawn on THIS device as one SVG
+//              path of dark squares on a white field, quiet zone included. The modules come from
+//              `qrMatrix` (modules/registration/qrImage.js, over `lean-qr`), the same matrix the PNG
+//              of "Copy QR code" and "Download QR" is drawn from. No external service is asked,
+//              nothing is injected as markup, and no inline style or script is needed, so the
+//              Content-Security-Policy is untouched.
 //
 // The SVG scales to whatever box it is given (`viewBox`), which is how the same component serves the
 // small code beside the link and the full-screen stage view; `crispEdges` keeps the modules sharp at
@@ -14,24 +15,21 @@
 // ============================================================
 
 import { useMemo } from 'react';
-import { generate } from 'lean-qr';
-
-/** The light margin around the code, in modules — the QR standard's minimum. */
-const QUIET_ZONE = 4;
+import { qrMatrix } from '../../modules/registration/qrImage.js';
 
 /**
  * @param {{ text: string, label?: string, className?: string }} props
  */
 export default function QrCode({ text, label = 'QR code', className }) {
   const { size, path } = useMemo(() => {
-    const code = generate(text);
+    const { size: n, dark } = qrMatrix(text);
     let d = '';
-    for (let y = 0; y < code.size; y++) {
-      for (let x = 0; x < code.size; x++) {
-        if (code.get(x, y)) d += `M${x + QUIET_ZONE} ${y + QUIET_ZONE}h1v1h-1z`;
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (dark(x, y)) d += `M${x} ${y}h1v1h-1z`;
       }
     }
-    return { size: code.size + QUIET_ZONE * 2, path: d };
+    return { size: n, path: d };
   }, [text]);
 
   return (

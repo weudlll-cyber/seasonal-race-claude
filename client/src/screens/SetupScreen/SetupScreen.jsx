@@ -22,6 +22,8 @@ import PlayerGroupPicker from './PlayerGroupPicker.jsx';
 import { sectionsOf } from './rosterGroups.js';
 import { fieldCapFor, isTrackOpen, quickTestFieldSize } from './fieldCap.js';
 import RegistrationPanel from './RegistrationPanel.jsx';
+import { readPlayersMode, writePlayersMode } from './playersMode.js';
+import { listRegistrations } from '../../services/registrationApi.js';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
@@ -246,7 +248,29 @@ function SetupScreen() {
   const [selectedTrackId, setSelectedTrackId] = useState(null);
   // REGISTRATION-1: 'names' (type them, or load a saved group) or 'registration' (the players
   // register themselves through a link — RegistrationPanel.jsx).
-  const [playersMode, setPlayersMode] = useState('names');
+  //
+  // FOLLOW-UP 1 (the owner's request of 2026-10-21): a reload must not hide a running registration.
+  // When the team has an OPEN registration the tab opens in 'registration', whatever was chosen
+  // before; otherwise in the mode last chosen in this tab (remembered for the session in
+  // sessionStorage, which may throw in a private window — then not remembered), else 'names' as
+  // before.
+  const [playersMode, setPlayersModeState] = useState(() => readPlayersMode() ?? 'names');
+  function setPlayersMode(mode) {
+    setPlayersModeState(mode);
+    writePlayersMode(mode);
+  }
+  useEffect(() => {
+    let live = true;
+    listRegistrations()
+      .then((list) => {
+        if (live && list.some((r) => r.state === 'open')) setPlayersModeState('registration');
+      })
+      // Not reachable, or no team: the tab stays on the names, as before.
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
   // "Use these players": the registered names become the roster — through the same `setPlayers`
   // every other way of filling the field uses, REPLACING what was there (a registration is a way
   // to fill the race, not to add to it) — and the registration's track is selected. The tab goes

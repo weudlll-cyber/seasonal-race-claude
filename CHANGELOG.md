@@ -16,13 +16,16 @@ is.
 ### Added
 
 - **Player registration** — a second way to fill a race. On the Setup screen's *Players* tab,
-  *Open registration* chooses a track, how long registration stays open (5 minutes to 7 days, or a
-  date and time up to 30 days ahead) and an optional event name. The players register themselves on
-  their phones through a link or its QR code (also shown full screen for a projector): no account,
+  *Player registration* chooses a track, how long registration stays open (1 minute to 7 days, or a
+  date and time up to 30 days ahead, with the closing time said in plain words under the field) and
+  an optional event name. The players register themselves on their phones through a link or its QR
+  code (copy it as a picture, download it as a PNG, or show it full screen for a projector): no account,
   their own name, "You're in! You are number N of M.", never more players than the track has places,
   the same name twice refused, one name per phone. The director sees the names arrive, removes one,
   closes early or extends; when it is closed, *Use these players* puts the names into the Players
-  tab and the race starts as usual. Names are kept until the director deletes the registration.
+  tab and the race starts as usual. The director's registrations are numbered cards, open ones first,
+  and a reload during a registration comes back to it. Names are kept until the director deletes
+  the registration.
   An external site with its own signed-in players can add them through a documented interface when
   the operator sets `RA_INTEGRATION_KEY` (docs/INTEGRATIONS.md); without it nothing changes.
   *(branch `feat/registration`, **not merged**, 2026-10-21)*

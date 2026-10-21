@@ -1088,8 +1088,13 @@ director (Setup → Players → Open registration)          player's phone (/joi
   own `setPlayers` with the names and `setSelectedTrackId` with the track, and switches the tab back
   to typing names; Start Race is then the normal flow. Nothing in the registration code can start or
   change a race, and none of it is inside the race hull (`scripts/engine-reach.mjs`).
-- **The QR code is drawn on the device** (`client/src/components/QrCode/QrCode.jsx`, `lean-qr`
-  as an SVG path); no service is asked.
+- **The QR code is drawn on the device** from one matrix (`client/src/modules/registration/qrImage.js`
+  over `lean-qr`): as an SVG path on screen (`client/src/components/QrCode/QrCode.jsx`) and as a
+  PNG of at least 512 px for "Copy QR code" (the Clipboard API's image write) and "Download QR"
+  (`QrShareButtons.jsx`); no service is asked.
+- **Coming back after a reload** (follow-up 1, 2026-10-21): the Setup screen asks for the team's
+  registrations on mount and opens the Players tab on "Player registration" when one is open; the
+  last chosen mode is remembered for the browser tab's session (`SetupScreen/playersMode.js`).
 - **The game stands on its own** ([PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) §11): the
   integration seam is off unless `RA_INTEGRATION_KEY` is set ([INTEGRATIONS.md](INTEGRATIONS.md)).
 

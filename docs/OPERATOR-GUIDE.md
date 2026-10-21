@@ -215,15 +215,22 @@ director opens a **registration** and the players add their own names from their
 
 **How it works.**
 
-1. Setup screen → *Players* tab → **Open registration**. Choose the track, how long registration
-   stays open (5 min, 15 min, 1 hour, 1 day, 3 days, 7 days, or a date and time of your own — at
-   least 1 minute, at most 30 days) and, if you like, an event name. **The number of places is the
-   track's own player limit**, the same number the Players tab allows; it is fixed when you open.
-2. Share the **join link**: copy it, or show its **QR code** — **Show QR full screen** fills the
-   screen for a projector or TV.
+1. Setup screen → *Players* tab → **Player registration** → *Open a registration*. Choose the track,
+   how long registration stays open (1 min, 5 min, 15 min, 1 hour, 1 day, 3 days, 7 days, or
+   *Until…* a date and time of your own — at least 1 minute, at most 30 days; under the field it
+   says when it will close, "Closes Thu 22 Oct, 19:45 (in 1 day 2 h)", or why a time cannot be used)
+   and, if you like, an event name. **The number of places is the track's own player limit**, the
+   same number the Players tab allows; it is fixed when you open.
+2. Share the **join link**: **Copy link**, or the **QR code** — **Copy QR code** puts it on the
+   clipboard as a picture (to paste into Telegram or Discord; a browser that cannot copy pictures says
+   so), **Download QR** saves it as a PNG file, and **Show QR full screen** fills the screen for a
+   projector or TV (with the same two buttons).
 3. While it is open you see the names arrive (the list updates every few seconds), can **remove** a
    name (✕), **close it now** or **extend** it (later, at most 30 days after you opened it). Nobody can
    register once every place is taken.
+   **Coming back:** your registrations are numbered cards under *Your registrations*, open ones first
+   and highlighted. While one is open, the Players tab opens on it after a reload (on the list, if
+   several are open); **Back to all registrations** returns to the list.
 4. It closes by itself at the deadline — the server decides by its own clock, also when nobody has
    the page open or the server was restarted in between. A closed registration stays closed.
 5. **Use these players** puts the registered names into the Players tab and selects the track, then

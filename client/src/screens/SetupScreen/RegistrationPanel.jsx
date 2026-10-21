@@ -2,27 +2,35 @@
 // File:        RegistrationPanel.jsx
 // Path:        client/src/screens/SetupScreen/RegistrationPanel.jsx
 // Project:     RaceArena — REGISTRATION-1 (the owner's decisions of 2026-10-20)
-// Description: The Players tab's second way to fill a race: "Open registration". The director
+// Description: The Players tab's second way to fill a race: "Player registration". The director
 //              chooses a track, how long registration stays open and an optional event name; the
 //              server opens it with the track's place count (server/src/routes/registrations.js).
-//              Then this panel shows the join link with a copy button and a QR code, places taken
-//              and left, the time left, the live list with a remove button per name, "Close now",
-//              "Extend", "Show QR full screen" and "Delete registration". When it is closed, "Use
-//              these players" hands the names and the track to the Setup screen, and the race is
-//              started through the normal Start Race flow — nothing here starts a race.
+//              Then this panel shows the join link with a copy button, a QR code with "Copy QR code"
+//              and "Download QR", places taken and left, the time left, the live list with a remove
+//              button per name, "Close now", "Extend", "Show QR full screen" and "Delete
+//              registration". When it is closed, "Use these players" hands the names and the track to
+//              the Setup screen, and the race is started through the normal Start Race flow —
+//              nothing here starts a race.
 //
 // ── THE PLACE COUNT IS THE PLAYERS TAB'S OWN LIMIT ─────────────────────────────────────────────
 // Computed for the chosen track exactly as the Players tab computes it for the selected one:
 // `isTrackOpen` and `fieldCapFor` (fieldCap.js). Sent once, on creation; the server bounds it and
 // holds it fixed, so a later change to the race defaults does not change an open registration.
 //
+// ── COMING BACK (follow-up 1, the owner's request of 2026-10-21) ───────────────────────────────
+// The team's registrations are numbered cards, open ones first and highlighted. When any is open the
+// list stands ABOVE the form, and on the panel's first load exactly one open registration is shown
+// directly — so a director who reloads during a registration lands on it (SetupScreen.jsx opens the
+// tab in this mode when one is open).
+//
 // ── LIVE BY POLLING ────────────────────────────────────────────────────────────────────────────
 // While a registration is shown and open, it is asked for again every 5 s (no new transport); the
 // countdown ticks every second from this device's clock, and the server's clock decides.
 // ============================================================
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import QrCode from '../../components/QrCode/QrCode.jsx';
+import QrShareButtons from '../../components/QrCode/QrShareButtons.jsx';
 import {
   closeRegistration,
   createRegistration,
@@ -32,9 +40,17 @@ import {
   listRegistrations,
   removeRegistrationEntry,
 } from '../../services/registrationApi.js';
-import { formatTimeLeft, msUntil } from '../../modules/registration/timeLeft.js';
+import {
+  deadlineProblem,
+  formatDeadline,
+  formatTimeLeft,
+  msFromLocal,
+  msUntil,
+} from '../../modules/registration/timeLeft.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { fieldCapFor, isTrackOpen } from './fieldCap.js';
+import DeadlineField from './DeadlineField.jsx';
+import { useNow } from './useNow.js';
 import styles from './RegistrationPanel.module.css';
 
 const MINUTE = 60 * 1000;
@@ -43,6 +59,7 @@ const DAY = 24 * HOUR;
 
 /** How long registration stays open: the presets of the owner's decisions, and a custom time. */
 const DURATION_PRESETS = [
+  { key: '1m', label: '1 min', ms: MINUTE },
   { key: '5m', label: '5 min', ms: 5 * MINUTE },
   { key: '15m', label: '15 min', ms: 15 * MINUTE },
   { key: '1h', label: '1 hour', ms: HOUR },
@@ -50,6 +67,12 @@ const DURATION_PRESETS = [
   { key: '3d', label: '3 days', ms: 3 * DAY },
   { key: '7d', label: '7 days', ms: 7 * DAY },
 ];
+/**
+ * Added to every preset when it is sent. The server refuses a window under 1 minute counted from
+ * when the request ARRIVES, so "1 min" sent as exactly 60 s from the click would always be refused
+ * by the request's own travel time. Five seconds is invisible in every preset.
+ */
+const PRESET_GRACE_MS = 5 * 1000;
 /** How much later "Extend" moves the deadline. */
 const EXTEND_PRESETS = [
   { key: '+5m', label: '+5 min', ms: 5 * MINUTE },
@@ -58,16 +81,12 @@ const EXTEND_PRESETS = [
   { key: '+1d', label: '+1 day', ms: DAY },
 ];
 const POLL_MS = 5 * 1000;
+/** How many CLOSED registrations the list shows; open ones are always all shown. */
+const RECENT_CLOSED = 10;
 
 /** The link a player opens: this app's own address, so it is right behind any proxy. */
 function joinLinkFor(code) {
   return `${window.location.origin}/join/${code}`;
-}
-
-/** A `datetime-local` value as an ISO instant, or null when it is empty or not a time. */
-function isoFromLocal(value) {
-  const ms = value ? new Date(value).getTime() : NaN;
-  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
 }
 
 const errorText = (err) => err?.message || 'Something went wrong. Try again.';
@@ -80,11 +99,19 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
   const [list, setList] = useState(null);
   const [shown, setShown] = useState(null); // the registration open in the panel, with its names
   const [error, setError] = useState('');
-  const [now, setNow] = useState(() => Date.now());
+  const now = useNow();
+  const firstLoad = useRef(true);
 
   const refreshList = useCallback(async () => {
     try {
-      setList(await listRegistrations());
+      const next = await listRegistrations();
+      setList(next);
+      // The panel's first load: exactly one open registration is shown directly.
+      if (firstLoad.current) {
+        firstLoad.current = false;
+        const open = next.filter((r) => r.state === 'open');
+        if (open.length === 1) setShown(await fetchRegistration(open[0].id));
+      }
     } catch (err) {
       setError(errorText(err));
     }
@@ -94,25 +121,19 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
     refreshList();
   }, [refreshList]);
 
-  // Poll the shown registration while it is open; tick the countdown every second.
+  // Poll the shown registration while it is open.
   const shownId = shown?.id ?? null;
   const shownOpen = shown?.state === 'open';
   useEffect(() => {
-    if (!shownId) return undefined;
-    const tick = setInterval(() => setNow(Date.now()), 1000);
-    const poll = shownOpen
-      ? setInterval(async () => {
-          try {
-            setShown(await fetchRegistration(shownId));
-          } catch (err) {
-            setError(errorText(err));
-          }
-        }, POLL_MS)
-      : null;
-    return () => {
-      clearInterval(tick);
-      if (poll) clearInterval(poll);
-    };
+    if (!shownId || !shownOpen) return undefined;
+    const poll = setInterval(async () => {
+      try {
+        setShown(await fetchRegistration(shownId));
+      } catch (err) {
+        setError(errorText(err));
+      }
+    }, POLL_MS);
+    return () => clearInterval(poll);
   }, [shownId, shownOpen]);
 
   // The countdown reached zero here: ask the server, whose clock decides.
@@ -137,6 +158,7 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
       <RegistrationView
         registration={shown}
         timeLeft={shown.state === 'open' ? left : 0}
+        now={now}
         error={error}
         onBack={() => {
           setShown(null);
@@ -160,12 +182,19 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
     );
   }
 
+  const anyOpen = (list ?? []).some((r) => r.state === 'open');
+  const listBlock = (
+    <RegistrationList list={list} now={now} onShow={(id) => act(() => fetchRegistration(id))} />
+  );
   return (
     <div className={styles.panel}>
+      {/* With an open registration the list comes first: getting back to it is the likely errand. */}
+      {anyOpen && listBlock}
       <OpenForm
         tracks={tracks}
         raceDefaults={raceDefaults}
         selectedTrackId={selectedTrackId}
+        now={now}
         onOpen={(input) => act(() => createRegistration(input))}
       />
       {error && (
@@ -173,13 +202,13 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
           {error}
         </p>
       )}
-      <RegistrationList list={list} onShow={(id) => act(() => fetchRegistration(id))} />
+      {!anyOpen && listBlock}
     </div>
   );
 }
 
 /** Choose the track, the duration and an optional event name, then open. */
-function OpenForm({ tracks, raceDefaults, selectedTrackId, onOpen }) {
+function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
   const [trackId, setTrackId] = useState(selectedTrackId ?? tracks[0]?.id ?? '');
   const [duration, setDuration] = useState('15m');
   const [custom, setCustom] = useState('');
@@ -192,13 +221,16 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, onOpen }) {
   const geometryReady = !!track?.geometryId && !!getTrack(track.geometryId);
   const capacity = geometryReady ? fieldCapFor(isTrackOpen(track, getTrack), raceDefaults) : null;
   const preset = DURATION_PRESETS.find((p) => p.key === duration);
-  const deadlineChosen = !!preset || !!isoFromLocal(custom);
+  const customProblem = deadlineProblem(msFromLocal(custom), { now });
+  const deadlineChosen = !!preset || customProblem === null;
 
   async function submit(e) {
     e.preventDefault();
     // A preset counts from the moment Open is pressed, not from when it was chosen.
-    const closesAt = preset ? new Date(Date.now() + preset.ms).toISOString() : isoFromLocal(custom);
-    if (!track || !capacity || !closesAt || busy) return;
+    const closesAt = preset
+      ? new Date(Date.now() + preset.ms + PRESET_GRACE_MS).toISOString()
+      : new Date(msFromLocal(custom)).toISOString();
+    if (!track || !capacity || !deadlineChosen || busy) return;
     setBusy(true);
     try {
       await onOpen({ trackId: track.id, capacity, eventName: eventName.trim(), closesAt });
@@ -209,6 +241,7 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, onOpen }) {
 
   return (
     <form className={styles.form} onSubmit={submit} aria-label="Open registration">
+      <h3 className={styles.subTitle}>Open a registration</h3>
       <label className={styles.field}>
         <span>Track</span>
         <select value={trackId} onChange={(e) => setTrackId(e.target.value)}>
@@ -238,15 +271,16 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, onOpen }) {
             {p.label}
           </label>
         ))}
-        {duration === 'custom' && (
-          <input
-            type="datetime-local"
-            aria-label="Registration closes at"
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-          />
-        )}
       </fieldset>
+      {duration === 'custom' && (
+        <DeadlineField
+          label="Registration closes at"
+          value={custom}
+          onChange={setCustom}
+          now={now}
+          testId="registration-until-hint"
+        />
+      )}
       <label className={styles.field}>
         <span>Event name (optional)</span>
         <input
@@ -267,26 +301,63 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, onOpen }) {
   );
 }
 
-/** The team's open and recently closed registrations, newest first. */
-function RegistrationList({ list, onShow }) {
+/**
+ * The team's registrations as numbered cards: open ones first and highlighted, then the most
+ * recent closed ones. A card opens its registration on a click anywhere on it, or with its "Open"
+ * button (which is how the keyboard reaches it).
+ */
+function RegistrationList({ list, now, onShow }) {
   if (list === null) return <p className={styles.muted}>Loading registrations…</p>;
-  const recent = list.slice(0, 10);
-  if (recent.length === 0) return <p className={styles.muted}>No registrations yet.</p>;
+  const open = list.filter((r) => r.state === 'open');
+  const closed = list.filter((r) => r.state !== 'open').slice(0, RECENT_CLOSED);
+  const cards = [...open, ...closed];
+  if (cards.length === 0) return <p className={styles.muted}>No registrations yet.</p>;
   return (
-    <div className={styles.list}>
-      <h3 className={styles.subTitle}>Open and recent registrations</h3>
-      <ul>
-        {recent.map((r) => (
-          <li key={r.id}>
-            <button type="button" className={styles.linkButton} onClick={() => onShow(r.id)}>
-              {r.eventName || r.trackName}
-            </button>{' '}
-            <span className={styles.muted}>
-              {r.trackName} · {r.taken}/{r.capacity} · {r.state === 'open' ? 'open' : 'closed'}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <div>
+      <h3 className={styles.subTitle}>Your registrations</h3>
+      <ol className={styles.cards} data-testid="registration-list">
+        {cards.map((r, i) => {
+          const isOpen = r.state === 'open';
+          const title = r.eventName || r.trackName;
+          const closedAt = Date.parse(r.closedEarlyAt ?? r.closesAt);
+          return (
+            <li
+              key={r.id}
+              className={`${styles.card} ${isOpen ? styles.cardOpen : ''}`}
+              data-testid="registration-card"
+              data-state={r.state}
+              onClick={() => onShow(r.id)}
+            >
+              <span className={styles.cardNumber}>{i + 1}</span>
+              <div className={styles.cardBody}>
+                <div className={styles.cardTitle}>
+                  {title}{' '}
+                  <span className={isOpen ? styles.badgeOpen : styles.badgeClosed}>
+                    {isOpen ? 'Open' : 'Closed'}
+                  </span>
+                </div>
+                <div className={styles.muted}>
+                  {r.trackName} · {r.taken} of {r.capacity} places ·{' '}
+                  {isOpen
+                    ? `${formatTimeLeft(msUntil(r.closesAt, now))} left`
+                    : `closed ${formatDeadline(closedAt)}`}
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.cardOpenButton}
+                aria-label={`Open registration ${i + 1}: ${title}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShow(r.id);
+                }}
+              >
+                Open
+              </button>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
@@ -295,6 +366,7 @@ function RegistrationList({ list, onShow }) {
 function RegistrationView({
   registration: r,
   timeLeft,
+  now,
   error,
   onBack,
   onClose,
@@ -310,11 +382,13 @@ function RegistrationView({
   const [customExtend, setCustomExtend] = useState('');
   const link = joinLinkFor(r.code);
   const open = r.state === 'open' && timeLeft > 0;
+  const extendRules = { openedAt: Date.parse(r.createdAt), after: Date.parse(r.closesAt) };
+  const extendProblem = deadlineProblem(msFromLocal(customExtend), { now, ...extendRules });
 
   return (
     <div className={styles.panel} data-testid="registration-view">
-      <button type="button" className={styles.linkButton} onClick={onBack}>
-        ← All registrations
+      <button type="button" className={styles.backButton} onClick={onBack}>
+        ← Back to all registrations
       </button>
       <h3 className={styles.subTitle}>{r.eventName || 'Registration'}</h3>
       <p className={styles.muted}>Track: {r.trackName}</p>
@@ -335,6 +409,12 @@ function RegistrationView({
             >
               {copied ? 'Copied' : 'Copy link'}
             </button>
+            <QrShareButtons
+              link={link}
+              eventName={r.eventName}
+              trackName={r.trackName}
+              className={styles.row}
+            />
             <button type="button" onClick={() => setStage(true)}>
               Show QR full screen
             </button>
@@ -380,34 +460,40 @@ function RegistrationView({
       {r.entries.length === 0 && <p className={styles.muted}>Nobody has registered yet.</p>}
 
       {open ? (
-        <div className={styles.row}>
-          <button type="button" onClick={onClose}>
-            Close now
-          </button>
-          <span className={styles.muted}>Extend:</span>
-          {EXTEND_PRESETS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => onExtend(new Date(Date.parse(r.closesAt) + p.ms).toISOString())}
-            >
-              {p.label}
+        <>
+          <div className={styles.row}>
+            <button type="button" onClick={onClose}>
+              Close now
             </button>
-          ))}
-          <input
-            type="datetime-local"
-            aria-label="Extend until"
-            value={customExtend}
-            onChange={(e) => setCustomExtend(e.target.value)}
-          />
-          <button
-            type="button"
-            disabled={!isoFromLocal(customExtend)}
-            onClick={() => onExtend(isoFromLocal(customExtend))}
-          >
-            Extend until
-          </button>
-        </div>
+            <span className={styles.muted}>Extend:</span>
+            {EXTEND_PRESETS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => onExtend(new Date(Date.parse(r.closesAt) + p.ms).toISOString())}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className={styles.row}>
+            <DeadlineField
+              label="Extend until"
+              value={customExtend}
+              onChange={setCustomExtend}
+              now={now}
+              rules={extendRules}
+              testId="registration-extend-hint"
+            />
+            <button
+              type="button"
+              disabled={extendProblem !== null}
+              onClick={() => onExtend(new Date(msFromLocal(customExtend)).toISOString())}
+            >
+              Extend until
+            </button>
+          </div>
+        </>
       ) : (
         <div className={styles.row}>
           <span className={styles.closed}>Registration is closed.</span>
@@ -443,7 +529,8 @@ function RegistrationView({
 /**
  * The stage view: the QR code as large as the window allows, with the event, the track and the
  * link, for a projector or a TV across the room. It takes the whole screen (the browser's full-screen
- * mode where it is allowed) and leaves with Escape or the button.
+ * mode where it is allowed) and leaves with Escape or the button. "Copy QR code" and "Download QR"
+ * are here too, for whoever is at the stage machine.
  */
 function QrStage({ registration: r, link, onExit }) {
   useEffect(() => {
@@ -478,6 +565,12 @@ function QrStage({ registration: r, link, onExit }) {
       <p className={styles.stageTrack}>{r.trackName} · scan to register</p>
       <QrCode text={link} label="QR code of the join link" className={styles.stageQr} />
       <code className={styles.stageLink}>{link}</code>
+      <QrShareButtons
+        link={link}
+        eventName={r.eventName}
+        trackName={r.trackName}
+        className={styles.stageShare}
+      />
       <button type="button" className={styles.stageExit} onClick={onExit}>
         Close
       </button>

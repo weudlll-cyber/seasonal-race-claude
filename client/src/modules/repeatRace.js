@@ -84,7 +84,7 @@ export function identifierForStoredInputs(inputs) {
  * setup screen to start it.
  *
  * The seed field is written through `KEYS.RACE_SEED` — the SAME store the field reads itself
- * (`SetupScreen.jsx:131`), so the value is there whether the screen is mounted yet or not, and the
+ * (`SetupScreen.jsx:153`), so the value is there whether the screen is mounted yet or not, and the
  * field shows what is about to run rather than starting something invisible.
  *
  * @param {object} inputs a stored race's inputs

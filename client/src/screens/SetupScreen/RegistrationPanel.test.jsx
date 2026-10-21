@@ -119,7 +119,13 @@ describe('one registration', () => {
     api.listRegistrations.mockResolvedValue([registration(over)]);
     api.fetchRegistration.mockResolvedValue(registration(over));
     const handles = renderPanel();
-    fireEvent.click(await screen.findByRole('button', { name: 'Friday cup' }));
+    // One OPEN registration is shown directly on the panel's first load; a closed one is opened
+    // from its card.
+    if (over?.state === 'closed') {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Open registration 1: Friday cup' })
+      );
+    }
     await screen.findByTestId('registration-view');
     return handles;
   }
@@ -179,7 +185,158 @@ describe('one registration', () => {
     const stage = screen.getByTestId('qr-stage');
     expect(within(stage).getByTestId('qr-code')).toBeTruthy();
     expect(within(stage).getByText('Friday cup')).toBeTruthy();
+    expect(within(stage).getByRole('button', { name: 'Copy QR code' })).toBeTruthy();
+    expect(within(stage).getByRole('button', { name: 'Download QR' })).toBeTruthy();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByTestId('qr-stage')).toBeNull();
+  });
+
+  it('has a visible "Back to all registrations" at the top', async () => {
+    await showOne();
+    const back = screen.getByRole('button', { name: '← Back to all registrations' });
+    expect(screen.getByTestId('registration-view').firstElementChild).toBe(back);
+    fireEvent.click(back);
+    expect(await screen.findByTestId('registration-list')).toBeTruthy();
+  });
+
+  it('"Copy QR code" and "Download QR" are beside "Copy link"', async () => {
+    await showOne();
+    const row = screen.getByRole('button', { name: 'Copy link' }).parentElement;
+    expect(within(row).getByRole('button', { name: 'Copy QR code' })).toBeTruthy();
+    expect(within(row).getByRole('button', { name: 'Download QR' })).toBeTruthy();
+  });
+});
+
+// ── Follow-up 1 (the owner's requests of 2026-10-21) ─────────────────────────────────────────────
+
+describe('item 1 — a 1-minute registration', () => {
+  it('"1 min" is the first preset, and it sends a deadline at least a minute ahead', async () => {
+    api.createRegistration.mockResolvedValue(registration({ entries: [], taken: 0 }));
+    renderPanel();
+    const presets = within(screen.getByRole('group', { name: 'Open for' })).getAllByRole('radio');
+    expect(presets[0].value).toBe('1m');
+    fireEvent.click(screen.getByLabelText('1 min'));
+    const before = Date.now();
+    fireEvent.click(screen.getByRole('button', { name: 'Open registration' }));
+    await screen.findByTestId('registration-view');
+    const ms = Date.parse(api.createRegistration.mock.calls[0][0].closesAt) - before;
+    // At least the server's minimum, with the travel-time allowance on top.
+    expect(ms).toBeGreaterThanOrEqual(60 * 1000);
+    expect(ms).toBeLessThan(70 * 1000);
+  });
+});
+
+describe('item 2 — the "Until…" and "Extend until" fields', () => {
+  const localIn = (minutes) => {
+    const d = new Date(Date.now() + minutes * 60 * 1000);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  it('says what will happen, and refuses a past or too-distant time before submitting', async () => {
+    renderPanel();
+    fireEvent.click(screen.getByLabelText('Until…'));
+    const field = screen.getByLabelText('Registration closes at');
+    const open = screen.getByRole('button', { name: 'Open registration' });
+    expect(field.className).toMatch(/dateInput/);
+    fireEvent.change(field, { target: { value: localIn(2 * 24 * 60 + 5) } });
+    expect(screen.getByTestId('registration-until-hint').textContent).toMatch(
+      /^Closes .+ \(in 2 days 0 h\)$/
+    );
+    expect(open.disabled).toBe(false);
+    fireEvent.change(field, { target: { value: localIn(-10) } });
+    expect(screen.getByTestId('registration-until-hint').textContent).toBe(
+      'This time is in the past.'
+    );
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(open.disabled).toBe(true);
+    fireEvent.change(field, { target: { value: localIn(31 * 24 * 60) } });
+    expect(screen.getByTestId('registration-until-hint').textContent).toMatch(/at most 30 days/);
+    expect(open.disabled).toBe(true);
+    await screen.findByText('No registrations yet.');
+  });
+
+  it('an extension must be later than the current deadline', async () => {
+    api.listRegistrations.mockResolvedValue([
+      registration({ createdAt: new Date().toISOString() }),
+    ]);
+    api.fetchRegistration.mockResolvedValue(registration({ createdAt: new Date().toISOString() }));
+    renderPanel();
+    await screen.findByTestId('registration-view');
+    const field = screen.getByLabelText('Extend until');
+    const extend = screen.getByRole('button', { name: 'Extend until' });
+    fireEvent.change(field, { target: { value: localIn(10) } }); // before the 15-minute deadline
+    expect(screen.getByTestId('registration-extend-hint').textContent).toBe(
+      'Choose a time later than the current deadline.'
+    );
+    expect(extend.disabled).toBe(true);
+    fireEvent.change(field, { target: { value: localIn(90) } });
+    expect(screen.getByTestId('registration-extend-hint').textContent).toMatch(
+      /^Closes .+\(in 1 h/
+    );
+    expect(extend.disabled).toBe(false);
+  });
+});
+
+describe('item 4 and 5 — the list of registrations', () => {
+  const list = [
+    registration({ id: 'c1', state: 'closed', eventName: 'Old cup', closesAt: inMinutes(-60) }),
+    registration({ id: 'o1', eventName: 'Morning cup' }),
+    registration({ id: 'o2', eventName: null, trackName: 'River Run', taken: 3, capacity: 100 }),
+  ];
+
+  it('numbered cards: open ones first and highlighted, then closed; the list is above the form', async () => {
+    api.listRegistrations.mockResolvedValue(list);
+    renderPanel();
+    const cards = await screen.findAllByTestId('registration-card');
+    expect(cards.map((c) => [c.textContent.slice(0, 1), c.dataset.state])).toEqual([
+      ['1', 'open'],
+      ['2', 'open'],
+      ['3', 'closed'],
+    ]);
+    expect(cards[0].className).toMatch(/cardOpen/);
+    expect(cards[2].className).not.toMatch(/cardOpen/);
+    expect(within(cards[0]).getByText('Open', { selector: 'span' })).toBeTruthy();
+    expect(within(cards[2]).getByText('Closed')).toBeTruthy();
+    expect(cards[1].textContent).toMatch(/River Run.*3 of 100 places.*left/);
+    expect(cards[2].textContent).toMatch(/closed /);
+    // Above the form, because something is open.
+    const listEl = screen.getByTestId('registration-list');
+    const form = screen.getByRole('form', { name: 'Open registration' });
+    expect(listEl.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('each card opens its registration, by a click anywhere on it or by its button', async () => {
+    api.listRegistrations.mockResolvedValue(list);
+    api.fetchRegistration.mockImplementation(async (id) =>
+      registration({ id, eventName: id === 'o2' ? null : 'Morning cup' })
+    );
+    renderPanel();
+    const cards = await screen.findAllByTestId('registration-card');
+    fireEvent.click(cards[1]);
+    await screen.findByTestId('registration-view');
+    expect(api.fetchRegistration).toHaveBeenLastCalledWith('o2');
+    fireEvent.click(screen.getByRole('button', { name: '← Back to all registrations' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Open registration 1: Morning cup' })
+    );
+    await waitFor(() => expect(api.fetchRegistration).toHaveBeenLastCalledWith('o1'));
+  });
+
+  it('with exactly one open registration, it is shown directly', async () => {
+    api.listRegistrations.mockResolvedValue([list[0], list[1]]);
+    api.fetchRegistration.mockResolvedValue(list[1]);
+    renderPanel();
+    await screen.findByTestId('registration-view');
+    expect(api.fetchRegistration).toHaveBeenCalledWith('o1');
+  });
+
+  it('with none open, the form comes first and the closed ones follow it', async () => {
+    api.listRegistrations.mockResolvedValue([list[0]]);
+    renderPanel();
+    const listEl = await screen.findByTestId('registration-list');
+    const form = screen.getByRole('form', { name: 'Open registration' });
+    expect(form.compareDocumentPosition(listEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId('registration-view')).toBeNull();
   });
 });
