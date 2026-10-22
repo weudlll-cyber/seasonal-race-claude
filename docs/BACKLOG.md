@@ -1936,6 +1936,10 @@ proposal arriving again in six months looking new.
         a release that needs no build on Windows"**; the other two options (build tools as a
         requirement of plain-Node installs and Windows development; installing with
         `--ignore-scripts`, with an exception in the Dockerfile for bcrypt) are not taken.
+        **Checked again 2026-10-22: still a build.** The newest release, 13.0.3 (2026-08-05), and
+        13.0.2 and 13.0.1 publish **no prebuilt binaries at all** (0 release assets each, against
+        131 for 12.10.0, among them Windows x64), so `npm ci` compiles it on every platform; on
+        Windows that needs the C++ build tools. Nothing upgraded; still on 12.10.0.
       The other majors the audit listed: Vite was in range; `@testing-library/jest-dom` 7 and
       `lint-staged` 17 were not part of this chain and stay on their current majors.
       **Taken along when it closed (2026-10-19, `chore/a7-03-close`):** the German review markers in
