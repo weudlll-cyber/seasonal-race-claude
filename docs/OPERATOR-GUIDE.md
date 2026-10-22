@@ -218,7 +218,10 @@ director opens a **registration** and the players add their own names from their
 1. Setup screen → *Players* tab → **Player registration** → *Open a registration*. Choose the track,
    how long registration stays open (1 min, 5 min, 15 min, 1 hour, 1 day, 3 days, 7 days, or
    *Until…* a date and time of your own — at least 1 minute, at most 30 days; under the field it
-   says when it will close, "Closes Thu 22 Oct, 19:45 (in 1 day 2 h)", or why a time cannot be used)
+   says when it will close, "Closes Thu 22 Oct 2026, 19:45 (in 1 day 2 h)", or why a time cannot be
+   used) — every date and time the game shows has this one form, in English whatever language the
+   browser is set to (since 2026-10-23); only the date picker itself is drawn by the browser in its
+   own language —
    and, if you like, an event name. **The number of places is the track's own player limit**, the
    same number the Players tab allows; it is fixed when you open.
 2. Share the **join link**: **Copy link**, or the **QR code** — **Copy QR code** puts it on the
@@ -234,7 +237,17 @@ director opens a **registration** and the players add their own names from their
 4. It closes by itself at the deadline — the server decides by its own clock, also when nobody has
    the page open or the server was restarted in between. A closed registration stays closed.
 5. **Use these players** puts the registered names into the Players tab and selects the track, then
-   you start the race as usual. Nothing starts by itself.
+   you start the race as usual. Nothing starts by itself. **The event name** (since 2026-10-22): when
+   the registration has one, the race's event name becomes your brand profile's event name and the
+   registration's together — *Summer Fair – Round 1* — or the registration's alone when no profile
+   with an event name is active. It is in the *Settings* tab, where you can still change it; taking
+   another registration's players replaces the registration's part. A registration without an event
+   name leaves the race's event name as it was.
+   **"Raced"** (since 2026-10-22): once a race has been started with a registration's players, its
+   card and its page say *Raced* and when (the first race; a second one keeps that time). Taking the
+   players without starting marks nothing, and changing the roster to other players (another
+   registration, a player group, or emptying it) means the next race marks nothing; correcting a
+   name keeps the mark coming. *Use these players* stays available on a raced registration.
 6. **Delete registration** when you are done: the names are kept until you do (see
    [PRIVACY-FACTS.md](PRIVACY-FACTS.md)).
 

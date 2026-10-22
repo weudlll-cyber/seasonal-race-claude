@@ -31,6 +31,15 @@
 // registrationStore.test.js with worker threads). The
 // UNIQUE constraints on (registration, name key) and (registration, external id) make a doubled
 // name or a doubled external id a property of the table too, not only of the check before it.
+//
+// ── "RACED": ONE COLUMN, ADDED WHEN THE FILE OPENS (follow-up 2, 2026-10-22) ──────────────────
+// `raced_at_ms` is when a race was first started with the registration's players (the owner's
+// decision of 2026-10-22: the card shows it). A database made before it has no such column, and
+// `CREATE TABLE IF NOT EXISTS` never alters an existing table — so `addRacedColumn` adds it every
+// time the store opens, if it is missing. That covers a live install, a restored older backup and a
+// development data folder alike, with no step in `scripts/migrate.mjs` that each of them would have
+// to have run first. It is the check-then-alter `races/migrateRaceSource.js` uses; nothing is
+// back-filled (an older registration has not raced, as far as anyone recorded).
 // ============================================================
 
 import Database from 'better-sqlite3';
@@ -114,6 +123,27 @@ function refusal(code, message) {
 
 const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());
 
+/** The column "Raced" is stored in; see the header. */
+const RACED_COLUMN = 'raced_at_ms';
+
+/**
+ * Add `raced_at_ms` to a registrations table that predates it; a table that has it is left alone.
+ * Exported for the test that opens a database made without the column.
+ *
+ * @param {import('better-sqlite3').Database} db
+ * @returns {boolean} true when the column was added
+ */
+export function addRacedColumn(db) {
+  const has = db
+    .prepare('PRAGMA table_info(registrations)')
+    .all()
+    .some((c) => c.name === RACED_COLUMN);
+  if (has) return false;
+  // Nullable, no default: NULL is "not raced", which every existing registration is.
+  db.exec(`ALTER TABLE registrations ADD COLUMN ${RACED_COLUMN} INTEGER`);
+  return true;
+}
+
 /** A new public code: 16 random bytes, URL-safe, 22 characters. */
 export function newRegistrationCode() {
   return randomBytes(16).toString('base64url');
@@ -133,6 +163,7 @@ export function createRegistrationStore(
   // Asked for per connection: it is what makes deleting a registration delete its entries.
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  addRacedColumn(db);
 
   const isClosed = (row, at) => row.closed_early_ms != null || at >= row.closes_at_ms;
 
@@ -165,6 +196,7 @@ export function createRegistrationStore(
       opensAt: iso(row.opens_at_ms),
       closesAt: iso(row.closes_at_ms),
       closedEarlyAt: iso(row.closed_early_ms),
+      racedAt: iso(row.raced_at_ms),
       state: isClosed(row, at) ? 'closed' : 'open',
       taken,
       placesLeft: Math.max(0, row.capacity - taken),
@@ -318,6 +350,21 @@ export function createRegistrationStore(
     return get(id, team);
   }
 
+  /**
+   * A race was started with its players: record when, ONCE. The first time is kept — a later
+   * call changes nothing and is not an error. Open or closed alike (the Setup screen decides when
+   * a race starts, not the registration's state). Null for an id that is not this team's.
+   */
+  function markRaced(id, team) {
+    const row = rowById(id, team);
+    if (!row) return null;
+    // `IS NULL` in the statement itself, so "keep the first" holds even against another connection.
+    db.prepare(
+      `UPDATE registrations SET ${RACED_COLUMN} = ? WHERE id = ? AND ${RACED_COLUMN} IS NULL`
+    ).run(now(), id);
+    return get(id, team);
+  }
+
   /** Remove one name. Returns the registration, or null when either id is not this team's. */
   function removeEntry(id, team, entryId) {
     const row = rowById(id, team);
@@ -432,6 +479,7 @@ export function createRegistrationStore(
     get,
     close,
     extend,
+    markRaced,
     removeEntry,
     remove,
     addEntry,
