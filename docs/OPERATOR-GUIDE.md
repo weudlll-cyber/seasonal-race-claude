@@ -219,6 +219,9 @@ director opens a **registration** and the players add their own names from their
    how long registration stays open (1 min, 5 min, 15 min, 1 hour, 1 day, 3 days, 7 days, or
    *Until…* a date and time of your own — at least 1 minute, at most 30 days; under the field it
    says when it will close, "Closes Thu 22 Oct, 19:45 (in 1 day 2 h)", or why a time cannot be used)
+   — every date and time the game shows is written this English way, whatever language the
+   browser is set to (since 2026-10-22); only the date picker itself is drawn by the browser in its
+   own language —
    and, if you like, an event name. **The number of places is the track's own player limit**, the
    same number the Players tab allows; it is fixed when you open.
 2. Share the **join link**: **Copy link**, or the **QR code** — **Copy QR code** puts it on the

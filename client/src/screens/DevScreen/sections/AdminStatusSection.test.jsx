@@ -17,6 +17,7 @@ vi.mock('../../../services/adminStatusApi.js', () => ({ fetchAdminStatus: vi.fn(
 import { useAuth } from '../../../contexts/AuthContext.jsx';
 import { fetchAdminStatus } from '../../../services/adminStatusApi.js';
 import AdminStatusSection from './AdminStatusSection.jsx';
+import { DISPLAY_LOCALE } from '../../../modules/registration/timeLeft.js';
 
 const HEALTHY = {
   build: { commit: 'abc1234', branch: 'v1.2', dirty: false },
@@ -52,7 +53,9 @@ describe('the admin status box', () => {
     render(<AdminStatusSection />);
     await waitFor(() => expect(screen.getByTestId('admin-status-build')).toBeTruthy());
     expect(line('build')).toBe('abc1234 on v1.2');
-    expect(line('newest-backup')).toBe(new Date(HEALTHY.backup.newest).toLocaleString());
+    expect(line('newest-backup')).toBe(
+      new Date(HEALTHY.backup.newest).toLocaleString(DISPLAY_LOCALE)
+    );
     expect(line('status')).toBe('OK — disk, writable, backup');
     expect(line('newer-release')).toMatch(/^yes — v1\.3 is newer than this build \(v1\.2\)/);
     // read-only: nothing to press, nothing to type

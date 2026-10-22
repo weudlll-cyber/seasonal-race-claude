@@ -33,7 +33,10 @@ is.
   carries the event name of the brand profile and of the registration together (*Summer Fair –
   Round 1*; still editable under *Settings*), on the race screen, the ceremony card and the result
   screen, which now shows the race's own event name; and the registration's card says *Raced* and
-  when. *(branch `feat/registration-event-name`, not merged)*
+  when. Every date and time the game shows is written in English form ("Thu 22 Oct, 23:37"),
+  whatever language the browser is set to — the registration cards, the Dev Screen's race history
+  and status box, the track editor's draft prompt; only the browser's own date picker under
+  *Until…* keeps the browser's language. *(branch `feat/registration-event-name`, not merged)*
 - A country-neutral privacy-policy template on the Dev Screen (*Accounts and system*, *Legal pages*):
   an "Insert template" button under the privacy-policy field, like the legal notice's — it fills an
   empty field, asks before replacing text, and saves nothing by itself. The template is written from

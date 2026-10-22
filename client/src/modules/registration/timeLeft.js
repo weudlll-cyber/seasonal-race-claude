@@ -8,6 +8,12 @@
 //              own clock); this only renders the distance to it from this device's clock. Since
 //              follow-up 1 (2026-10-21) also how a chosen deadline reads ("Closes Wed 22 Oct, 19:45
 //              (in 1 day 2 h)") and what is wrong with one, for the director's date fields.
+//
+// ★ THE GAME'S ONE DISPLAY LOCALE (the owner's decision of 2026-10-22): every date and time the
+//   game shows is in English form, whatever the browser's locale. `DISPLAY_LOCALE` below is its one
+//   home; `formatDeadline` uses it, and every other date shown on screen passes it explicitly
+//   (RaceHistory.jsx, AdminStatusSection.jsx, TrackEditor.jsx). The native date picker behind
+//   "Until…" draws in the browser's own locale and cannot be told otherwise.
 // ============================================================
 
 const SECOND = 1000;
@@ -43,13 +49,19 @@ const MIN_WINDOW_MS = MINUTE;
 const MAX_WINDOW_MS = 30 * DAY;
 
 /**
- * An instant the way a person reads it, in the browser's locale: "Wed 22 Oct, 19:45" in English.
+ * The locale every date and time on screen is written in: British English, 24-hour clock —
+ * "Thu 22 Oct, 23:37". Never the browser's (see the header).
+ */
+export const DISPLAY_LOCALE = 'en-GB';
+
+/**
+ * An instant the way a person reads it: "Wed 22 Oct, 19:45" — in `DISPLAY_LOCALE`, whatever the
+ * browser's locale, and in this device's time zone.
  *
  * @param {number} ms
- * @param {string} [locale]  defaults to the browser's
  */
-export function formatDeadline(ms, locale) {
-  return new Intl.DateTimeFormat(locale, {
+export function formatDeadline(ms) {
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -71,8 +83,8 @@ export function localFromMs(ms) {
 }
 
 /** "Closes Wed 22 Oct, 19:45 (in 1 day 2 h)" — what a chosen deadline will do, said plainly. */
-export function closesSentence(ms, now, locale) {
-  return `Closes ${formatDeadline(ms, locale)} (in ${formatTimeLeft(ms - now)})`;
+export function closesSentence(ms, now) {
+  return `Closes ${formatDeadline(ms)} (in ${formatTimeLeft(ms - now)})`;
 }
 
 /**
