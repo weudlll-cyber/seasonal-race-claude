@@ -7,9 +7,9 @@
 //
 // ── WHY A SEED IS NOT ENOUGH, at source ─────────────────────────────────────────────────────────
 //
-// `SetupScreen.jsx:1026` fixes the plan seed into the race payload, and the race is a pure function
-// of what it is given. But `resolveRaceWorld` (called at `RaceScreen/index.jsx:626`) reads the
-// action stage (`raceWorldSetup.js:129`) and gathers the whole config world (`raceWorldSetup.js:144`)
+// `SetupScreen.jsx` → `handleStartRace` fixes the plan seed into the race payload, and the race is a pure function
+// of what it is given. But `resolveRaceWorld` (called at `RaceScreen/index.jsx`) reads the
+// action stage (`raceWorldSetup.js` → `resolveRaceWorld`) and gathers the whole config world (`raceWorldSetup.js` → `resolveRaceWorld`)
 // — both from THE HOST'S OWN STORAGE at the moment the race starts. So the same
 // seed on two machines is two races, and neither operator changed anything. This module carries
 // everything the seed does not.
@@ -27,11 +27,11 @@
 //                                is physics, because `stablePairBit` hashes it
 //   4. field size           :546 — implied exactly by the length of the name list, so it is not
 //                                 encoded twice
-//   5. `racePlanSeed`       raceWorldSetup.js:167
-//   6. `raceActionStage`    raceWorldSetup.js:129
-//   7. `targetLaps` / `targetDurationSec`  raceWorldSetup.js:191, :192
-//   8. `racePlanEnabled`    raceWorldSetup.js:194
-//   9. THE WORLD CONFIG     raceWorldSetup.js:144 — `buildWorldConfig()`, which reads the host's
+//   5. `racePlanSeed`       raceWorldSetup.js
+//   6. `raceActionStage`    raceWorldSetup.js
+//   7. `targetLaps` / `targetDurationSec`  raceWorldSetup.js, `targetDurationSec`
+//   8. `racePlanEnabled`    raceWorldSetup.js
+//   9. THE WORLD CONFIG     raceWorldSetup.js — `buildWorldConfig()`, which reads the host's
 //                                 localStorage through the SAME loaders the race path uses
 //
 // ★ TWO PAYLOAD FIELDS REACH THE PICTURE BUT NOT THE ENGINE, and they are deliberately NOT in the
@@ -178,7 +178,7 @@ export function encodeRaceIdentifier({
     s: racePlanSeed,
     a: raceActionStage,
     p: racePlanEnabled ? 1 : 0,
-    // Exactly one of these is meaningful per race mode, which is the shape `SetupScreen.jsx:1017-1018`
+    // Exactly one of these is meaningful per race mode, which is the shape `SetupScreen.jsx` → `handleStartRace`
     // already writes. The absent one is omitted rather than nulled, so it round-trips as absent.
     ...(targetLaps == null ? {} : { l: targetLaps }),
     ...(targetDurationSec == null ? {} : { d: targetDurationSec }),

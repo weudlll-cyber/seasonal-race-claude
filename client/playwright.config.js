@@ -54,7 +54,7 @@ export default defineConfig({
   // a separate question — most of the wall clock is a handful of files waiting for real races to
   // finish (`race-history` 14.5 min, `seed-field-typing` 10.5 min, `d9-smoke` 7.1 min,
   // `race-history-real-route` 6.7 min), and those races run at the track's full length when
-  // `OPEN_TRACK_MIN_SECONDS` (`durationModel.js:56`) is 10. Shortening them is the next piece of
+  // `OPEN_TRACK_MIN_SECONDS` (`durationModel.js`) is 10. Shortening them is the next piece of
   // work and is written up in the report; it is not done here, because a suite that reports
   // fourteen failures it does not have is the more urgent defect.
   //

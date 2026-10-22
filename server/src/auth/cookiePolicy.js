@@ -8,8 +8,8 @@
 //
 // ── WHY IT MOVED OUT OF session.js, WHICH IS THE ONLY CHANGE HERE ───────────────────────────────
 //
-// The rule was `session.js:23`, and it still behaves identically — this file is its new home and
-// `session.js` re-exports it, so every existing caller (`authRouter.js:19`, `session.test.js:17`)
+// The rule was in `session.js`, and it still behaves identically — this file is its new home and
+// `session.js` re-exports it, so every existing caller (`authRouter.js`, `session.test.js`)
 // is untouched.
 //
 // It had to move because `startupReadiness.js` now needs it, and `session.js` imports

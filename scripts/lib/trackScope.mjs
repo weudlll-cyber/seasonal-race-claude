@@ -8,7 +8,7 @@
 //
 // ── WHY IT EXISTS ─────────────────────────────────────────────────────────────────────────────
 //
-// `loadTracks({only})` (`raceDriver.mjs:285`) matches ONE exact id and returns `[]` for a name it
+// `loadTracks({only})` (`raceDriver.mjs` → `loadTracks`) matches ONE exact id and returns `[]` for a name it
 // does not know. Callers then filtered with `.includes(g.id)` and never looked at what came back, so
 // a scope that matched nothing produced a full set of table headers, zero data rows, and EXIT 0.
 // Reproduced on 2026-09-25 with `--tracks=all` on `line-visible-truth.mjs` and `pan-lag-account.mjs`

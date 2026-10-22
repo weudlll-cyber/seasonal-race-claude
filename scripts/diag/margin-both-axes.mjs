@@ -89,7 +89,7 @@ const FROM_U = Number(arg("from", "0.10"));
 // WHAT IT DOES: overrides the swept racer type's `bodyFillY` in the IN-MEMORY registry, for the
 // duration of this process only, so a shape can be measured without editing a shipped value. The
 // registry object comes from the driver's own `RT`, so this is the same instance `buildRace` reads
-// at `raceDriver.mjs:373`; nothing is persisted and no file is written.
+// at `raceDriver.mjs` → `buildRace`; nothing is persisted and no file is written.
 //
 // ★ IT VARIES THE LONG AXIS ONLY. `bodyFillX` is left alone, so `bodyFillNarrow = min(X, Y)` does
 //   not move and the arm isolates the along-track axis — which SPRITE-PREMISE-1 established is the

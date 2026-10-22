@@ -16,7 +16,7 @@
 #
 # ── ★★ WHY IT IS ITS OWN WORKFLOW AND NOT A JOB IN ci.yml ──────────────────────────────────────
 # THE ABSENCE WAS A DECISION, NOT AN OVERSIGHT, and this file keeps that decision intact.
-# `audit-schedule.yml:18` states it: a scheduled or slow job must not be able to turn master red for
+# `audit-schedule.yml` → its header comment states it: a scheduled or slow job must not be able to turn master red for
 # something nobody triaged, "the same reasoning that … keeps the ten-minute e2e suite out of the
 # per-push path". That sentence is still true and this workflow does not contradict it — it is the
 # precedent this file is modelled on, down to the two separations:
@@ -59,7 +59,7 @@
 # (PROD-ARM-1): one process, the server serving the built client and the API on one origin, which is
 # what a user actually gets. The dev arm is not run here — it tests a different artefact.
 #
-# ★ NO RETRIES, AND NONE ARE ADDED. `playwright.prod.config.js:78` already sets `retries: 0`, and
+# ★ NO RETRIES, AND NONE ARE ADDED. `playwright.prod.config.js` already sets `retries: 0`, and
 # this workflow does not override it. A retry setting turns a flaky test into a slow green one and
 # hides exactly what a gate is for.
 #

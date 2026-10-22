@@ -5,7 +5,7 @@
 // ALONG-RESIDUAL-1's P1 — attack the sprite — rests on that sentence.
 //
 // THE QUANTITY THAT COLUMN HOLDS, read out of the instrument rather than inferred:
-// `leader-lag-truth.mjs:137` computes
+// `leader-lag-truth.mjs` → the line "const halfLen = ((leader.drawnBodyLengthPx ?? 0) / 2) * …" computes
 //
 //     const halfLen = ((leader.drawnBodyLengthPx ?? 0) / 2) * effX;      effX = proj.effX(cd.zoom)
 //

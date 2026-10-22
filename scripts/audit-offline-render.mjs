@@ -35,7 +35,7 @@
 // ── WHERE IT RUNS, AND WHERE IT DELIBERATELY DOES NOT ───────────────────────────────────────────
 //
 // It is named `audit-` rather than `check-` ON PURPOSE, and the name is the whole decision.
-// `scripts/lib/routing.mjs:343` discovers every top-level `check-*.mjs` as a guard that `verify`
+// `scripts/lib/routing.mjs` → `guardScripts` discovers every top-level `check-*.mjs` as a guard that `verify`
 // must route. This one MUST NOT be routed, for the reason `audit-bundle-address.mjs` states beside
 // it: it judges `client/dist`, an artefact `verify` does not build. Routing it would mean `verify`
 // builds the client — and RUNTIME-API-URL-1 put exactly that question on the owner's list (item 7)

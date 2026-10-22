@@ -8,7 +8,7 @@
 //              button that runs it again.
 //
 // ── ★ WHY THIS SCREEN AND NOT A NEW ONE (RACE-HISTORY-4) ────────────────────────────────────────
-// The history already lived here, and this section is `tier: 'operator'` (devScreenChapters.js:212) behind
+// The history already lived here, and this section is `tier: 'operator'` (`devScreenChapters.js` → `CHAPTERS`) behind
 // a `/dev` route with no `requiredRole` — so every race director already reaches it, which is the
 // owner's requirement. There was no admin-only problem to solve and therefore no reason to build a
 // second history somewhere else. It is EXTENDED in place, and the tree has exactly one race list.

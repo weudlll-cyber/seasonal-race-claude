@@ -348,13 +348,13 @@ for (const geo of loadGeos()) {
     cam = cd.update(st.racers, ts, {
       raceElapsed: ts, finishedCount: st.finishedCount,
       winner: st.racers.find((r) => r.finishRank === 1) ?? null, finishT: st.finishT,
-      // OUTCOME-WINDOW-1: the PRODUCT's own expression (`RaceScreen/index.jsx:1313`), not a literal.
+      // OUTCOME-WINDOW-1: the PRODUCT's own expression (`RaceScreen/index.jsx` → `loop`), not a literal.
       // `false` nails the outcome window shut, and the comeback shot's gate at
-      // `CameraDirector.js:883` reads it — so a literal here measures a camera the product never
+      // `CameraDirector.js` → `_comebackPrecedenceOffer` reads it — so a literal here measures a camera the product never
       // runs. ★ Measured on this fixture: it moves nothing, because no COMEBACK_ZOOM fires here at
       // all (the plan IS delivered and the roles ARE cast; no racer qualifies as a candidate). Wired
       // anyway — "it happens not to matter today" is not a reason to keep a value nobody chose.
-      // ★ `render-fingerprint.mjs:584` carries the SAME literal and is deliberately NOT touched:
+      // ★ `render-fingerprint.mjs` → `trackHash` carries the SAME literal and is deliberately NOT touched:
       // docs/fingerprints.json records that fixing it moves the minted render value, which is a
       // second decision and the owner's.
       isOutcomePhase:

@@ -45,7 +45,7 @@ try {
 } catch (err) {
   // Deliberate: a refusal to start is what stderr is for. No eslint-disable is needed here —
   // `no-console` is configured as `["warn", { allow: ["warn", "error"] }]`
-  // (`client/eslint.config.js:56`), so `console.error` is already allowed. The directive that
+  // (`client/eslint.config.js`, its `no-console` rule), so `console.error` is already allowed. The directive that
   // used to sit here was dead and the linter said so; removed 2026-09-27, DELIVERY-CLEAN-1 §10.
   console.error(`RaceArena cannot start: ${err.message}`);
   process.exit(1);
@@ -80,7 +80,7 @@ const server = listenOn(
     // precisely because it reports what this install CANNOT do. WHAT WAITS ON THIS LINE IS A PERSON,
     // not a process: nothing in the tree parses it (Playwright waits on a URL —
     // `webServer[].url` in client/playwright.config.js — and neither server/Dockerfile nor docker-compose.yml declares
-    // a HEALTHCHECK), while `.claude/skills/dev-start/SKILL.md:33` names it as the expected log line
+    // a HEALTHCHECK), while `.claude/skills/dev-start/SKILL.md` → § "on (VERIFY-RULES.md R10). The list is comma-separated and corsOptions is built ONCE at module" names it as the expected log line
     // and the line after it names the warning that must NOT appear beside it. That reading only works
     // while the go-ahead and the warnings are on different streams.
     // eslint-disable-next-line no-console -- deliberate: the startup banner is normal output, above

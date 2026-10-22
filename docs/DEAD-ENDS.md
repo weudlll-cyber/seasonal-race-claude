@@ -529,9 +529,9 @@ progress 0.9502, by the same mechanism.** The one-seed sample was hiding it; the
 list already said it would.
 
 **Why it was not repaired.** The mechanism is that `_scheduleClose`'s line floor
-(`_lineCeiling`, `CameraDirectorCeilings.js:366`, called from `_scheduleClose`,
-`CameraDirectorRunIn.js:526`) is armed but measured from the anchor the framing rule *intends*
-(`_anchorScreen`, `CameraDirectorCeilings.js:282`) while the opening glide is still running at the deadline — so the floor
+(`_lineCeiling`, `CameraDirectorCeilings.js`, called from `_scheduleClose`,
+`CameraDirectorRunIn.js` → `_scheduleClose`) is armed but measured from the anchor the framing rule *intends*
+(`_anchorScreen`, `CameraDirectorCeilings.js`) while the opening glide is still running at the deadline — so the floor
 reports satisfied while the band is off canvas. **Every available repair changes races that are not
 failing**: measuring from the observed anchor re-opens ENDGAME-REPAIR-1's singularity (undefined on
 63–84% of frames on six tracks), and un-retiring the `line` ceiling during the schedule breaks "the
@@ -625,7 +625,7 @@ fingerprints are unmoved at the default throughout, so **nothing was minted**.
 **Do not re-propose "hold the cast less tightly to its drawn place". The range is now measured end
 to end. Lesson 178 holds at every point in it, including one only 15% off the shipped pin.**
 
-**WHAT WAS MEASURED.** `racePlanner.js:1437` blends `error = strictness·rankError +
+**WHAT WAS MEASURED.** `racePlanner.js` → `update` blends `error = strictness·rankError +
 (1−strictness)·bandError`. For CAST racers the strictness was the literal **1.0** — steer to the
 exact drawn place, band weighted zero; the pack runs at 0.5. Both ENDS of that range were already
 known and **nothing in between had ever been measured for the cast**:

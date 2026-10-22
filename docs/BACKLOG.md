@@ -202,10 +202,10 @@ not an address which is right (§9.1).
       They read: *"up to 3 layered effects per track"* found nowhere in the code, and *"no mobile
       layout by design"* contradicted by nine CSS files carrying `max-width` queries.
       - **The 3-effect cap EXISTS.** It is enforced in the authoring control
-        (`EffectConfig.jsx:11,34,124`, `TrackEditorToolbar.jsx:128`) and again on save
-        (`trackEditorSave.js:73`). I searched `modules/track-effects/`, `TrackEditor.jsx` and
+        (`EffectConfig.jsx` → `EffectConfig`, `handleAdd`, `TrackEditorToolbar.jsx` → `TrackEditorToolbar`) and again on save
+        (`trackEditorSave.js` → `buildTrackFromEditorState`). I searched `modules/track-effects/`, `TrackEditor.jsx` and
         `defaults.js` and **never opened `components/EffectConfig/`** — while
-        `docs/TRACK_EDITOR.md:310` names that very component. `ARCHITECTURE.md:173` was right all
+        `docs/TRACK_EDITOR.md` → § "Editor UI Scope — Version 1" names that very component. `ARCHITECTURE.md` → § "Key Design Decisions" was right all
         along and now records where the limit lives.
       - **The nine was the wrong measurement.** It counted the CSS *property* `max-width`, which
         limits an element's width and says nothing about screen size. **Three** files carry an
@@ -244,16 +244,16 @@ line numbers are the address; read the value there.
 
 | candidate key | where | what it plausibly governs |
 | --- | --- | --- |
-| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1213-1216` | how hard a gap is closed by re-drawing |
-| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:1188-1190` | how many attackers rise, and how far |
-| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:1037-1039` | how much and how often tempo is re-drawn |
-| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:1139-1140` | how strongly the plan shapes the field |
-| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:1082-1089`, `:1329` | the lead-rotation mechanism's reach and its realism clamp |
-| `chaosSteerGain` | `defaults.js:1067` | the steering noise added to the field |
+| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `storage/defaults.js` | how hard a gap is closed by re-drawing |
+| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `storage/defaults.js` | how many attackers rise, and how far |
+| `reRollVariationPercent`, `reRollIntervalDivisor` | `storage/defaults.js` | how much and how often tempo is re-drawn |
+| `choreoIntensity`, `choreoPackBandStrictness` | `storage/defaults.js` | how strongly the plan shapes the field |
+| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `storage/defaults.js`, `pulkFrontPool` | the lead-rotation mechanism's reach and its realism clamp |
+| `chaosSteerGain` | `storage/defaults.js` | the steering noise added to the field |
 
 ### The two surfaces, with addresses
 
-- **HOST-FACING:** `client/src/screens/SetupScreen/SetupScreen.jsx:1074` renders the **Race Settings**
+- **HOST-FACING:** `client/src/screens/SetupScreen/SetupScreen.jsx` → `SetupScreen` renders the **Race Settings**
   panel, which delegates to `client/src/screens/SetupScreen/RaceSettings.jsx`. **That file is 86 lines
   and carries THREE controls today — Race Duration, Number of Winners, and an optional Event Name.**
   This is the surface the requirement names, and it is nearly empty, which is the useful part of
@@ -261,7 +261,7 @@ line numbers are the address; read the value there.
   decision of that day** — the podium is three places everywhere — so the panel's own settings are
   Race Duration and the Event Name.
   **CORRECTED 2026-08-23, re-counted at source.** It said *"exactly ONE control today — Race
-  Duration, at `RaceSettings.jsx:32`"*. The line number was right and the count was wrong: the same
+  Duration, at `RaceSettings.jsx` → `RaceSettings`"*. The line number was right and the count was wrong: the same
   file renders a winners stepper and an event-name field below it. **The correction is kept visible
   because of what it nearly cost** — the sentence was the evidence for "the host surface is nearly
   empty", and a wrong count is a bad reason for a right conclusion. The conclusion survives the
@@ -457,7 +457,7 @@ source before it was moved rather than taken from a report:**
   pretending to be a safety net. Verified 2026-09-05: no `check-guard-imports` exists anywhere in
   `scripts/` or `package.json`. See [INVISIBLE-FOUR-1](../reports/evolution/INVISIBLE-FOUR-1.md).
 - **`lint` and `format:check` are not in `verify`** — **DONE for the client, and the server needs
-  nothing.** `scripts/lib/routing.mjs:226` and `:241` declare `client-lint` and `client-format-check`,
+  nothing.** `scripts/lib/routing.mjs` → `SUITE_GUARDS` declare `client-lint` and `client-format-check`,
   both scoped to `client/` outside `client/e2e/`, and both were selected and passed in this chain's
   verify runs. ★ **The server is not a gap:** `server/package.json` declares exactly four scripts —
   `dev`, `restart`, `start`, `test` — so it has no `lint` or `format:check` to run.
@@ -722,9 +722,9 @@ here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns 
 **verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
 here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
 was still denying it: race outcomes ARE persisted, in a real database
-(`server/src/races/raceStore.js:262`, `createRaceStore`, served by `server/src/routes/races.js`); branding profiles
+(`server/src/races/raceStore.js`, `createRaceStore`, served by `server/src/routes/races.js`); branding profiles
 ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
-(`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
+(`server/src/routes/races.js` → its header comment). Each of those rows now claims only the half that remains.
 **What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
 the absence of a server that was never started, and each leaves by being built rather than by being
 checked.
@@ -765,7 +765,7 @@ are in PART TWO with what closed them; these are the ones still standing.
       put this online by itself.
       ★★ **AND THE RISK IS NOT WHAT THIS ROW SAID.** It read *"without HTTPS sign-in does not merely
       become insecure, it STOPS WORKING."* That is true only if the cookie is left `Secure`, which is
-      the production default — `resolveCookieSecure` (`server/src/auth/session.js:23-29`) returns
+      the production default — `resolveCookieSecure` (`server/src/auth/session.js`) returns
       `isProduction` when nothing is set. **Set `RA_COOKIE_SECURE=false` and it is honoured
       explicitly, and sign-in works over plain HTTP.** So the true reason to want HTTPS is not that
       the app breaks: it is that the sign-in POST carries the password and the cookie carries the
@@ -964,7 +964,7 @@ verified against `git log` / `git tag`.
 
 **🔜 / ⏳ Open**
 
-- **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:148/155) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :459). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
+- **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (`heroCurveGenerator.js`) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at `checkPositiveBudget`). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:168`) still produces one `realizedIntensity` for the whole cast at `:535`. Waiting on the eye-test the entry itself asks for before building.
 
@@ -1840,6 +1840,34 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **CITE-BY-NAME-1 · living documents and comments cite by name — CLOSED 2026-10-22, merged.**
+      The owner's decision of 2026-10-22: living documents and code comments cite a source location
+      by its name, not by a line number; dated records keep theirs. The rule is
+      [VERIFY-RULES.md](VERIFY-RULES.md) R19, rewritten. Converted on `chore/cite-by-name`: about 620
+      `file:line` citations and their bare `:NN` follow-ons, in 89 files. Each one is named from the
+      target file as it stood when the citing line was last written (`git blame`), and the name was
+      checked to exist at HEAD; where the lines had drifted since, the citation now names what it
+      pointed at then. **Already pointing at the wrong place, corrected by name:**
+      `RA_COOKIE_SECURE` in OPEN.md (the rule moved to `cookiePolicy.js` → `resolveCookieSecure` on
+      2026-09-27); four `releaseCheck.js` ranges in OPERATOR-GUIDE.md that lay past the end of the
+      file; `clampIntensityToBudget` in PART ONE's B2 row; the browser's config-key reads, now in
+      `RaceScreen/raceWorldSetup.js`. `check-fallback-agreement` Rule F lost its line-range check
+      (CITATION-PAIRS-1): a linked citation still resolves its file by the href and must name a
+      symbol that file contains. **Left with line numbers:** the dated records (reports/,
+      docs/archive/, MORNING, AUDIT, LESSONS, TAGS, this PART TWO, and every dated verdict,
+      measurement or correction record in PART ONE, OPEN.md and the other documents); and, because a
+      comment edit there would make a measured stamp stale, every file inside the closure of the
+      tracking-lag, straggler-truth and ENGINE_INPUT_MODULES stamps that carries one:
+      `client/src/modules/camera/` (`CameraDirector.js`, `comebackDetector.js` and five of their
+      tests), `racePlanner.js`, `raceParams.js`, `raceConfigWorld.js`, `storage/defaults.js`,
+      `scripts/lib/cameraPlanDelivery.mjs`, `frameBox.mjs` and `raceDriver.mjs`. They are converted
+      when those stamps are next re-taken. **Noticed and not changed:** the stuck-mode constants
+      FORCE-MAP.md lists (`STUCK_P_THRESH` and two more) exist nowhere in the tree; the `mulberry32`
+      stream CONCEPT-COHESION.md places in `raceGovernor.js` is not there; Rule F does not walk `.mjs`
+      files or `server/utils/` and `shared/`, so 27 symbol citations into them are reported
+      unresolved; and its href test passes on a basename fallback, because its fixture documents sit
+      outside the repository.
 
 - [x] **fix/test-bcrypt-cost · the server tests hash at bcrypt's minimum — CLOSED 2026-10-22,
       merged.** The cause of the auth files' repeated setup timeouts under load, measured on

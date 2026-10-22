@@ -45,12 +45,12 @@ import s from '../DevScreen.module.css';
 // ── GAP-BRAKE-1: the owner's unit, and the one place that converts it ─────────────────────────
 //
 // He judges a lead in CANVAS WIDTHS (his photographed breakaway was 0.698 corrected). The engine
-// cannot use that unit: a canvas width is `canvasH / (camZoom * axisY)` (camera/zoomUnit.js:119),
+// cannot use that unit: a canvas width is `canvasH / (camZoom * axisY)` (`camera/zoomUnit.js` → `visibleWorldPx`),
 // so it follows the LIVE camera zoom, which is not deterministic from the race seed and must
 // never reach the physics. The stored key is therefore world px and the conversion lives HERE.
 //
 // ★ THE YARDSTICK IS THE LEADER SHOT. `visibleWorldPx = corridors * referenceWidthPx` by
-// construction (zoomUnit.js:44, where the world size cancels), so a canvas width is only a fixed
+// construction (`zoomUnit.js` → its header comment, where the world size cancels), so a canvas width is only a fixed
 // distance once a shot is named. The one to name is LEADER_ZOOM, which defaults.js calls "the
 // reference shot, the owner's own eye" — LEADER_ZOOM.visibleCorridors x referenceCorridorPx world
 // px (0.75 x 300 = 225 when this was written; the LEADER default moved on 2026-10-01, which is
@@ -1599,7 +1599,7 @@ function DynamicsTuningSection({ part }) {
                 </label>
                 {/* ★ THE UNIT HE JUDGES IN, AND WHY THE CONVERSION IS HERE AND NOT IN THE ENGINE.
                     The stored key is WORLD PX. A canvas width is canvasH / (camZoom * axisY)
-                    (camera/zoomUnit.js:119) — it depends on the LIVE camera zoom, which is not
+                    (camera/zoomUnit.js → visibleWorldPx) — it depends on the LIVE camera zoom, which is not
                     deterministic from the race seed and must never reach the physics. So the engine
                     compares world px and this control does the conversion, against the LEADER shot
                     (GAP_BRAKE_REFERENCE_PX: LEADER_ZOOM.visibleCorridors x referenceCorridorPx). The world-px value

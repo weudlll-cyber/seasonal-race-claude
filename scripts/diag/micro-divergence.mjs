@@ -191,11 +191,11 @@ function planConfig() {
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
     // ★★ BLIND-SITE-1 (2026-09-15) — the same eleven inputs this file omitted against
-    // raceCore.js:261-360: COMBO15 fair-arrival (SHIPPED ON, defaults.js:1013-1017) and the gap
+    // `raceCore.js` → `createRaceFromIdentity`: COMBO15 fair-arrival (SHIPPED ON, `storage/defaults.js` → `DEFAULT_CAMERA_CONFIG`) and the gap
     // brake (four keys + its rate window + `pathLengthPx`, inert while the default is OFF).
     // ★ THIS FILE'S OWN CLAIM IS UNAFFECTED. Its checkpoint diff compares two arms that BOTH read
     // this one builder, so a key missing from it cancelled on both sides and the documented
-    // "checkpoint diff of exactly zero" (docs/SIM.md:93) held for a reason that was never the
+    // "checkpoint diff of exactly zero" (`docs/SIM.md` → § "Browser determinism (Quick-Test seed)") held for a reason that was never the
     // reason given. It holds now for the right one: both arms run the shipped world.
     // Values already at this site — `DYN` imported at :45, `pathLengthPx` resolved at :101.
     chaosSteer: DYN.chaosSteer,

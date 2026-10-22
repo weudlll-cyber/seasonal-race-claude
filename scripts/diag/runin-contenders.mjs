@@ -161,7 +161,7 @@ function measure(geo, seed) {
           comebackIdx: cd.comebackLockedRacerIndex ?? null,
           // WHERE EACH RACER SAT IN FRAME, as a fraction of the canvas. The transform is the
           // renderer's own for a CLOSED track: screen = world * (zoom * bs) + offset
-          // (renderRaceFrame.js:129/132/153). 0..1 is on canvas; outside that is off it.
+          // (`renderRaceFrame.js` → `renderRaceFrame`/132/153). 0..1 is on canvas; outside that is off it.
           pos: st.racers.map((r) => [
             r.index,
             +(((r.x ?? 0) * (cd.zoom ?? 0) * BSX + (cd.offsetX ?? 0)) / CW).toFixed(4),

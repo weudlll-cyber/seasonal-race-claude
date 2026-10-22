@@ -28,7 +28,7 @@
 //
 // ── ★ THE DECLARATION, AND WHY IT IS DERIVED ────────────────────────────────────────────────────
 // `reach: ["client/src/modules/raceCore.js"]` is not a list of files — it is an ENTRY POINT, and
-// `scripts/lib/routing.mjs:383` expands it through `engine-reach.mjs`'s import closure
+// `scripts/lib/routing.mjs` → `resolveGuard` expands it through `engine-reach.mjs`'s import closure
 // (`closureOf`). So the declared set IS whatever can reach the race engine today, computed on every
 // run, and a new module that the engine starts importing joins it without anybody remembering.
 //

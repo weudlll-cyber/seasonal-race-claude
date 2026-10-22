@@ -40,7 +40,7 @@ const HALF_WIDTH = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN / 2;
 
 // ── The five physics draw sites, mirrored from RaceScreen/index.jsx, now taking an EXPLICIT rng ──
 // The sites have since moved out of index.jsx into modules/raceCore.js (re-pointed 2026-10-18):
-// raceCore.js:158 (row shuffle), :192 (spreadFactor), :194 (rollJitter), :646 (re-roll target),
+// `raceCore.js` → `createRaceFromIdentity` (row shuffle) (spreadFactor) (rollJitter), `stepRacePhysics` (re-roll target),
 // :681 (jOff). Threading `rng` here is the same shape the real code now uses.
 function initRaceDraws(
   rng,

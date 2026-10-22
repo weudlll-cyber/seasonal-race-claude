@@ -26,7 +26,7 @@
 // route test here uses. The magic-byte buffer idea is `brands.test.js`'s.
 //
 // ★ A NONEXISTENT ENTITY ID IS USED ON PURPOSE. In all three routes the upload middleware runs
-// BEFORE the entity lookup (`brands.js:348-351`, `racers.js:345-348`, `tracks.js:717-720`), so a
+// BEFORE the entity lookup (`brands.js` → `POST /:id/logo`, `racers.js` → `POST /:id/sprite`, `tracks.js` → `POST /:id/background`), so a
 // rejected upload is answered by the middleware and never reaches the 404. That lets the error
 // paths be driven without creating and cleaning up three entities — and it also pins that
 // ordering: if a route were reordered to check existence first, these tests would see 404 and fail.

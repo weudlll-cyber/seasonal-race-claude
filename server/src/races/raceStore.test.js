@@ -374,7 +374,7 @@ describe('★ the identifier mapping is complete', () => {
    */
   const DELIBERATELY_ABSENT = {
     fieldSize:
-      'implied exactly by the roster length and never encoded twice — raceIdentifier.js:24-26 says ' +
+      'implied exactly by the roster length and never encoded twice — raceIdentifier.js → its header comment says ' +
       'the same. `hydrate` derives it from the stored names.',
   };
 
@@ -460,7 +460,7 @@ describe('★ the identifier mapping is complete', () => {
   });
 
   it('the two picture-only payload fields are absent BY DESIGN and are not identifier fields at all', async () => {
-    // `raceIdentifier.js:34-38` names worldWidth/worldHeight and trackSurfaceClasses as reaching the
+    // `raceIdentifier.js` → its header comment names worldWidth/worldHeight and trackSurfaceClasses as reaching the
     // CameraDirector and the surface emitter but no engine file — they decide what a race looks
     // like, not who wins. They are not in the identifier, so they are not in this store either, and
     // this asserts the decoder still yields neither rather than trusting the comment.

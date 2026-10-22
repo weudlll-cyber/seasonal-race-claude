@@ -53,8 +53,9 @@ const MEASURED = SAMPLE_TRACKS.map(({ id }) => {
     measuredWidth: shape.getActualTrackWidth(),
     // THE WIDTH THE GAME ACTUALLY USES. Every shipped call site prefers the stored value and
     // falls back to the spline estimate: SEVENTEEN of them across sixteen files, counted with
-    // `git grep -c "width ?? .*getActualTrackWidth()"` — RaceScreen/index.jsx:576,
-    // sim-fairness.mjs:4307, scripts/lib/raceDriver.mjs:122 and :148, and thirteen more.
+    // `git grep -c "width ?? .*getActualTrackWidth()"` — `RaceScreen/index.jsx` → `RaceScreen`,
+    // `sim-fairness.mjs` → its `if (isMain)` block, `scripts/lib/raceDriver.mjs` → `trackWidthOf` and
+    // `buildRace`, and thirteen more.
     // The old table here computed auto-scale from `getActualTrackWidth()` UNCONDITIONALLY, so
     // from 2026-05-06 until tonight it printed factors derived from a width the game never reads.
     // That is the most useful thing this file turned up when it was armed, and it is why the
@@ -87,7 +88,8 @@ describe('the committed track geometries load and measure', () => {
 
   // ── THE ASSUMPTION EVERY CALL SITE IS WRITTEN AROUND ─────────────────────────────────────────
   //
-  // `RaceScreen/index.jsx:573` and `sim-fairness.mjs:4306` both carry the same comment: read the
+  // `RaceScreen/index.jsx` → `RaceScreen` and `sim-fairness.mjs` → its `if (isMain)` block both carry
+  // the same comment: read the
   // stored width first, because `getActualTrackWidth()` measures the median spline cross-section
   // and OVERESTIMATES. Nothing tested that direction against a real track.
   //
@@ -104,7 +106,7 @@ describe('the committed track geometries load and measure', () => {
       const ratio = t.measuredWidth / t.declaredWidth;
       expect(
         ratio,
-        `${t.id} (${t.isOpen ? 'open' : 'closed'}): measured ${t.measuredWidth} < declared ${t.declaredWidth} — the overestimate assumption at RaceScreen/index.jsx:573 has reversed`
+        `${t.id} (${t.isOpen ? 'open' : 'closed'}): measured ${t.measuredWidth} < declared ${t.declaredWidth} — the overestimate assumption at RaceScreen/index.jsx → RaceScreen has reversed`
       ).toBeGreaterThanOrEqual(1);
     }
   });

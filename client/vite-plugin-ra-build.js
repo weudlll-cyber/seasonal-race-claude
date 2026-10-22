@@ -340,8 +340,8 @@ export function raBuildInfo() {
       // WHY THIS MATTERS RATHER THAN BEING A TIDY-UP: `0xC0000142` (STATUS_DLL_INIT_FAILED) has hit
       // this machine twice — 2026-08-05 and 2026-09-19 — leaving a long-lived dev server unable to
       // spawn ANY child, so the badge could name no commit and an eye test ran on a build whose
-      // identity it could not state (`reports/night/BREAKAWAY-GROWTH-1.md:457`,
-      // `docs/LESSONS.md:3641`). The leading suspect is a session-level resource exhausted by
+      // identity it could not state (`reports/night/BREAKAWAY-GROWTH-1.md` → § "What they were serving when this was written",
+      // `docs/LESSONS.md` → § "Lesson 204 — The Mute-Instrument Law: An Instrument That Can Detect Its Own Failure Must Be Able To Report It, Or The Diagnosis Costs A Day"). The leading suspect is a session-level resource exhausted by
       // sustained process creation. This removes the sustained part; it does not claim to fix the
       // Windows condition.
       //

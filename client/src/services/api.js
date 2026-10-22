@@ -25,7 +25,7 @@
 //      deployment answer and it wins, because it is the only one that can differ per install
 //      without a rebuild.
 //   2. BUILD-TIME — `import.meta.env.VITE_API_URL`, KEPT, and kept deliberately: the e2e harness
-//      (`playwright.config.js:82`) and `scripts/viewer-invariants.mjs:581` both start a client
+//      (`playwright.config.js`, its `VITE_API_URL` env) and `scripts/viewer-invariants.mjs` → `runBuild` both start a client
 //      pointed at a throwaway API on a random port, and they do it through this variable. Those are
 //      HARNESSES, not packages. ★ It is NOT set when the shipped client is built, and
 //      `scripts/audit-bundle-address.mjs` is what stops it being set by accident.
