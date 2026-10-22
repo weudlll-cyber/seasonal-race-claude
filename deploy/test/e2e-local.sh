@@ -140,7 +140,9 @@ echo "── a slow start: the app healthy only after the compose window, Caddy 
 # Both containers gone, as on a first start; then a version whose server listens only after 70 s.
 # Compose marks it unhealthy and gives up on Caddy; racearena must start Caddy once the app is healthy.
 docker rm -f racearena-app-1 racearena-caddy-1 >/dev/null
-git -C "$RA_HOME" checkout --quiet --detach "$REF_D"
+# A SHA, not the name: in the install's own clone a throwaway branch exists only as origin/<name>.
+D_SHA="$(git -C "$CLONE" rev-parse "$REF_D")"
+check "the checkout is on D" git -C "$RA_HOME" checkout --quiet --detach "$D_SHA"
 "${RACEARENA[@]}" start >"$E2E/start-d.log" 2>&1
 START_D_RC=$?
 tail -n 4 "$E2E/start-d.log" | tee -a "$RESULTS"
