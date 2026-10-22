@@ -267,6 +267,15 @@ starting Caddy, which the first 'up' gave up on", and https answered. No contain
 left. **shellcheck** v0.10.0 (digest `sha256:2097951f…221fb`): `e2e-local.sh`, `hardening-check.sh`,
 `install.sh`, `racearena` clean.
 
+## 2026-10-23 — the test again after REGISTRATION-1 follow-up 2 was merged in (master `42d152ca`)
+
+Master `42d152ca` (the event name from a registration, the Raced marker with its new column in
+`registrations.sqlite`, one English date form) merged in as `d8cefeb9`. Run the same way as before (A =
+`d8cefeb9`; B = A plus `e2e-test-1`; C = A with a server that exits at start; D = B with a server that
+waits 70 s; B, C and D throwaway local branches, deleted after the run): **79 of 79 on the first run**;
+no container of the stack was left. Nothing under `deploy/` changed in the merge, so the shellcheck
+result above stands.
+
 ## What could NOT be tested here — on the owner's VPS, at the first install
 
 - the system detection on the real machine (the dry run checked the parser on Debian 12);
