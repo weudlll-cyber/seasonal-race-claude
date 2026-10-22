@@ -65,7 +65,7 @@ import {
 import { useServerTracksControl } from '../../modules/storage/useServerTracks.js';
 import TrackEditorToolbar from './TrackEditorToolbar.jsx';
 import TrackEditorSaveBar from './TrackEditorSaveBar.jsx';
-import { DISPLAY_LOCALE } from '../../modules/registration/timeLeft.js';
+import { formatDateTime } from '../../modules/registration/timeLeft.js';
 import s from './TrackEditor.module.css';
 
 const CW = 1280;
@@ -395,8 +395,8 @@ export default function TrackEditor() {
       clearDraft(undefined, serverId);
       return;
     }
-    // English form whatever the browser's locale (DISPLAY_LOCALE, the owner's decision of 2026-10-22).
-    const when = new Date(d.savedAt).toLocaleString(DISPLAY_LOCALE);
+    // The game's one date form, English whatever the browser's locale (formatDateTime).
+    const when = formatDateTime(d.savedAt);
     const name = d.trackName ? ` “${d.trackName}”` : '';
     const ok = window.confirm(
       `An unsaved track${name} from ${when} was found (${draftPointCount(d)} points).\n\n` +

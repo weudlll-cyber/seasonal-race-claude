@@ -49,7 +49,7 @@ import { SYNC } from '../../../modules/raceHistory.js';
 import { armRepeat } from '../../../modules/repeatRace.js';
 import { fetchRacesPage, verifyRace } from '../../../services/racesApi.js';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
-import { DISPLAY_LOCALE } from '../../../modules/registration/timeLeft.js';
+import { formatDateTime } from '../../../modules/registration/timeLeft.js';
 import s from '../DevScreen.module.css';
 
 /** How many of the team's races one page holds. Paginated from the first version, by design. */
@@ -497,8 +497,8 @@ function RaceHistory() {
                   const label = STATE_LABEL[row.state] ?? STATE_LABEL.local;
                   return (
                     <tr key={row.rowId} data-testid={`history-row-${row.state}`}>
-                      {/* English form whatever the browser's locale (DISPLAY_LOCALE, 2026-10-22). */}
-                      <td>{new Date(row.date).toLocaleString(DISPLAY_LOCALE)}</td>
+                      {/* The game's one date form, English whatever the browser's locale (formatDateTime). */}
+                      <td>{formatDateTime(row.date)}</td>
                       <td>
                         {track ? `${track.icon} ${track.name}` : (row.trackId ?? row.geometryId)}
                       </td>

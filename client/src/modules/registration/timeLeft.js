@@ -6,14 +6,15 @@
 //              "14 min 05 s", "Closed". One helper for the public join page and the director's view,
 //              so both count down the same way. The deadline itself is the SERVER's (it decides by its
 //              own clock); this only renders the distance to it from this device's clock. Since
-//              follow-up 1 (2026-10-21) also how a chosen deadline reads ("Closes Wed 22 Oct, 19:45
-//              (in 1 day 2 h)") and what is wrong with one, for the director's date fields.
+//              follow-up 1 (2026-10-21) also how a chosen deadline reads ("Closes Thu 22 Oct 2026,
+//              19:45 (in 1 day 2 h)") and what is wrong with one, for the director's date fields.
 //
-// ★ THE GAME'S ONE DISPLAY LOCALE (the owner's decision of 2026-10-22): every date and time the
-//   game shows is in English form, whatever the browser's locale. `DISPLAY_LOCALE` below is its one
-//   home; `formatDeadline` uses it, and every other date shown on screen passes it explicitly
-//   (RaceHistory.jsx, AdminStatusSection.jsx, TrackEditor.jsx). The native date picker behind
-//   "Until…" draws in the browser's own locale and cannot be told otherwise.
+// ★ THE GAME'S ONE DATE FORM (the owner's decisions of 2026-10-22 and 2026-10-23): every date and
+//   time the game shows reads "Thu 22 Oct 2026, 23:54", in English whatever the browser's locale.
+//   `DISPLAY_LOCALE` and `formatDateTime` below are its one home; the registration cards, the
+//   deadline sentence, RaceHistory.jsx, AdminStatusSection.jsx and TrackEditor.jsx all call
+//   `formatDateTime`. The native date picker behind "Until…" draws in the browser's own locale and
+//   cannot be told otherwise.
 // ============================================================
 
 const SECOND = 1000;
@@ -48,26 +49,37 @@ export function msUntil(closesAt, now = Date.now()) {
 const MIN_WINDOW_MS = MINUTE;
 const MAX_WINDOW_MS = 30 * DAY;
 
-/**
- * The locale every date and time on screen is written in: British English, 24-hour clock —
- * "Thu 22 Oct, 23:37". Never the browser's (see the header).
- */
+/** The locale every date and time on screen is written in: British English. Never the browser's. */
 export const DISPLAY_LOCALE = 'en-GB';
 
+const DATE_TIME_OPTIONS = {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+};
+
 /**
- * An instant the way a person reads it: "Wed 22 Oct, 19:45" — in `DISPLAY_LOCALE`, whatever the
- * browser's locale, and in this device's time zone.
+ * An instant the way the game shows every date: "Thu 22 Oct 2026, 19:45" — weekday, day, month,
+ * year, 24-hour time, no seconds; in this device's time zone, in English whatever the browser's
+ * locale. The one date formatter (see the header).
  *
- * @param {number} ms
+ * Built from the PARTS, not `format()`: en-GB writes "Thu, 22 Oct 2026, 19:45", with a comma after
+ * the weekday, and the form decided on 2026-10-23 has none.
+ *
+ * @param {number|string|Date} value  ms, an ISO string, or a Date
  */
-export function formatDeadline(ms) {
-  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(ms));
+export function formatDateTime(value) {
+  const part = {};
+  // Made per call, so the device's current time zone always applies.
+  const parts = new Intl.DateTimeFormat(DISPLAY_LOCALE, DATE_TIME_OPTIONS).formatToParts(
+    new Date(value)
+  );
+  for (const p of parts) part[p.type] = p.value;
+  return `${part.weekday} ${part.day} ${part.month} ${part.year}, ${part.hour}:${part.minute}`;
 }
 
 /** A `datetime-local` value (this device's time zone) as ms, or NaN when empty or incomplete. */
@@ -82,9 +94,9 @@ export function localFromMs(ms) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/** "Closes Wed 22 Oct, 19:45 (in 1 day 2 h)" — what a chosen deadline will do, said plainly. */
+/** "Closes Thu 22 Oct 2026, 19:45 (in 1 day 2 h)" — what a chosen deadline will do, said plainly. */
 export function closesSentence(ms, now) {
-  return `Closes ${formatDeadline(ms)} (in ${formatTimeLeft(ms - now)})`;
+  return `Closes ${formatDateTime(ms)} (in ${formatTimeLeft(ms - now)})`;
 }
 
 /**

@@ -18,18 +18,18 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
 import { fetchAdminStatus } from '../../../services/adminStatusApi.js';
 import { Info } from './ControlInfo.jsx';
-import { DISPLAY_LOCALE } from '../../../modules/registration/timeLeft.js';
+import { formatDateTime } from '../../../modules/registration/timeLeft.js';
 import s from '../DevScreen.module.css';
 
 const CONTROL_ID = 'AdminStatusSection:admin-status-box';
 
 /**
  * An instant the server sent, in this browser's local time and in the game's English form
- * (`DISPLAY_LOCALE`, the owner's decision of 2026-10-22); the raw value if it is not one.
+ * (`formatDateTime`, the owner's decisions of 2026-10-22 and 2026-10-23); the raw value if it is not one.
  */
 function when(iso) {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString(DISPLAY_LOCALE);
+  return Number.isNaN(d.getTime()) ? String(iso) : formatDateTime(d);
 }
 
 function buildLine(build) {

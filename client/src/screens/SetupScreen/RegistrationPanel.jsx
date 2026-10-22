@@ -44,7 +44,7 @@ import {
 } from '../../services/registrationApi.js';
 import {
   deadlineProblem,
-  formatDeadline,
+  formatDateTime,
   formatTimeLeft,
   msFromLocal,
   msUntil,
@@ -349,7 +349,7 @@ function RegistrationList({ list, now, onShow }) {
                   {r.trackName} · {r.taken} of {r.capacity} places ·{' '}
                   {isOpen
                     ? `${formatTimeLeft(msUntil(r.closesAt, now))} left`
-                    : `closed ${formatDeadline(closedAt)}`}
+                    : `closed ${formatDateTime(closedAt)}`}
                 </div>
               </div>
               <button
@@ -373,13 +373,13 @@ function RegistrationList({ list, now, onShow }) {
 
 /**
  * "Raced" and when, for a registration a race was started with — the first such race; nothing for
- * one that has not raced. The time is written the way the card writes "closed" (`formatDeadline`).
+ * one that has not raced. The time is written the way every date is (`formatDateTime`).
  */
 function RacedBadge({ racedAt }) {
   if (!racedAt) return null;
   return (
     <span className={styles.badgeRaced} data-testid="registration-raced">
-      Raced {formatDeadline(Date.parse(racedAt))}
+      Raced {formatDateTime(racedAt)}
     </span>
   );
 }

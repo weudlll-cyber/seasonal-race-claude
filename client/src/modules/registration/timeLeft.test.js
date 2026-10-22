@@ -3,8 +3,9 @@
 // Path:        client/src/modules/registration/timeLeft.test.js
 // Project:     RaceArena — REGISTRATION-1
 // Description: The countdown text of a registration: days and hours, hours and minutes, minutes and
-//              seconds, and "Closed" at or past the deadline. Since 2026-10-22: a deadline reads in
-//              English whatever the browser's locale (the owner's decision; `DISPLAY_LOCALE`).
+//              seconds, and "Closed" at or past the deadline. Since 2026-10-22/23: every date reads
+//              "Thu 22 Oct 2026, 19:45", in English whatever the browser's locale (the owner's
+//              decisions; `formatDateTime`).
 // ============================================================
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -12,7 +13,7 @@ import {
   closesSentence,
   deadlineProblem,
   DISPLAY_LOCALE,
-  formatDeadline,
+  formatDateTime,
   formatTimeLeft,
   localFromMs,
   msFromLocal,
@@ -53,25 +54,30 @@ describe('a chosen deadline, said plainly', () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it('reads "Thu 22 Oct, 19:45" — English, 24-hour clock', () => {
+  it('reads "Thu 22 Oct 2026, 19:45" — the one form: no comma after the weekday, no seconds', () => {
     expect(DISPLAY_LOCALE).toBe('en-GB');
-    expect(formatDeadline(at)).toBe('Thu 22 Oct, 19:45');
+    expect(formatDateTime(at)).toBe('Thu 22 Oct 2026, 19:45');
+    // The same instant as an ISO string or a Date, the way the history and the server hand it over.
+    expect(formatDateTime(new Date(at).toISOString())).toBe('Thu 22 Oct 2026, 19:45');
+    expect(formatDateTime(new Date(2026, 9, 23, 0, 5))).toBe('Fri 23 Oct 2026, 00:05');
   });
 
-  // WHAT BREAKS IF THIS IS DELETED: a German browser would read "Do., 22. Okt., 19:45" again —
-  // formatDeadline must NAME its locale, never take the environment's default.
-  it('stays English when the default locale is German', () => {
+  // WHAT BREAKS IF THIS IS DELETED: a German browser would read "Do., 22. Okt. 2026, 19:45" again —
+  // formatDateTime must NAME its locale, never take the environment's default.
+  it('is exactly "Thu 22 Oct 2026, 19:45" when the default locale is German', () => {
     const Real = Intl.DateTimeFormat;
     // A plain function, not an arrow: the code under test calls it with `new`.
     vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(function (locale, options) {
       return new Real(locale ?? 'de-AT', options);
     });
     expect(new Intl.DateTimeFormat(undefined, { month: 'short' }).format(at)).toMatch(/^Okt/); // German
-    expect(formatDeadline(at)).toBe('Thu 22 Oct, 19:45');
+    expect(formatDateTime(at)).toBe('Thu 22 Oct 2026, 19:45');
   });
 
   it('"Closes … (in …)" uses the countdown text', () => {
-    expect(closesSentence(at, at - (D + 2 * H))).toBe('Closes Thu 22 Oct, 19:45 (in 1 day 2 h)');
+    expect(closesSentence(at, at - (D + 2 * H))).toBe(
+      'Closes Thu 22 Oct 2026, 19:45 (in 1 day 2 h)'
+    );
   });
 
   it('a datetime-local value and an instant convert both ways, to the minute', () => {

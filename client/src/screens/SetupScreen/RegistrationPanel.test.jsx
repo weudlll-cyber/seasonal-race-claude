@@ -14,7 +14,7 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
-import { formatDeadline } from '../../modules/registration/timeLeft.js';
+import { formatDateTime } from '../../modules/registration/timeLeft.js';
 
 const api = {
   listRegistrations: vi.fn(),
@@ -182,7 +182,7 @@ describe('one registration', () => {
     const racedAt = inMinutes(-5);
     const { onUsePlayers } = await showOne({ state: 'closed', racedAt });
     expect(screen.getByTestId('registration-raced').textContent).toBe(
-      `Raced ${formatDeadline(Date.parse(racedAt))}`
+      `Raced ${formatDateTime(racedAt)}`
     );
     fireEvent.click(screen.getByRole('button', { name: 'Use these players' }));
     expect(onUsePlayers).toHaveBeenCalledTimes(1);
