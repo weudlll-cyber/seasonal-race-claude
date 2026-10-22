@@ -1913,6 +1913,21 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] **fix/audit-launch-editor · master's CI red on the audit gate — CLOSED 2026-10-22, merged.**
+      From `6470e2e6` (2026-10-21) every CI run on master failed one step, the client's *Security
+      audit gate*, on **GHSA-587h-7wmj-h5pm** (CVE-2026-112942, high, published 2026-10-20):
+      launch-editor's `fs.existsSync()` existence check can be bypassed on Windows; launch-editor
+      `<= 2.14.1`, fixed in 2.14.2. The client has no launch-editor package of its own: **Vite 8
+      bundles it**, so the advisory is filed against `vite` (8.0.0–8.1.5 fixed in 8.1.6, 8.2.0–8.2.3
+      in 8.2.4, 8.3.0–8.3.2 in 8.3.3), and the client's devDependency `vite@^8.0.0` was locked at
+      8.0.16. launch-editor serves only the development server's "open in editor" request; it is not
+      in the built bundle, not in `vite preview`, and not in the server. **Fixed by the first option
+      the order allowed** — Vite upgraded within its major to 8.3.5 (`client/package.json`
+      `^8.3.5`); no `overrides` entry and no allowlist entry were needed, and the gate is unchanged.
+      `npm audit` in the client: 0 vulnerabilities (the four lesser advisories that rode along — two
+      moderate launch-editor ones, a moderate and a low one in Vite — are closed too); `npm ci` and
+      the build pass.
+
 - [x] **CITE-BY-NAME-1 · living documents and comments cite by name — CLOSED 2026-10-22, merged.**
       The owner's decision of 2026-10-22: living documents and code comments cite a source location
       by its name, not by a line number; dated records keep theirs. The rule is

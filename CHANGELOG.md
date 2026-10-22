@@ -149,6 +149,10 @@ is.
   (audit finding A5M-06), also after a restore. *(branch `feat/vps-install`)*
 - `SECURITY.md`: how to report a security problem privately (GitHub's "Report a vulnerability"),
   what is in scope, and that only the newest release receives fixes. *(on `master`, 2026-10-12)*
+- The development build tool (Vite) updated to 8.3.5, closing a high-severity advisory in the
+  editor launcher it carries (GHSA-587h-7wmj-h5pm) and four lesser ones. Developer machines only:
+  the launcher is used by the development server, never by an installed RaceArena.
+  *(on `master`, 2026-10-22)*
 
 ## [1.0.0] — not yet tagged
 
