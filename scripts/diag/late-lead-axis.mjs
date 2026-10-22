@@ -5,13 +5,13 @@
 // into an ACROSS-TRACK or ALONG-TRACK one.
 //
 // WHY THE LABEL IS NOT THE ANSWER. The stored side is `top` / `bottom` / `left` / `right`: world-axis
-// directions, because the render transform carries no rotation (renderRaceFrame.js:152-158). Whether
+// directions, because the render transform carries no rotation (`renderRaceFrame.js` → `renderRaceFrame`). Whether
 // `left` means BEHIND depends on which way the track runs at the line, and it does NOT run the same
 // way on every track — see late-lead-axis-geom.mjs. So each side is classified per track against the
 // heading over the closing stretch.
 //
 // THE ATTRIBUTION BIAS IS REPORTED, NOT HIDDEN. The hunt recorded ONE side per off-frame under a
-// fixed priority (late-lead-hunt.mjs:96): top, then bottom, then left, then right. A racer outside a
+// fixed priority (`late-lead-hunt.mjs` → `measure`): top, then bottom, then left, then right. A racer outside a
 // CORNER of the canvas is therefore booked to top/bottom whatever else was also true. On the seven
 // tracks where top/bottom is the across-track pair that inflates ACROSS; on space-sprint, where
 // top/bottom is the ALONG pair, it deflates it. Both directions are stated per track below.

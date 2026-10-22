@@ -333,16 +333,16 @@ export function buildIdentity({
 //
 // ★★ THE COST OF WRITING IT TWICE, AND THE RULE THAT PAYS IT (BLIND-SITE-1, 2026-09-15). Deliberate
 // duplication only catches drift it can SEE. Both builders below silently omitted the same six
-// inputs raceCore.js:294-306 supplies — the four gap-brake keys, `trajectoryTransitionDuration` and
+// inputs `raceCore.js` → `createRaceFromIdentity` supplies — the four gap-brake keys, `trajectoryTransitionDuration` and
 // `pathLengthPx` — so with that brake switched on BOTH arms raced a world the browser does not, and
 // the guards could not report it because neither arm had the mechanism. Lesson 187 named this class
 // for plan FLAGS; it is the same trap for plan INPUTS.
 //
-// THE RULE: every key `createRacePlan` is given at raceCore.js:261 must appear in BOTH builders
+// THE RULE: every key `createRacePlan` is given at raceCore.js must appear in BOTH builders
 // below. `client/src/modules/parity/planConfigMirror.test.js` fails if one goes missing.
 
 // ★ BLIND-SITE-1: `pathLengthPx` is a second argument, not a key read off the dynamics config,
-// because it is track geometry rather than a setting — exactly how raceCore.js:306 supplies it.
+// because it is track geometry rather than a setting — exactly how `raceCore.js` → `createRaceFromIdentity` supplies it.
 // Both callers already hold it as `ctx.pathLengthPx` (loadTrack, :220); nothing is threaded.
 function browserPlanConfig(dynamicsConfig, pathLengthPx) {
   return {
@@ -391,11 +391,11 @@ function browserPlanConfig(dynamicsConfig, pathLengthPx) {
     gapRerollMode: dynamicsConfig.gapRerollMode ?? "symmetric",
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
-    // ★ GAP-BRAKE-1 — mirror of raceCore.js:294-306. Without these six the plan cannot run the gap
-    // brake at all (`_computeGapLeaderBrake` returns at its guard, racePlanner.js:907), so this arm
+    // ★ GAP-BRAKE-1 — mirror of `raceCore.js` → `createRaceFromIdentity`. Without these six the plan cannot run the gap
+    // brake at all (`_computeGapLeaderBrake` returns at its guard, racePlanner.js), so this arm
     // raced a world the browser does not. Shipped default is OFF, so forwarding them is inert today.
     // `trajectoryTransitionDuration` is the brake's rate window — passed in SECONDS, as the store
-    // holds it and as raceCore.js:305 passes it; the planner converts once (racePlanner.js:415).
+    // holds it and as `raceCore.js` → `createRaceFromIdentity` passes it; the planner converts once (`racePlanner.js` → `createRacePlan`).
     gapBrakeEnabled:
       dynamicsConfig.gapBrakeEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
     gapBrakeAllowedGapPx:
@@ -458,7 +458,7 @@ function simPlanConfig(DYN, pathLengthPx) {
     gapRerollStrength: DYN.gapRerollStrength,
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
-    // ★ GAP-BRAKE-1 — mirror of raceCore.js:294-306, same six inputs as browserPlanConfig. This arm
+    // ★ GAP-BRAKE-1 — mirror of `raceCore.js` → `createRaceFromIdentity`, same six inputs as browserPlanConfig. This arm
     // is the one the parity guards run, and `gapBrake` appeared ZERO times in this file before, so
     // with the brake switched on the two arms raced different worlds (PARITY-CLOSE-1). Default OFF.
     gapBrakeEnabled: DYN.gapBrakeEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,

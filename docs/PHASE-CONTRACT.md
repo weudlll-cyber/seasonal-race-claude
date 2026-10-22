@@ -33,14 +33,14 @@ and the same fossil was standing at five more sites — three code comments in `
 restated here; they live in `defaults.js`.)* `pulkEnd` and `corridorStart` are overwritten from
 `choreoOutcomeStart` (below).
 
-**The shipped two-phase model (racePlanner.js:175-177), UNCONDITIONAL.** Choreography is always on
-(`_choreoEnabled` is hardcoded `true`, racePlanner.js:331). At plan build time:
+**The shipped two-phase model (`racePlanner.js` → `createRacePlan`), UNCONDITIONAL.** Choreography is always on
+(`_choreoEnabled` is hardcoded `true`, racePlanner.js). At plan build time:
 `choreoPulkEnd = config.choreoOutcomeStart ?? phaseFractions.pulkStart`, then `pulkEnd := choreoPulkEnd` and
 `corridorStart := choreoPulkEnd` (DERIVED, not a second copy). So OUTCOME begins exactly where PULK ends:
-**CHAOS → PULK → OUTCOME, with no TRANSITION phase.** The monotonic clamp chain (racePlanner.js:192-202)
+**CHAOS → PULK → OUTCOME, with no TRANSITION phase.** The monotonic clamp chain (`racePlanner.js` → `createRacePlan`)
 keeps `pulkStart <= pulkEnd <= corridorStart <= corridorEnd`.
 
-`getPhase` (racePlanner.js:698-711) still lists five ordered branches
+`getPhase` (racePlanner.js) still lists five ordered branches
 (`PRE_PULK < pulkStart · PULK < pulkEnd · TRANSITION < corrStart · OUTCOME < corrEnd · FINAL`), **but
 because `corridorStart == pulkEnd` always, the TRANSITION branch is zero-width and unreachable** — a racer
 goes straight from PULK to OUTCOME. TRANSITION is a dead branch, not a live phase.
@@ -55,14 +55,14 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 
 ## 1. `pulkStart` = 0.15 (shipped; no fallback literal — `DEFAULT_PHASE_FRACTIONS.pulkStart` READS the config key) — the CHAOS→PULK boundary (config key `racePlanPulkStart`)
 
-- **Who reads it.** `getPhase` (racePlanner.js:700,703); the row-envelope chaos-end (raceStep.js via
+- **Who reads it.** `getPhase` (racePlanner.js); the row-envelope chaos-end (raceStep.js via
   `computeRowEnvMult`; browser `PHASE_CHAOS_END` index.jsx; sim `pulkStartLive` sim-fairness.mjs); the
   areaBonus instant-zero boundary — under choreo the areaBonus is full during CHAOS and snaps to `1.0`
-  for the WHOLE field from `pulkStartFrac` onward (racePlanner.js:1002-1018); the phase-split `inChaos`
-  branch (racePlanner.js:1066); the hero-cast boundary (heroes are cast and tagged `isHeroChoreographed`
-  once `phaseProgress >= pulkStartFrac`, racePlanner.js:1083,1120,1193); the hero-curve generator anchor
-  (`anchorProgress: pulkStartFrac`, racePlanner.js:1146); and the PULK lead-rotation window start
-  (`progress >= pulkStartFrac`, raceGovernor.js:263).
+  for the WHOLE field from `pulkStartFrac` onward (racePlanner.js); the phase-split `inChaos`
+  branch (`racePlanner.js` → `update`); the hero-cast boundary (heroes are cast and tagged `isHeroChoreographed`
+  once `phaseProgress >= pulkStartFrac`, `racePlanner.js` → `update`); the hero-curve generator anchor
+  (`anchorProgress: pulkStartFrac`, `racePlanner.js` → `update`); and the PULK lead-rotation window start
+  (`progress >= pulkStartFrac`, `raceGovernor.js` → `applyPulkLeadRotation`).
 - **What it gates.** The end of CHAOS: where the areaBonus snaps to zero for the whole field, where the
   2–4 heroes are cast with anchored curves, and where the PULK lead rotation begins.
 - **When it MOVES.** The chaos window resizes → the areaBonus-zero point moves, heroes are cast
@@ -78,15 +78,15 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 ## 2. `pulkEnd` = `choreoOutcomeStart` — the PULK end / OUTCOME start (config key `choreoOutcomeStart`) — **the owned PULK→OUTCOME seam**
 
 - **Resolution.** `pulkEnd := choreoOutcomeStart` and `corridorStart := choreoOutcomeStart`
-  (racePlanner.js:175-177). This single value is the PULK→OUTCOME seam; there is exactly ONE source and
+  (`racePlanner.js` → `createRacePlan`). This single value is the PULK→OUTCOME seam; there is exactly ONE source and
   ONE user-facing control for it.
-- **Who reads it.** `getPhase` (racePlanner.js:701; corrStart branch :702 is the same value); the
+- **Who reads it.** `getPhase` (racePlanner.js; corrStart branch :702 is the same value); the
   row-envelope pulk-end (raceStep.js; browser `PHASE_PULK_END`; sim `pulkEndLive`); the phase-split
-  `inPulk` branch (racePlanner.js:1067); the PULK lead-rotation window end
-  (`progress < pulkEndFrac`, raceGovernor.js:264); the phase-weight fade end (`governorPhaseWeight` →
+  `inPulk` branch (racePlanner.js); the PULK lead-rotation window end
+  (`progress < pulkEndFrac`, `raceGovernor.js` → `applyPulkLeadRotation`); the phase-weight fade end (`governorPhaseWeight` →
   EXACTLY 0 at `corrStartFrac == pulkEndFrac`, `raceGovernor.js` → `governorPhaseWeight`); the PULK re-roll bias
-  (`computePulkBiasedTarget` returns `rawSample` unless `getPhase()==='PULK'`, racePlanner.js:1598); the
-  phase context threaded to the governor (`getPhaseFractions`, racePlanner.js:1859-1861).
+  (`computePulkBiasedTarget` returns `rawSample` unless `getPhase()==='PULK'`, racePlanner.js); the
+  phase context threaded to the governor (`getPhaseFractions`, racePlanner.js).
 - **What it gates.** PULK width; the window in which the PULK cohesion bias (`pulkBiasGain`) acts; the
   window in which the PULK lead rotation runs; the phase-weight fade window; and — via
   `corridorStart := pulkEnd` — the moment OUTCOME band-steering begins.
@@ -121,11 +121,11 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 
 ## 3. `corridorStart` = `pulkEnd` — the OUTCOME start (DERIVED from `choreoOutcomeStart`, not a literal)
 
-- **Resolution.** `corridorStart := choreoPulkEnd` (racePlanner.js:177); it is the SAME value as
+- **Resolution.** `corridorStart := choreoPulkEnd` (`racePlanner.js` → `createRacePlan`); it is the SAME value as
   `pulkEnd`. The `racePlanCorridorStart` literal (default 0.55) is overwritten and never survives to a
   live race — the seam is owned by `choreoOutcomeStart` (§2).
-- **Who reads it.** `getPhase` `corrStartFrac` (racePlanner.js:702); the servo pre-OUTCOME gate
-  (`_preOutcome && !isHero` pins the pack to 1.0 before OUTCOME, racePlanner.js:1089,1268); the
+- **Who reads it.** `getPhase` `corrStartFrac` (racePlanner.js); the servo pre-OUTCOME gate
+  (`_preOutcome && !isHero` pins the pack to 1.0 before OUTCOME, `racePlanner.js` → `update`); the
   phase-weight fade-to-zero end (`governorPhaseWeight` returns 0 at `progress >= corrStartFrac`,
   `raceGovernor.js` → `governorPhaseWeight`); the governor phase context (`getPhaseFractions`, `racePlanner.js`).
 - **What it gates.** The moment the servo (`trajectoryMult`) STARTS steering the PACK toward target ranks
@@ -135,7 +135,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 - **When it MOVES.** It moves with `choreoOutcomeStart` (§2) — earlier OUTCOME = more servo correction
   budget / more fairness authority, and a shorter PULK contest.
 - **DevScreen.** No independent control. The `racePlanCorridorStart` slider still renders
-  (DynamicsTuningSection.jsx:963-992, "P-Controller starts") but its value is overwritten by
+  (`DynamicsTuningSection.jsx` → `DynamicsTuningSection`, "P-Controller starts") but its value is overwritten by
   `choreoOutcomeStart` at plan build, so the owned seam is the "PULK end / OUTCOME begins" control.
 - **Calibrated for it.** The phase-weight fade window is anchored on it (spans
   `max(corrStartFrac − pulkEndFrac, MIN_FADE_SPAN)` back from it, `raceGovernor.js` → `MIN_FADE_SPAN`; since it equals
@@ -143,37 +143,37 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 
 ## 4. `corridorEnd` = 1.0 — the OUTCOME→FINAL boundary (config key `racePlanCorridorEnd`)
 
-- **Who reads it.** racePlanner.js:159 (setter from `config.corridorEnd`); the clamp ceiling (:192-202);
+- **Who reads it.** `racePlanner.js` → `createRacePlan` (setter from `config.corridorEnd`); the clamp ceiling (:192-202);
   `getPhase` `corrEndFrac` (:700); `getPhaseFractions` (:1858).
 - **What it gates.** When the servo STOPS steering (raw physics after, in FINAL).
 - **When it MOVES.** The servo's steering-end moves; 1.0 = steer to the line; lower = a raw-physics tail.
 - **DevScreen.** `racePlanCorridorEnd` slider — "P-Controller ends (% race)"
-  (DynamicsTuningSection.jsx:994-1032), default 100%. LIVE (it is the OUTCOME end).
+  (`DynamicsTuningSection.jsx` → `DynamicsTuningSection`), default 100%. LIVE (it is the OUTCOME end).
 
 ## 5. `transitionEnd` = 0.75 — the areaBonus fade-end literal (config key `racePlanBonusTransitionEnd`) — **INERT**
 
 - **Why it's inert.** Under the unconditional choreo model the areaBonus is instant-zero from `pulkStart`
-  (racePlanner.js:1002-1018) — there is no `easeInOutCubic` fade to trigger, so `bonusFadeDuration` is
+  (`racePlanner.js` → `update`) — there is no `easeInOutCubic` fade to trigger, so `bonusFadeDuration` is
   functionless and `transitionEnd` never gates a fade. Its only remaining structural role is a
   `corridorStart` fallback (`resolvedCorridorStart = corridorStart ?? transitionEnd`, `racePlanner.js`),
   which never fires because `corridorStart` is always defined (it is derived from `choreoOutcomeStart`).
-- **Who reads it.** racePlanner.js:156-157 (setter from `config.bonusTransitionEnd`); :189 (the never-firing
+- **Who reads it.** `racePlanner.js` → `createRacePlan` (setter from `config.bonusTransitionEnd`); :189 (the never-firing
   `corridorStart` fallback); :260 (`transEnd` ms); :563 (`transEndFrac`); :1021 (the areaBonus fade
-  trigger inside the `else` branch — dead code because `_choreoEnabled` is always true, racePlanner.js:1002);
+  trigger inside the `else` branch — dead code because `_choreoEnabled` is always true, racePlanner.js);
   :1858 (`getPhaseFractions` returns `transEndFrac`).
 - **DevScreen.** `racePlanBonusTransitionEnd` slider — "Bonus active until (% race)"
-  (DynamicsTuningSection.jsx:908-934, range 30–95%). Does NOTHING at the shipped model (no fade exists to
+  (`DynamicsTuningSection.jsx` → `DynamicsTuningSection`, range 30–95%). Does NOTHING at the shipped model (no fade exists to
   bound).
 - **Naming trap.** `transitionEnd` (0.75) is NOT where any phase ends — there is no live TRANSITION phase.
   It is a misleadingly named, currently inert literal.
 
 ## 6. `choreoReleaseProgress` — the B1 hero release
 
-- **Who reads it.** racePlanner.js:342 (`_choreoReleaseProgress` on the plan) and :344-350 (band-index 0
+- **Who reads it.** racePlanner.js (`_choreoReleaseProgress` on the plan) and `createRacePlan` (band-index 0
   of `_choreoBandResolve`); :1149 (threaded into the generator as `releaseProgress`); :1276-1279 (a B1 hero
   is `released` when `phaseProgress >= plan._choreoReleaseProgress` and its target rank ≤ `BAND_EDGES[0]`).
 - **What it gates.** When the leading (B1) heroes are RELEASED from their tight front cluster to natural
-  speed for the final run-out (racePlanner.js:1275-1282,1345-1349): past release, `targetRank = currentRank ⇒
+  speed for the final run-out (`racePlanner.js` → `update`): past release, `targetRank = currentRank ⇒
 rankError 0 ⇒ servo 1.0 ⇒ natural speed`.
 - **When it MOVES.** Earlier release = a longer natural run-out fight to the line; later = held in the
   cluster longer. Companions `choreoResolveB2..B5` (0.8/0.7/0.65/0.6) are the per-band resolve
@@ -187,8 +187,8 @@ rankError 0 ⇒ servo 1.0 ⇒ natural speed`.
 
 Choreography is ALWAYS on; there is no enable flag. The generator runs ONCE, one frame after `pulkStart`,
 on the actual field state, casting 2–4 heroes with anchored position-over-time curves
-(racePlanner.js:1123-1205). Heroes track their curves exactly (strictness 1.0); the pack runs looser
-(`choreoPackBandStrictness`, racePlanner.js:1377-1381). Config keys and shipped values (defaults.js):
+(`racePlanner.js` → `update`). Heroes track their curves exactly (strictness 1.0); the pack runs looser
+(`choreoPackBandStrictness`, `racePlanner.js` → `update`). Config keys and shipped values (defaults.js):
 `choreoIntensity` 0.6, `choreoPackBandStrictness` 0.5, `choreoSuppressChaosBonusB1` false (spoiler
 switch), `choreoReleaseProgress` 0.97, `choreoResolveB2/B3/B4/B5` 0.8/0.7/0.65/0.6, `choreoOutcomeStart`
 **0.6** *(corrected 2026-09-03 from 0.5)*. The plan-internal mirrors are `_choreo*` (e.g. `_choreoEnabled` hardcoded true).

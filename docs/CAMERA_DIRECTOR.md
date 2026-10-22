@@ -1193,7 +1193,7 @@ standing claim survives the change: OVERVIEW is still the TIGHTEST state, not th
 this table because the state was removed — it is still in the director and still shot. It is absent
 because **this instrument's fixture takes no comeback shot at all any more**, and the reason is
 specific to its fixture. Probed on that identity (raceSeed 5601, 40 racers, track-default racer, the
-DEFAULT world — `tracking-lag.mjs:45-52`), on the commit before this one:
+DEFAULT world — `tracking-lag.mjs` → `IDENTITY`), on the commit before this one:
 
 | track | cast comebackers | COMEBACK_ZOOM shots |
 |---|---|---|

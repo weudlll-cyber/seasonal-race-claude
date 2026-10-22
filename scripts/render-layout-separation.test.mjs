@@ -121,7 +121,7 @@ runRace(
   ({ cd, ts, raceStart, frame }) => {
     if (frame === FRAME) {
       // `runRace` does not hand the caller `cd.update`'s return value, and it does not need to: that
-      // return is these three fields off the director itself (CameraDirector.js:1126).
+      // return is these three fields off the director itself (`CameraDirector.js` → `update`).
       camAt = { zoom: cd.zoom, offsetX: cd.offsetX, offsetY: cd.offsetY };
       tsAt = ts;
       raceStartAt = raceStart;

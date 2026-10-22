@@ -31,7 +31,7 @@ const FINISH_T = 2.0;
 const PATH_PX = 6000;
 const MEAN_BODY = 30;
 const PULK_START = 0.25;
-const PULK_END = 0.6; // == choreoOutcomeStart, racePlanner.js:175
+const PULK_END = 0.6; // == choreoOutcomeStart, `racePlanner.js` → `createRacePlan`
 
 /** A field of `n` racers laid out in rank order, optionally with one large gap after `gapAfter`. */
 function makeField(n = 20, { gapAfter = null, gapT = 0.05 } = {}) {

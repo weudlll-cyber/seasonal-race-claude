@@ -41,7 +41,7 @@
 //      actually entered rather than merely scheduled.
 //   5. a Router. `index.jsx` imports no router package, so grepping the file for `react-router`
 //      says it needs none — and that is wrong. It calls `useFadeNavigate()` at :170, and that hook
-//      (`contexts/TransitionContext.jsx:47`) falls back to `useNavigate()`, which throws outside a
+//      (`contexts/TransitionContext.jsx`) falls back to `useNavigate()`, which throws outside a
 //      Router. Found by running the mount, not by reading for it; recorded here because the same
 //      search will mislead the next person the same way.
 // ============================================================

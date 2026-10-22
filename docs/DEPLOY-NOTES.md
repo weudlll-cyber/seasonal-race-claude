@@ -78,7 +78,7 @@ This is a straight trade and it has already been written up rather than taken.
 possible at all.
 
 ★ **BUILT since (D30, option C): the address is resolved at START time.** The server stamps every page it
-serves with the API's address (`injectRuntimeConfig`, `server/src/runtimeConfig.js`), and `client/src/services/api.js:99` reads
+serves with the API's address (`injectRuntimeConfig`, `server/src/runtimeConfig.js`), and `client/src/services/api.js` → `API_BASE_URL` reads
 `API_BASE_URL = runtimeApiBaseUrl() ?? buildTimeApiBaseUrl() ?? DEFAULT_API_BASE_URL`, so one image
 works at any address. The rest of this section is the hurdle as it stood on 2026-09-04, kept as the
 record of what D30 chose between.
@@ -142,7 +142,7 @@ separate failures, all from ONE missing file."* It prints, at startup:
   signed into. *(Corrected 2026-10-04: this said `docker-compose.yml` sets a dev value. It sets only `PORT`, so a
   compose install needs the token in its own override file too — PROBE-INSTALL-1 part 3.)*
 - **`RA_SESSION_SECRET` missing** → in development a random one is used and **every restart signs
-  everyone out**. In production it is not a warning: `server/src/auth/session.js:68` **throws** and
+  everyone out**. In production it is not a warning: `server/src/auth/session.js` → `createSessionMiddleware` **throws** and
   the server does not start.
 - **`RA_CLIENT_ORIGIN` missing** → only warned when this server is serving no client build of its
   own, because a same-origin install needs no CORS at all. That conditional is deliberate and its
@@ -162,20 +162,20 @@ without `RA_CLIENT_ORIGIN` would break the same-origin deployment the project is
 **What is true, and it was searched for rather than assumed.** An uncapped search of `server/`,
 `client/`, `scripts/` and `shared/` for `https.createServer`, `node:https`, `require('https')`,
 `from 'https'`, `createSecureServer`, `tls.`, `node:tls`, key/cert pairs, `letsencrypt` and `certbot`
-returns **nothing**. `server/src/index.js:64` is `listenOn(app, PORT, bindAddress, …)` — plain HTTP.
+returns **nothing**. `server/src/index.js` → `server` is `listenOn(app, PORT, bindAddress, …)` — plain HTTP.
 
 **But the server is TLS-aware and expects to sit behind a terminator:**
 
 - `server/src/trustProxy.js` — trusts `RA_TRUST_PROXY` hops; unset, one hop when `NODE_ENV=production`
-- `server/src/auth/session.js:23-29` — `resolveCookieSecure` marks the session cookie `Secure` in
+- `server/src/auth/session.js` — `resolveCookieSecure` marks the session cookie `Secure` in
   production, overridable with `RA_COOKIE_SECURE=true|false|auto`
-- `server/src/auth/session.js:35-43` — the cookie is named `__Host-ra.sid` when `Secure` is
+- `server/src/auth/session.js` — the cookie is named `__Host-ra.sid` when `Secure` is
   *guaranteed*, and `RA_COOKIE_NAME_MODE=host` throws rather than issue that name without it
 
 So the intended arrangement is: **a reverse proxy terminates TLS and forwards; the app never sees a
 certificate.** That is the ordinary and correct shape, and it is why there is no TLS code to find.
 
-**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:218` reads
+**What is at stake without it.** The sign-in POST carries the password (`authRouter.js` → `POST /login` reads
 `username` and `password` from `req.body`), and the session cookie carries the session. Over plain
 HTTP both are readable by anything on the path. **`Secure` cookies are not sent over HTTP at all**,
 so an install that sets `NODE_ENV=production` without HTTPS in front does not merely become
@@ -239,12 +239,12 @@ so the decision below is still his and still open; what changed is that an opera
 can close the port with one line instead of a firewall. [DEPLOYMENT.md](DEPLOYMENT.md) recommends it
 behind a proxy. The Docker publish `4000:4000` below is untouched.
 
-★★ **THE BIND IS NOT A PURE WIN AND SO IT WAS NOT CHANGED.** `docker-compose.yml:17-18` publishes
+★★ **THE BIND IS NOT A PURE WIN AND SO IT WAS NOT CHANGED.** `docker-compose.yml` → `ports` publishes
 `4000:4000`, which listens on every interface. Binding `127.0.0.1:4000` instead would be safer on a
 rented server — **but it would remove a mode that works today.** The shipped model is same-origin:
-the server serves the built app *and* the API on one port (`DEPLOYMENT.md:9-13`), so a browser on
+the server serves the built app *and* the API on one port (`DEPLOYMENT.md` → § "Public same-origin hosting"), so a browser on
 another machine reaches `http://<host>:4000` directly, and a reverse proxy is described as optional
-(`DEPLOYMENT.md:229-230` recommends `RA_BIND_ADDRESS=127.0.0.1` behind one; the tested example is
+(`DEPLOYMENT.md` → § "Install" recommends `RA_BIND_ADDRESS=127.0.0.1` behind one; the tested example is
 `:452`). Binding to loopback breaks direct access
 and makes a proxy mandatory. **That is a decision about how the product may be run, so it is his.**
 
@@ -275,7 +275,7 @@ line needs no argument. `npm run status` reports the newest backup's age. How to
 
 ### 3 · The two standing choices, with their costs
 
-**Cookie lifetime — 30 days** (`server/src/auth/session.js:108`,
+**Cookie lifetime — 30 days** (`server/src/auth/session.js` → `createSessionMiddleware`,
 `maxAge: 30 * 24 * 60 * 60 * 1000`). The safe alternative is a shorter life, hours rather than
 weeks: a stolen or forgotten session stops working sooner. **The cost is real and is the reason it
 is 30 days** — an organiser running an event does not want to sign in again mid-evening, and this
@@ -310,7 +310,7 @@ his choice, with both sides, rather than taken.
 ★ **CLOSED 2026-10-02 (TIDY-C-1):** every archive now has a `<archive>.sha256` beside it in
 `sha256sum` format, and `npm run status` fails the backup check when the newest archive's checksum
 file is missing or does not match. How to use it is [DEPLOYMENT.md](DEPLOYMENT.md)'s.
-★ A precision that matters when reading the source: `scripts/backup.mjs:204-206` writes a *tar header*
+★ A precision that matters when reading the source: `scripts/backup.mjs` → `tarHeader` writes a *tar header*
 checksum, which is part of the tar format and **not** an integrity digest of the archive. Do not
 read that line as one.
 

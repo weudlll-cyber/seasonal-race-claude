@@ -185,7 +185,7 @@ export function writeHistory(list) {
   let ok;
   try {
     // `storageSet` REPORTS failure rather than throwing it — it catches the quota error itself and
-    // returns false (storage.js:91-100). Waiting for a throw here would therefore never fire, and
+    // returns false (`storage.js` → `storageSet`). Waiting for a throw here would therefore never fire, and
     // this function would have reported success for a write that did not happen. The try/catch
     // stays for the one thing storageSet cannot absorb: `capHistory` being handed something that
     // is not a list.

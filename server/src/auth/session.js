@@ -22,7 +22,7 @@ import { resolveCookieSecure } from './cookiePolicy.js';
 const SqliteStore = sqliteStoreFactory(session);
 
 // ★ THE RULE MOVED, THE BEHAVIOUR DID NOT (DELIVERY-CLEAN-3 piece 1, 2026-09-27). It now lives in
-// `cookiePolicy.js` and is re-exported here, so `authRouter.js:19` and `session.test.js:17` import
+// `cookiePolicy.js` and is re-exported here, so `authRouter.js` and `session.test.js` import
 // it from the same place as before. It had to move because `startupReadiness.js` needs the same
 // rule and must not import this file — this one pulls in `better-sqlite3`, and that file promises
 // it can be judged without an environment. The alternative was a second copy of the rule.

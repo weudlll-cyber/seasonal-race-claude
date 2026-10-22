@@ -51,7 +51,7 @@ export const REAL_ARM_SEEDS = [1, 7, 42];
  * finish orders match, so this is a re-pin and not a parity failure.
  * ★★ THAT MEASUREMENT IS THE LICENCE, AND IT MATTERS HERE MORE THAN USUAL: this pin failing was
  * twice mis-read as a parity divergence (see reports/evolution/CHASE-PARITY-DIAG-1.md), which voided
- * a whole block. The failing line is `goldenRealArm.test.js:57` — a pinned SHIPPED OUTCOME. The
+ * a whole block. The failing line is `goldenRealArm.test.js` → describe "real browser arm (raceCore) == sim — the step-order-alignment parity guard" — a pinned SHIPPED OUTCOME. The
  * parity assertions sit ABOVE it and passed throughout.
  */
 export const REAL_ARM_WINNERS = { 1: 27, 7: 38, 42: 7 };

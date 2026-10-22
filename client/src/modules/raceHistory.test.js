@@ -272,7 +272,7 @@ describe('★ `inputs` and raceIdentifier.js name the same set of inputs', () =>
   // client half, and without it a field could be added to the identifier and silently never stored.
   //
   // The alternative was to store the identifier STRING and decode it server-side. It was rejected:
-  // the identifier REFUSES to decode across builds by design (raceIdentifier.js:225-232), which is
+  // the identifier REFUSES to decode across builds by design (`raceIdentifier.js` → `decodeRaceIdentifier`), which is
   // right for a string a person passes to someone else and wrong for a race being filed forever.
 
   it('every input the identifier encodes round-trips through what the entry stores', async () => {
@@ -346,7 +346,7 @@ describe('★ `inputs` and raceIdentifier.js name the same set of inputs', () =>
       world:
         'flattened into worldSchemaVersion / worldConfigs / racerTypeOverrides / effectiveRacerTypes',
       fieldSize:
-        'derived from names.length — raceIdentifier.js:24-26 says it is never encoded twice',
+        'derived from names.length — raceIdentifier.js → its header comment says it is never encoded twice',
     };
 
     const unanswered = Object.keys(decoded).filter(

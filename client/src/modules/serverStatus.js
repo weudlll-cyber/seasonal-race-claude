@@ -30,7 +30,7 @@
 // An HTTP STATUS IS AN ANSWER — including 401, 403 and 500. The server is there and is refusing or
 // failing, which is a different thing and a different message, and calling it "server unreachable"
 // would send somebody to restart a backend that is already running. So any response, of any status,
-// marks the server REACHABLE. This mirrors the split `AuthContext.jsx:58-68` already makes, where a
+// marks the server REACHABLE. This mirrors the split `AuthContext.jsx` → `AuthProvider` already makes, where a
 // network error with no status becomes `offline-hint` and anything with a status does not.
 // ============================================================
 

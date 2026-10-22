@@ -134,7 +134,7 @@ test('the owner s arrival shape is selectable in the browser, and steers him bac
   // commit turned `arrivalShape.test.js` around to assert the opposite and did not touch this spec,
   // and the browser suite is night work, so nothing ran it for six days (ARRIVAL-BRAKE-1).
   //
-  // ★★ THE SHIPPED DESIGN IS AT `racePlanner.js:1403-1412`, in the engine's own words: *"AFTER HE
+  // ★★ THE SHIPPED DESIGN IS AT `racePlanner.js` → `update`, in the engine's own words: *"AFTER HE
   // ARRIVES HE IS STEERED, like any other racer … `strictness` therefore stays at the hero's 1.0 and
   // the blend below is exact-rank steering."* What band steering cost was clause 2 — unsteered, he
   // opened 3.3x the pre-shape gap at twenty racers. So the multiplier inside his block is NOT 1.0:

@@ -95,7 +95,7 @@ export function withPublicOrigin(existing, origin) {
  * each, so they are unique per install by construction.
  *
  *   RA_SESSION_SECRET   signs sessions. In production the server REFUSES to start without it
- *                       (`server/src/auth/session.js:71`); in development it invents an ephemeral
+ *                       (`server/src/auth/session.js` → `createSessionMiddleware`); in development it invents an ephemeral
  *                       one and every restart signs everybody out.
  *   RA_BOOTSTRAP_TOKEN  authorises `POST /api/auth/setup`, the call that creates the FIRST admin.
  *                       Without it that route answers 403 and a fresh install cannot be opened.

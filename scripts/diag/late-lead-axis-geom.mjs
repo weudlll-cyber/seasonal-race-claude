@@ -5,7 +5,7 @@
 // claim about the track's heading, and this script is where it is established rather than assumed.
 //
 // THE ONE FACT THAT MAKES IT DECIDABLE: the render transform carries NO ROTATION.
-// `renderRaceFrame.js:152-158` is `ctx.translate(cam.offsetX, cam.offsetY)` followed by
+// `renderRaceFrame.js` → `renderRaceFrame` is `ctx.translate(cam.offsetX, cam.offsetY)` followed by
 // `ctx.scale(...)` and nothing else, so screen +x IS world +x and screen +y IS world +y on every
 // frame of every track. A screen side therefore names a WORLD AXIS DIRECTION, and the track's own
 // heading at that moment is what converts it into "ahead", "behind" or "across".
@@ -28,13 +28,13 @@ const { resolveNameSet, DEFAULT_NAME_SET } = await import(u("client/src/modules/
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 
 // The closing stretch in the RACE's own progress unit: `_runInProgressOf` is 0 at
-// `endgameThreshold` and 1 at the line (CameraDirector.js:604), so u>0 spans p 0.95 -> 1.00.
+// `endgameThreshold` and 1 at the line (CameraDirector.js), so u>0 spans p 0.95 -> 1.00.
 const THRESHOLD = DEFAULT_CAMERA_CONFIG.endgameThreshold;
 
 const SAMPLES = 200;
 
 function headingAtShapeT(shape, t, isOpen) {
-  // The director's own _headingAt (CameraDirector.js:2175), same eps, same wrap.
+  // The director's own _headingAt (`CameraDirector.js` → `_headingAt`), same eps, same wrap.
   const eps = 0.003;
   const tA = isOpen ? Math.min(1, t + eps) : (((t + eps) % 1) + 1) % 1;
   const tB = isOpen ? Math.max(0, t - eps) : (((t - eps) % 1) + 1) % 1;

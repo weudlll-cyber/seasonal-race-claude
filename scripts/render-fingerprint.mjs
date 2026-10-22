@@ -43,7 +43,7 @@
 //      by a sabotage that swapped them and did NOT move the hash. Named fix in the report.
 //   5. ★ THE REAL LABEL COUNT, because TEXT MEASUREMENT IS SYNTHETIC. Recorded here 2026-09-05 with
 //      MINT-RENDER-1, because a reader meets the instrument before they meet the recorder.
-//      `recordingContext.js:26-31` returns a DETERMINISTIC SYNTHETIC WIDTH from `measureText` — it
+//      `recordingContext.js` returns a DETERMINISTIC SYNTHETIC WIDTH from `measureText` — it
 //      has to return something, and the name-tag layout consumes that width to decide which labels
 //      are drawn. A real browser's width depends on the installed font. SO THIS FINGERPRINT PINS THE
 //      TAG-LAYOUT RULE — same widths in, same labels out — AND NOT THE NUMBER OF LABELS a real
@@ -474,7 +474,7 @@ function trackHash(geo, wantOps) {
     // THIS WAS A HAND-WRITTEN LITERAL WITH THREE MEMBERS, and `frameCameraInputs.js` declares FIVE
     // fields plus this method. The three absent ones were `state`, `anchorRacerIndex` and
     // `runInArrived` — and two of them are read by the very draw path this instrument measures:
-    // `renderRaceFrame.js:212` reads `camera?.anchorRacerIndex` for the focus racer, and `:220`
+    // `renderRaceFrame.js` → `renderRaceFrame` reads `camera?.anchorRacerIndex` for the focus racer,
     // reads `camera?.runInArrived` to decide whether a label says a NAME or a number. So the
     // fingerprint was hashing a frame drawn with the leader fallback and with numbers, on every
     // frame of every track, while the game drew the subject and his name.
@@ -592,10 +592,10 @@ function trackHash(geo, wantOps) {
         // This read `false` unconditionally, so every render hash ever taken was measured with the
         // race plan's OUTCOME window permanently SHUT — a camera the product never runs, and
         // therefore frames the product never draws. The browser derives it at
-        // `RaceScreen/raceLoopDiagnostics.js:147` (`recordRacePlanStepDiag`, called from
-        // `RaceScreen/index.jsx:1243`) as
+        // `RaceScreen/raceLoopDiagnostics.js` (`recordRacePlanStepDiag`, called from
+        // `RaceScreen/index.jsx` → `loop`) as
         // `racePlanController.getPhase(physicsTs, st.raceProgress) === 'OUTCOME'` and reads it back
-        // into the director's `raceState` at `index.jsx:1313`. The camera instrument was corrected this way
+        // into the director's `raceState` at `RaceScreen/index.jsx` → `loop`. The camera instrument was corrected this way
         // by HARNESS-OUTCOME-1 and minted by MINT-CAMERA-1; this is the same repair on the second
         // instrument, made with the same call and the same two arguments so the two cannot disagree.
         isOutcomePhase:

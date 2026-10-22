@@ -204,7 +204,7 @@ rule**; see [reports/README.md](reports/README.md). `docs/archive/` is history a
 - **There is no leaderboard or cross-event standings server yet.** That is planned work, not
   shipped behaviour — see [BACKLOG.md](docs/BACKLOG.md) PART ONE, *Phases 5–7*.
 - **The race picture is a fixed field.** The world-to-screen scales are defined against a
-  1280×720 reference canvas (`client/src/modules/camera/projection.js:37-38`); it does not reflow.
+  1280×720 reference canvas (`client/src/modules/camera/projection.js` → `REFERENCE_CANVAS_W`); it does not reflow.
   Three screens do carry a small-screen breakpoint — the race screen at 640px, the result screen at
   768px and the racer editor at 900px. ★ **Those are the measurements; this page says nothing about
   whether phone use is a goal**, because nothing in the repository establishes that.

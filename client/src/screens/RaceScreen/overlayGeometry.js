@@ -79,8 +79,8 @@ export const OVERLAY_ANCHORS = {
     // WinnerCard: percentages from the day the winner-card bug was fixed. This file did NOT
     // change WinnerCard.css — it is here so the guard can prove the CARD still clears the MINIMAP.
     kind: 'dom',
-    leftFrac: 0.02, // 2% from the left, as `WinnerCard.css:47` sets
-    bottomFrac: 0.26, // 26% from the bottom, as `WinnerCard.css:48` sets
+    leftFrac: 0.02, // 2% from the left, as `WinnerCard.css` → `.winner-card` sets
+    bottomFrac: 0.26, // 26% from the bottom, as `WinnerCard.css` → `.winner-card` sets
     // The card is at most 30% wide of the wrapper (`max-width: 30%`), and grows upward from a
     // bottom anchor — a longer name moves it away from the minimap, never into it. Height is
     // font-driven and measured ~55 CSS px on the finish frame.
