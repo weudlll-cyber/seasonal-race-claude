@@ -5,8 +5,9 @@
 // Description: The date-and-time field of "Until…" and "Extend until": the browser's own
 //              `datetime-local` input, themed like the Setup screen's other fields (its `playerInput`
 //              class, reused, plus `color-scheme: dark` so the browser draws its picker dark too) —
-//              no date library. Under it, in plain words, what the choice will do — "Closes Wed 22
-//              Oct, 19:45 (in 1 day 2 h)" in the browser's locale, live — or, when the choice cannot
+//              no date library. Under it, in plain words, what the choice will do — "Closes Thu 22
+//              Oct 2026, 19:45 (in 1 day 2 h)", in the game's one date form whatever the browser's
+//              locale (`closesSentence`, `formatDateTime`), live — or, when the choice cannot
 //              be accepted, why (`deadlineProblem`, modules/registration/timeLeft.js). The caller
 //              disables its button while there is a problem.
 // ============================================================

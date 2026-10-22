@@ -8,9 +8,11 @@
 //              Then this panel shows the join link with a copy button, a QR code with "Copy QR code"
 //              and "Download QR", places taken and left, the time left, the live list with a remove
 //              button per name, "Close now", "Extend", "Show QR full screen" and "Delete
-//              registration". When it is closed, "Use these players" hands the names and the track to
-//              the Setup screen, and the race is started through the normal Start Race flow —
-//              nothing here starts a race.
+//              registration". When it is closed, "Use these players" hands the names, the track, the
+//              registration's id and its event name to the Setup screen, and the race is started
+//              through the normal Start Race flow — nothing here starts a race. A registration a race
+//              was started with shows "Raced" and when (follow-up 2, the owner's decision of
+//              2026-10-22); its players can still be used again.
 //
 // ── THE PLACE COUNT IS THE PLAYERS TAB'S OWN LIMIT ─────────────────────────────────────────────
 // Computed for the chosen track exactly as the Players tab computes it for the selected one:
@@ -42,7 +44,7 @@ import {
 } from '../../services/registrationApi.js';
 import {
   deadlineProblem,
-  formatDeadline,
+  formatDateTime,
   formatTimeLeft,
   msFromLocal,
   msUntil,
@@ -93,7 +95,8 @@ const errorText = (err) => err?.message || 'Something went wrong. Try again.';
 
 /**
  * @param {{ tracks: object[], raceDefaults: object, selectedTrackId: string|null,
- *           onUsePlayers: (p: { names: string[], trackId: string }) => void }} props
+ *           onUsePlayers: (p: { id: string, names: string[], trackId: string,
+ *                               eventName: string|null }) => void }} props
  */
 export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackId, onUsePlayers }) {
   const [list, setList] = useState(null);
@@ -176,7 +179,12 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
           })
         }
         onUsePlayers={() =>
-          onUsePlayers({ names: shown.entries.map((e) => e.name), trackId: shown.trackId })
+          onUsePlayers({
+            id: shown.id,
+            names: shown.entries.map((e) => e.name),
+            trackId: shown.trackId,
+            eventName: shown.eventName,
+          })
         }
       />
     );
@@ -334,13 +342,14 @@ function RegistrationList({ list, now, onShow }) {
                   {title}{' '}
                   <span className={isOpen ? styles.badgeOpen : styles.badgeClosed}>
                     {isOpen ? 'Open' : 'Closed'}
-                  </span>
+                  </span>{' '}
+                  <RacedBadge racedAt={r.racedAt} />
                 </div>
                 <div className={styles.muted}>
                   {r.trackName} · {r.taken} of {r.capacity} places ·{' '}
                   {isOpen
                     ? `${formatTimeLeft(msUntil(r.closesAt, now))} left`
-                    : `closed ${formatDeadline(closedAt)}`}
+                    : `closed ${formatDateTime(closedAt)}`}
                 </div>
               </div>
               <button
@@ -359,6 +368,19 @@ function RegistrationList({ list, now, onShow }) {
         })}
       </ol>
     </div>
+  );
+}
+
+/**
+ * "Raced" and when, for a registration a race was started with — the first such race; nothing for
+ * one that has not raced. The time is written the way every date is (`formatDateTime`).
+ */
+function RacedBadge({ racedAt }) {
+  if (!racedAt) return null;
+  return (
+    <span className={styles.badgeRaced} data-testid="registration-raced">
+      Raced {formatDateTime(racedAt)}
+    </span>
   );
 }
 
@@ -390,7 +412,9 @@ function RegistrationView({
       <button type="button" className={styles.backButton} onClick={onBack}>
         ← Back to all registrations
       </button>
-      <h3 className={styles.subTitle}>{r.eventName || 'Registration'}</h3>
+      <h3 className={styles.subTitle}>
+        {r.eventName || 'Registration'} <RacedBadge racedAt={r.racedAt} />
+      </h3>
       <p className={styles.muted}>Track: {r.trackName}</p>
 
       <div className={styles.share}>

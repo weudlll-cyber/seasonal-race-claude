@@ -14,6 +14,7 @@
 //              GET    /:id                       one, with its names
 //              POST   /:id/close                 close it now
 //              POST   /:id/extend                move the deadline later  { closesAt }
+//              POST   /:id/raced                 a race was started with its players (first time kept)
 //              DELETE /:id/entries/:entryId      remove one name
 //              DELETE /:id                       delete it and every name in it
 //
@@ -141,6 +142,16 @@ export function createRegistrationsRouter({ store, tracks } = {}) {
     } catch (err) {
       return answerRefusal(res, err);
     }
+  });
+
+  // POST /:id/raced — the Setup screen started a race with this registration's players
+  // (follow-up 2, the owner's decision of 2026-10-22). The store keeps the FIRST time; open or
+  // closed alike; another team's id is not found, like every route here. No body.
+  router.post('/:id/raced', (req, res) => {
+    const team = teamOf(req, res);
+    if (!team) return;
+    const marked = resolveStore().markRaced(req.params.id, team);
+    return marked ? res.json(marked) : res.status(404).json(NOT_FOUND);
   });
 
   // DELETE /:id/entries/:entryId — remove one name; its place is free again.

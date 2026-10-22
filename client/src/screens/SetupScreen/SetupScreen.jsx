@@ -11,6 +11,11 @@
 //   `activeRace` in THREE places and every one of them must set `raceSource` — see the note above
 //   `handleStartRace`. The value travels with the race and is stored with it; nothing downstream
 //   can work it out again, which is the whole reason it is set here.
+//
+// ★ REGISTRATION-1 follow-up 2 (the owner's decisions of 2026-10-22): players taken from a
+//   registration carry its event name into the race's (`handleUseRegisteredPlayers`), and the
+//   race that starts with them marks that registration "Raced" (`handleStartRace`). The rules are
+//   modules/registration/raceFromRegistration.js.
 // ============================================================
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -23,7 +28,11 @@ import { sectionsOf } from './rosterGroups.js';
 import { fieldCapFor, isTrackOpen, quickTestFieldSize } from './fieldCap.js';
 import RegistrationPanel from './RegistrationPanel.jsx';
 import { readPlayersMode, writePlayersMode } from './playersMode.js';
-import { listRegistrations } from '../../services/registrationApi.js';
+import { listRegistrations, markRegistrationRaced } from '../../services/registrationApi.js';
+import {
+  composeEventName,
+  nextRegistrationToMark,
+} from '../../modules/registration/raceFromRegistration.js';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
@@ -271,14 +280,24 @@ function SetupScreen() {
       live = false;
     };
   }, []);
+  // The registration whose players are in the roster now, which the race marks "Raced" when it
+  // starts — null for none. Kept and dropped by `nextRegistrationToMark`'s rules.
+  const [registrationToMark, setRegistrationToMark] = useState(null);
+  const noteRoster = (event) => setRegistrationToMark((id) => nextRegistrationToMark(id, event));
   // "Use these players": the registered names become the roster — through the same `setPlayers`
   // every other way of filling the field uses, REPLACING what was there (a registration is a way
   // to fill the race, not to add to it) — and the registration's track is selected. The tab goes
   // back to the names, where the roster can be checked before Start Race.
-  function handleUseRegisteredPlayers({ names, trackId }) {
+  // Follow-up 2: the race's event name becomes "<brand profile's event name> – <registration's>",
+  // built from the PROFILE, not the field, so a second registration replaces the first one's part;
+  // the Settings field shows it and stays editable.
+  function handleUseRegisteredPlayers({ id, names, trackId, eventName }) {
     setPlayers(names.map((name) => ({ name })));
     setSelectedTrackId(trackId);
     setPlayersMode('names');
+    noteRoster({ type: 'take', id });
+    const composed = composeEventName(activeBrandProfile?.eventName, eventName);
+    if (composed !== null) setRaceSettings((prev) => ({ ...prev, eventName: composed }));
   }
   const [racerTypeOverride, setRacerTypeOverride] = useState(null);
   // CLOSED tracks: the operator picks LAPS and the duration is derived. OPEN tracks: the operator
@@ -1042,6 +1061,15 @@ function SetupScreen() {
     // seed as well as a typed one — the drawn case is the whole reason the key exists, because the
     // field stays empty and would otherwise be the only record.
     rememberStartedRace(race);
+    // Follow-up 2: the race really starts, so the registration its players came from is marked
+    // "Raced" — once, and never in the race's way: the call is not awaited, and a failure is only
+    // logged (the server keeps the first time, so nothing is lost by not retrying).
+    if (registrationToMark) {
+      markRegistrationRaced(registrationToMark).catch((err) =>
+        console.warn('[setup] the registration could not be marked as raced:', err)
+      );
+      noteRoster({ type: 'started' });
+    }
     navigate('/race');
   }
 
@@ -1307,12 +1335,18 @@ function SetupScreen() {
                       field, and both doors lead to it. */}
                   <PlayerGroupPicker
                     players={players}
-                    onChange={setPlayers}
+                    onChange={(next) => {
+                      setPlayers(next);
+                      noteRoster({ type: 'group' });
+                    }}
                     maxPlayers={effectiveMaxPlayers}
                   />
                   <PlayerSetup
                     players={players}
-                    onChange={setPlayers}
+                    onChange={(next) => {
+                      setPlayers(next);
+                      noteRoster({ type: 'names', count: next.length });
+                    }}
                     maxPlayers={effectiveMaxPlayers}
                   />
                 </>

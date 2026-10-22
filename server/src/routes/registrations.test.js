@@ -167,6 +167,7 @@ describe('another team can neither see nor change it', () => {
       request(b)
         .post(`/api/registrations/${r.id}/extend`)
         .send({ closesAt: inMinutes(60) }),
+      request(b).post(`/api/registrations/${r.id}/raced`),
       request(b).delete(`/api/registrations/${r.id}/entries/${entryId}`),
       request(b).delete(`/api/registrations/${r.id}`),
     ];
@@ -175,6 +176,41 @@ describe('another team can neither see nor change it', () => {
       expect(JSON.stringify(res.body)).not.toContain('Ada');
     }
     const unchanged = store.get(r.id, userA.team);
-    expect(unchanged).toMatchObject({ state: 'open', taken: 1, closesAt: r.closesAt });
+    expect(unchanged).toMatchObject({
+      state: 'open',
+      taken: 1,
+      closesAt: r.closesAt,
+      racedAt: null,
+    });
+  });
+});
+
+// ★ POST /:id/raced (follow-up 2, the owner's decision of 2026-10-22). What breaks if this is
+// deleted: the route could stop marking, or a second race could move the time the card shows.
+describe('marking it raced', () => {
+  it('marks an open or a closed registration once; a second call keeps the first time', async () => {
+    const app = appAs(userA);
+    const { body: r } = await openAs(userA);
+    expect(r.racedAt).toBeNull();
+    const first = await request(app).post(`/api/registrations/${r.id}/raced`);
+    expect(first.status).toBe(200);
+    expect(Date.parse(first.body.racedAt)).not.toBeNaN();
+    await new Promise((done) => setTimeout(done, 5)); // a later clock, so a moved time would show
+    const second = await request(app).post(`/api/registrations/${r.id}/raced`);
+    expect(second.body.racedAt).toBe(first.body.racedAt);
+    // The list and the single view both carry it.
+    const list = (await request(app).get('/api/registrations')).body.registrations;
+    expect(list.find((x) => x.id === r.id).racedAt).toBe(first.body.racedAt);
+    // A closed registration is marked too.
+    const { body: c } = await openAs(userA);
+    await request(app).post(`/api/registrations/${c.id}/close`);
+    const closed = await request(app).post(`/api/registrations/${c.id}/raced`);
+    expect(closed.body).toMatchObject({ state: 'closed' });
+    expect(closed.body.racedAt).not.toBeNull();
+  });
+
+  it('an unknown id is 404', async () => {
+    const res = await request(appAs(userA)).post('/api/registrations/no-such-id/raced');
+    expect(res.status).toBe(404);
   });
 });
