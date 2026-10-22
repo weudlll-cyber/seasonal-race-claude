@@ -62,7 +62,8 @@ ra_admin() {
 }
 
 # Caddy waits for the app to be healthy, so `up` itself fails while the app is not. That is not the
-# verdict: wait_healthy decides, and an update rolls back on it.
+# verdict: wait_healthy decides, and an update rolls back on it. When `up` fails this way it does not
+# start Caddy at all, and nothing would start it later — wait_healthy does, once the app is healthy.
 up_detached() { compose up -d || say "(the app is not healthy yet — the health check decides)"; }
 
 state_get() { cat "$RA_ETC/state/$1" 2>/dev/null || true; }
@@ -79,14 +80,41 @@ app_health_status() {
   docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id"
 }
 
+caddy_running() {
+  local id
+  id="$(compose ps -q caddy 2>/dev/null || true)"
+  [[ -n "$id" && "$(docker inspect -f '{{.State.Running}}' "$id" 2>/dev/null)" == "true" ]]
+}
+
 # Healthy means BOTH: the container's own check passes, and /api/health answers through Caddy over
 # https — what a visitor reaches. Gives up after HEALTH_TIMEOUT_S seconds.
+#
+# ★ A SLOW START (VPS-INSTALL-1, 2026-10-22). The app's health window in the compose file is its
+# start period plus three failed checks; a start that takes longer — the first one copies the seed
+# files into an empty data directory before the server listens, and a busy host stretches that — is
+# marked unhealthy, and `compose up` then gives up on Caddy for good. The app turns healthy a few
+# seconds later on its own, but with no Caddy https never answers and the start failed after the
+# whole bound (2 of 8 empty-data starts in the installer test). So once the app is healthy and Caddy
+# is not running, the stack is brought up again. The bound is unchanged: a version that never
+# becomes healthy still fails here, and an update still rolls back on it.
 wait_healthy() {
-  local deadline=$((SECONDS + HEALTH_TIMEOUT_S))
+  local start=$SECONDS status
+  local deadline=$((start + HEALTH_TIMEOUT_S)) next_report=$((start + 15))
   while ((SECONDS < deadline)); do
-    if [[ "$(app_health_status)" == "healthy" ]] && ra_admin health --https >/dev/null 2>&1; then
-      say "healthy: the app answers, and https through Caddy answers"
-      return 0
+    status="$(app_health_status)"
+    if [[ "$status" == "healthy" ]]; then
+      if ! caddy_running; then
+        say "the app is healthy; starting Caddy, which the first 'up' gave up on"
+        compose up -d >/dev/null 2>&1 || true
+      fi
+      if ra_admin health --https >/dev/null 2>&1; then
+        say "healthy: the app answers, and https through Caddy answers"
+        return 0
+      fi
+    fi
+    if ((SECONDS >= next_report)); then
+      say "waiting: the app is ${status} ($((SECONDS - start))s of ${HEALTH_TIMEOUT_S}s)"
+      next_report=$((SECONDS + 15))
     fi
     sleep 5
   done

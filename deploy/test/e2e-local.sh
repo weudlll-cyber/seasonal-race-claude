@@ -13,11 +13,13 @@
 #              first admin), and `racearena restore` of the carried archive must bring back the old
 #              install's admin and race; the drill's install is then purged too.
 #
-# Usage: bash e2e-local.sh <e2eRoot> <repoClone> <refA> <refB> <refC>
+# Usage: bash e2e-local.sh <e2eRoot> <repoClone> <refA> <refB> <refC> <refD>
 #   <repoClone>  a git repository holding the three refs; it becomes the checkout's `origin`
 #   <refA>       the version installed first
 #   <refB>       a newer one whose update must run a migration (a test migration, `e2e-test-1`)
 #   <refC>       a version whose app can never become healthy — its update must roll back by itself
+#   <refD>       <refB> with a server that starts listening only after 70 s: past the compose health
+#                window, inside racearena's bound — a start on it must still bring Caddy up
 # Run from Git Bash with Docker; it publishes 80 and 443 on this machine, so both must be free.
 # Everything it creates is under <e2eRoot> or carries the compose project name `racearena`; the
 # stack's containers, volumes and app images are removed by its own uninstall steps; the pulled
@@ -25,7 +27,7 @@
 # ============================================================
 set -uo pipefail
 
-E2E="$1" CLONE="$2" REF_A="$3" REF_B="$4" REF_C="$5"
+E2E="$1" CLONE="$2" REF_A="$3" REF_B="$4" REF_C="$5" REF_D="$6"
 # Windows form (pwd -W) under Git Bash: node is a Windows program and, with path conversion off
 # (MSYS_NO_PATHCONV below), would read /c/tmp/… as C:c	mp….
 HERE="$(cd "$(dirname "$0")" && { pwd -W 2>/dev/null || pwd; })"
@@ -133,6 +135,21 @@ check "after docker restart, https answers" bash -c "printf '%s\n' '$ADMIN_PW' |
 docker kill -s KILL racearena-app-1 >/dev/null
 sleep 45
 docker inspect -f 'after a SIGKILL of the app: status={{.State.Status}} restarts={{.RestartCount}} health={{if .State.Health}}{{.State.Health.Status}}{{end}}' racearena-app-1 | tee -a "$RESULTS"
+
+echo "── a slow start: the app healthy only after the compose window, Caddy still started (VPS-INSTALL-1)"
+# Both containers gone, as on a first start; then a version whose server listens only after 70 s.
+# Compose marks it unhealthy and gives up on Caddy; racearena must start Caddy once the app is healthy.
+docker rm -f racearena-app-1 racearena-caddy-1 >/dev/null
+git -C "$RA_HOME" checkout --quiet --detach "$REF_D"
+"${RACEARENA[@]}" start >"$E2E/start-d.log" 2>&1
+START_D_RC=$?
+tail -n 4 "$E2E/start-d.log" | tee -a "$RESULTS"
+check "racearena start succeeds on an app that answers only after 70 s" test "$START_D_RC" -eq 0
+check "it started Caddy itself once the app was healthy" grep -q "starting Caddy" "$E2E/start-d.log"
+check "https answers after the slow start" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $ADMIN"
+docker rm -f racearena-app-1 racearena-caddy-1 >/dev/null
+git -C "$RA_HOME" checkout --quiet --detach "$B_SHA"
+check "back on B: racearena start" "${RACEARENA[@]}" start
 
 echo "── log rotation"
 for c in racearena-app-1 racearena-caddy-1; do
