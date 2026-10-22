@@ -74,13 +74,13 @@ install, and `RA_PUBLIC_ORIGIN` with the address you give it.
 
 ★ **`http://localhost:4000` is a valid answer and the prompt does not say so** — its examples are a
 domain and a public IP, because that is what a deployment needs. Run bare it asks interactively;
-**with no terminal and no `--origin` it refuses rather than guessing** (`configure.mjs:145`), which is
+**with no terminal and no `--origin` it refuses rather than guessing** (`configure.mjs` → `main`), which is
 deliberate: "an unanswered question at install time is exactly how somebody ends up serving a package
 that points at their own machine." Checked against `judgePublicOrigin`, which accepts
 `http://localhost:4000` and `http://127.0.0.1:4000` and refuses a bare `localhost:4000` for having no
 scheme.
 
-★ **The secrets are never printed, deliberately** (`scripts/configure.mjs:103` — "a secret echoed to
+★ **The secrets are never printed, deliberately** (`scripts/configure.mjs` → `generateSecret` — "a secret echoed to
 a terminal is a secret in a scrollback buffer and in a screen recording"). They are written into
 `docker-compose.override.yml`, and **that file is where you read them**:
 
@@ -93,11 +93,11 @@ curl -X POST http://localhost:4000/api/auth/setup \
   -d '{"username":"me","password":"choose-a-real-password"}'
 ```
 
-★ **`npm run configure` never overwrites a value that is already there** (`configure.mjs:112`), so
+★ **`npm run configure` never overwrites a value that is already there** (`configure.mjs` → `withKeptEnv`), so
 re-running it on a live install cannot roll your session secret or your token.
 
 *(Corrected 2026-09-19, INSTALL-DOCS-1: this step said `docker-compose.yml` "already sets it, so copy
-the value from there". INSTALL-SECRETS-1 removed that shared token on 2026-09-08 — `docker-compose.yml:35-38`
+the value from there". INSTALL-SECRETS-1 removed that shared token on 2026-09-08 — `docker-compose.yml` → `environment`
 records the removal — so following this page gave you a working server you could never sign into.)*
 
 What you will see:

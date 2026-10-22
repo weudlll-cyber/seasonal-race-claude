@@ -44,12 +44,12 @@
 //     `SetupScreen` a readiness flag and wired it to the refusal: in `SetupScreen.jsx`,
 //     `selectedGeometryReady` gates `canStartBase` and both start paths, and `quickGeometryReady`
 //     disables the Quick Test button. A missing geometry
-//     now REFUSES the race instead of guessing at it, and `trackLoader.js:59-64` says so out loud
+//     now REFUSES the race instead of guessing at it, and `trackLoader.js` → `cacheTrackGeometry` says so out loud
 //     with a `console.warn` — which is where the "could not be cached" line in the logs comes from.
 //     The `geom ? !geom.closed : false` expressions are still there and still answer `false`, but
 //     nothing can reach a race through them any more.
 //   · **"seven workers doing it at once" is NO LONGER TRUE.** E2E-ONE-WORKER-1 set
-//     `playwright.config.js:63` to `workers: 1`, and `:64` to `retries: 0`.
+//     `playwright.config.js` to `workers: 1` and `retries: 0`.
 //
 // ★ THE HELPERS BELOW ARE KEPT ANYWAY, and not because nobody dared delete them. The dependency they
 // remove is a spec depending on WINNING a race, and that is the defect whether the race is seven

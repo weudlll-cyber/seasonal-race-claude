@@ -35,7 +35,7 @@ function reportServerReachable(reachable) {
 // ── PLAYER-WORDS-1: THIS STRING REACHES THE PLAYER, so it does not name a command ──────────────
 //
 // It is the message of the Error every service call throws when the server does not answer, and
-// screens render it verbatim — `SetupScreen/PlayerGroupPicker.jsx:145` prints "Saved groups could
+// screens render it verbatim — `SetupScreen/PlayerGroupPicker.jsx` → `PlayerGroupPicker` prints "Saved groups could
 // not be loaded (…)" with this text inside the brackets. The owner saw it on his own setup screen:
 // it told whoever was standing there to run `docker compose up` in the project root.
 //

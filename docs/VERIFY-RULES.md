@@ -796,7 +796,7 @@ a stated identity can be insufficient when the config is the thing that differs.
 **★ THE TOOL NAMED HERE IS CORRECTED, 2026-09-02 (RACE-IDENTITY-HASH-1).** This paragraph named
 `corridor-truth` from the day it was written. **`corridor-truth.mjs` has exactly one flag, `--json`**,
 and grepping it for `company` returns nothing at all; `--company-only` belongs to
-`his-shot-truth.mjs:47` and `camera-fingerprint.mjs:120`. The rule was right about the SHAPE and
+`his-shot-truth.mjs` → `COMPANY_ONLY` and `camera-fingerprint.mjs` → `COMPANY_ONLY`. The rule was right about the SHAPE and
 wrong about the tool — which is the very fault this rule exists to catch, sitting inside the rule.
 The real instance is also worse than the one described: `his-shot-truth` carries **four** arms under
 one identity line (`--company-only`, `--owner-unit`, `--min-racers=`, `--defaults`), not two.
@@ -872,79 +872,52 @@ the rule exists because nothing can answer.
 
 ---
 
-## R19 — A CITATION NAMES A SYMBOL, NOT A LINE — FROM HERE ON
+## R19 — A CITATION NAMES A THING, NOT A LINE
 
-**Rule.** A **NEW** citation from a document to code names a symbol:
+**Rule (the owner's decision of 2026-10-22).** Living documents — every `docs/*.md` that is not a
+dated record, the root README and `CLAUDE.md` — and comments in source, test and script files cite
+a source location by its NAME: the file, plus the function, export, route, constant, test name or
+section heading it points at.
 
     `raceGovernor.js` → `governorPhaseWeight`
+    `server/src/auth/authRouter.js` → `POST /login`
+    `ci.yml` → step "ESLint"
+    `DEPLOYMENT.md` → § "Install"
 
-not `raceGovernor.js:92`. Where the sentence already names the symbol beside the file, the line
-number is simply dropped — a bare filename makes no claim about a line and so cannot be wrong about
-one. **Spell the path when the basename is ambiguous**; `index.jsx` names at least four screens here.
+Never `file.js:92`, and never a range. Where the sentence already names the symbol beside the file,
+the file alone is enough. Where the cited lines are not inside a named thing, cite the nearest one
+that encloses them, or a short quoted phrase from the line. A link keeps its href and carries no
+`#L…` anchor. **Spell the path when the basename is ambiguous**; `index.jsx` names four screens.
 
-**The argument is not readability. It is that a line citation cannot be checked and a symbol
-citation can.** Nothing in this repository can tell a correct `file.js:357` from a stale one, because
-every in-range number is equally plausible — which is exactly how fifty-four of them rotted
-unnoticed (CITATIONS-1). *"`governorPhaseWeight` is in `raceGovernor.js`"* is a two-sided,
-machine-readable claim of the shape Rule A already enforces.
+**Why.** Every edit that shifts lines makes a line citation stale, and nothing says so: no tool in
+this repository can tell a correct `file.js:357` from a stale one, because every in-range number is
+equally plausible. Fifty-four rotted unnoticed before this rule existed (CITATIONS-1). Remapping the
+57 citations that one small auth change shifted cost most of that change's time
+(fix/test-bcrypt-cost, 2026-10-22). A name stays true when lines move, and a symbol name can be
+checked.
 
-**It IS guarded**, which is what separates this rule from R16 and R18. `check-fallback-agreement`'s
-**Rule F** resolves every arrow-form citation in `docs/*.md` and fails when the named file does not
-contain the named symbol — proven in both directions, and a document change now selects that guard.
-It is a **rule inside an existing guard, not a new script** (R13), and it lives beside Rule A because
-it asks Rule A's question with a document on one end.
+**Dated records keep their line numbers**, because they say what was true at a commit and rewriting
+them would falsify the record:
+- `reports/**`, `docs/archive/**`, the dated morning sheet (`MORNING.md`), and the append-only logs
+  (`AUDIT.md`, `LESSONS.md`, `TAGS.md`);
+- the dated history in `BACKLOG.md` PART TWO;
+- any paragraph that records what was verified, measured, counted or decided on its day.
 
-**"FROM HERE ON" is the whole of the rule, and the reason is measured.** CITATIONS-CONVENTION-1
-counted **246** code citations in `docs/*.md` and converted **12**. It did not convert the rest, and
-this is not deferred work:
+**A file inside a measured stamp's closure is converted only when that stamp is re-taken.** A
+comment edit there makes the stamp stale (`check-measured-stamps`). The files left with line
+citations for that reason are listed in [BACKLOG.md](BACKLOG.md) PART TWO, *CITE-BY-NAME-1*.
 
-- **107 (43%) are markdown deep links** — `[`raceStep.js` → `computeRowEnvMult`](../client/src/modules/raceStep.js#L46-L55)`.
-  **The line number IS the link target.** Converting them breaks 107 working links; CITATIONS-1's
-  proposal said "nothing mechanical breaks" and had not counted them.
-- **39 name a symbol that lives somewhere ELSE in the cited file.** Converting those moves the
-  pointer silently, which is worse than leaving it stale.
-- **24 sit inside a dated verdict or correction** — a record of what was checked on a day. Rewriting
-  a record is the thing this project refuses everywhere else.
-- The remainder name no symbol at all, and deciding what each meant is the judgement CITATIONS-1
-  measured as un-automatable: `getPhase`'s first occurrence in `racePlanner.js` is a **comment** at
-  `:169` and its definition is at `:695`.
+**It is guarded, for symbols.** `check-fallback-agreement`'s **Rule F** resolves every
+`` `file` → `symbol` `` in `docs/*.md` and fails when the named file does not contain the named
+symbol. In a link, the href resolves the file. It does not check a section, a test name or a quoted
+line, and it cannot see a line citation at all. Keeping line numbers out of living files is a review
+matter.
 
-**So the old citations stay, and nothing pretends they are checkable.** Rule F's count is a count of
-citations that OPTED IN, and its output says so, because "0 disagree" read as a statement about every
-citation in the documents would be the opposite of the truth.
-
-### ★ THE PAIRED FORM, and it is now the preferred one (CITATION-PAIRS-1, 2026-09-04)
-
-A citation that is already a DEEP LINK keeps its href and puts the symbol in its visible text:
-
-    [`raceStep.js` → `computeRowEnvMult`](../client/src/modules/raceStep.js#L46-L55)
-
-**The link still works and the visible half is now checkable. Rule F checks THE PAIR** — that the
-symbol named in the text is at the lines the href points to — and that is not a nicety:
-
-> **Converting the visible half alone would have been WORSE than the drift it replaces.** The href's
-> line number still moves silently when code above it moves, so the text would say the right name
-> while the click landed somewhere else — and a reader trusts a link more than a number.
-
-★ **IT ALSO CLOSES RULE F'S DECLARED BLIND SPOT for every citation in this form.** A bare
-`` `file` → `symbol` `` asks only whether the symbol is in the file ANYWHERE, so a symbol belonging
-to a different feature passes. A paired citation must have it AT THOSE LINES, which no other
-feature's symbol satisfies by accident. **The blind spot is now the BARE citations only, rather than
-all of them.** *(No count is written here. `check-fallback-agreement`'s verdict line prints the split
-on every run and it changes with every conversion — NEW-COPIES-1, 2026-09-04: this sentence carried
-“8 of 69”, and the guard's own `blind[]` carried it too.)*
-
-**A citation is converted only when a symbol is genuinely DECLARED at the cited lines**, and a
-substantial share of deep links cannot meet that — nothing in their range is a nameable symbol (a
-JSX fragment, a CSS rule, a bare expression). **Those are left as they are and reported**, because an
-unchecked pair is the failure mode this design exists to avoid. *(The split as it stood on the day of
-the conversion is in `reports/evolution/CITATION-PAIRS-1.md`; it is not restated here, because it
-moves whenever a citation is converted and this document would not move with it.)*
-
-**Cost, stated because it is the objection:** a `file:line` is clickable in some editors and a symbol
-is not. That cost is real for a bare citation and **zero for the 107 links**, which keep their
-anchors under this rule — a link may carry a symbol in its visible text and a line in its href, and
-the visible half is then the checkable one.
+**History, so the old form is recognised where it survives in a record.** From 2026-09-03 this rule
+applied only to NEW citations (CITATIONS-CONVENTION-1), and from 2026-09-04 a link carried a line
+range in its href that the symbol had to sit in (CITATION-PAIRS-1). The owner's decision of
+2026-10-22 replaced both: the living files were converted on `chore/cite-by-name`, and Rule F's
+line-range check was retired with the line numbers themselves.
 
 ---
 
@@ -977,6 +950,39 @@ each governs, and then saying so in its name.**
 **There is no guard for this**, and there could not easily be one: *“do these two names describe the
 same thing”* is a question about meaning. It is enforced at review time, by whoever is adding the
 fifth number.
+
+---
+
+## R21 — SERVER TESTS HASH AT BCRYPT'S MINIMUM; A REAL SERVER NEVER DOES — AND THE LOAD RULE
+
+**Rule.** Every server test hashes passwords at bcrypt cost **4**; production hashes at **12**. One
+switch does it, for the whole suite: `test/env-setup.js` sets `RA_BCRYPT_COST_FOR_TESTS`, and
+`bcryptCost()` in `server/src/auth/usersStore.js` reads it **only when `NODE_ENV` is `test`** (vitest
+sets that) — anywhere else it returns `BCRYPT_COST`, whatever the variable says. The timing-dummy hash
+the login path compares against on an unknown user comes from the same place (`timingDummyHash()`),
+so a user-miss and a password-miss still cost the same, in production and under tests.
+(fix/test-bcrypt-cost, 2026-10-22.)
+
+**Why.** A test that signs in spends one hash and one compare. At 12 that is about half a second of
+CPU, and with three projects' checks on one machine the auth files' setup ran past its timeout again
+and again — each time green alone. The answer had been per-file: a bcrypt mock in one file, a 30 s
+budget in three others. Both are gone; **do not add a per-file budget or a bcrypt mock back** — a
+slow auth test now has a different cause, and that cause is the finding.
+
+**What must never move, pinned by `server/src/auth/bcryptCost.test.js`**, each assertion broken once
+on purpose when written:
+
+- a `NODE_ENV=production` child process hashes at 12 although the switch says 4;
+- a hash made at 12 — every existing user's — still verifies (bcrypt reads the cost from the hash);
+- the password minimum (10) and the four rate limiters' limits and windows are unchanged.
+
+A test that needs a hash at the production cost on purpose makes it with `BCRYPT_COST` directly
+(`passwordMinLength.test.js` does, for a password stored before the length rule).
+
+**THE LOAD RULE (the owner's decision of 2026-10-22).** If a premerge fails **only** on a timeout in a
+test file the branch does not touch, run that one file alone. If it passes alone, proceed — do not
+wait for a quiet machine — and let GitHub's CI on the merge commit decide. If CI is then red on
+something the branch caused, revert the merge with a normal revert commit and report it.
 
 ---
 

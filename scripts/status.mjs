@@ -27,7 +27,7 @@
 //     from mtimes, because copying an archive to another disk resets its mtime. `scripts/backup.mjs`
 //     writes with the same module.
 //   · `RA_BACKUP_DIR` — the same setting `npm run backup` writes into, so one value schedules both.
-//   · `GET /api/health` — the existing public route (`server/src/auth/guards.js:16`); nothing new
+//   · `GET /api/health` — the existing public route (`server/src/auth/guards.js` → `PUBLIC_PATHS`); nothing new
 //     is added to the server for this.
 //
 // ── USAGE ──────────────────────────────────────────────────────────────────────────────────────

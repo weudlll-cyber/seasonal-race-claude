@@ -76,7 +76,7 @@ export function resolveRaceWorld({
   //    got HIS racer at HIS speed under the identifier's name.
   //
   //    `getRacerType` returns the type with THIS host's stored overrides already applied
-  //    (`racer-types/index.js:293-300` applies them at boot). The identifier has recorded the
+  //    (`racer-types/index.js` → `_applyStoredTunableOverrides` applies them at boot). The identifier has recorded the
   //    same fields all along — `effectiveRacerTypes`, which `exportRaceConfig.js` builds from
   //    `SIM_TYPE_FIELDS` — and nothing on the race path read them. `speedMultiplier` is a
   //    first-order physics input, so the result was a DIFFERENT RACE under the same identifier,

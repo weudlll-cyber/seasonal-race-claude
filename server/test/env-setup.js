@@ -2,7 +2,8 @@
 // File:        env-setup.js
 // Path:        server/test/env-setup.js
 // Project:     RaceArena
-// Description: Vitest global setup — isolates all server data from real server/data.
+// Description: Vitest global setup — isolates all server data from real server/data, and
+//              (since 2026-10-22) puts bcrypt at its minimum cost for the tests only.
 //              RA_DATA_DIR must be set BEFORE any module that imports dataPaths.js
 //              (which fixes DATA_ROOT at import time). This file imports only node
 //              built-ins, so no route/auth module is triggered here.
@@ -36,3 +37,13 @@ process.env.RA_USERS_DB = join(os.tmpdir(), `racearena-test-users-${randomUUID()
 
 // Known token (handy for authz tests; harmless here).
 process.env.RA_BOOTSTRAP_TOKEN ??= 'test-bootstrap-token';
+
+// ── BCRYPT AT ITS MINIMUM COST, FOR EVERY SERVER TEST (fix/test-bcrypt-cost, 2026-10-22) ───────
+//
+// Production hashes at 12 (about 250 ms a hash); a test that signs in spends one hash and one
+// compare, and with three projects' checks on one machine that setup ran past its timeout again and
+// again. Cost 4 is bcrypt's minimum and about a millisecond. ONE switch for the whole suite: read by
+// `bcryptCost()` in `src/auth/usersStore.js`, which IGNORES it unless NODE_ENV is 'test' (vitest
+// sets that), so it can never lower the cost of a real server. Hashes made at 4 verify normally;
+// what a hash at the PRODUCTION cost does is pinned by `src/auth/bcryptCost.test.js`.
+process.env.RA_BCRYPT_COST_FOR_TESTS = '4';

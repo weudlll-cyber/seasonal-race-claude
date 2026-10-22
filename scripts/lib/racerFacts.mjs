@@ -19,7 +19,7 @@
 //
 // ── THE ONE RULE, AND WHY IT IS NOT SIMPLY `.config` ───────────────────────────────────────────
 //
-// `client/src/racer-types/index.js:477` calls `_applyStoredTunableOverrides()` AT MODULE LOAD. It reads storage and
+// `client/src/racer-types/index.js` calls `_applyStoredTunableOverrides()` AT MODULE LOAD. It reads storage and
 // MUTATES `type.config` in place, and `TUNABLE_FIELDS` includes `speedMultiplier` and `displaySize`.
 // In jsdom `localStorage` exists, so a naive `.config.displaySize` would let a developer's Dev-Screen
 // tuning silently change what a harness measures. `CONFIG_SNAPSHOT` is frozen at that file's :248,

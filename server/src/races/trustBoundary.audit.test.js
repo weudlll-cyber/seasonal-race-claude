@@ -8,7 +8,7 @@
 //
 // The server accepts a structurally valid race result WITHOUT verifying that any simulation
 // produced it. That is deliberate, and the owner's rule is in the source it governs:
-// `client/src/modules/raceHistory.js:9-14`, 2026-09-06 —
+// `client/src/modules/raceHistory.js` → its header comment, 2026-09-06 —
 //     "The race is written LOCALLY FIRST, always. The server is a second store, never a gatekeeper."
 // `raceStore.js` enforces that line exactly: every guard it has is STRUCTURAL — required fields
 // (`:235`), a non-empty roster, `results` an array, `winners` an array (`:264-274`). None of them

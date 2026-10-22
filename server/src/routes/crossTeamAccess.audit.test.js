@@ -24,7 +24,7 @@
 // ★★★ THE TENANCY BOUNDARY WILL NOT BE BUILT — decision of the owner, 2026-10-01.
 // ════════════════════════════════════════════════════════════════════════════════════════════
 // Organizers on one installation share everything that is shared today; races stay scoped per team
-// exactly as already built (`server/src/routes/races.js:69`, `:91`). This supersedes the boundary
+// exactly as already built (`server/src/routes/races.js` → `POST /`). This supersedes the boundary
 // of 2026-09-25 and the order of 2026-09-27 that this header used to carry (`docs/BACKLOG.md`
 // PART TWO, the TENANCY row; the survey and plan are the tag `archive/tenancy-survey-1`).
 //

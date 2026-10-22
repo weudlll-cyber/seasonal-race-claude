@@ -13,7 +13,7 @@
 //
 // ── ★ WHAT IS REUSED RATHER THAN INVENTED ──────────────────────────────────────────────────────
 // The amber warning treatment already in the Dev Screen — `RACE_PLAN_TIMING_WARNING_STYLE` in
-// `DynamicsTuningSection.jsx:69-77`. The values are copied here rather than imported because that
+// `DynamicsTuningSection.jsx` → `RACE_PLAN_TIMING_WARNING_STYLE`. The values are copied here rather than imported because that
 // constant is module-private to a section that has no reason to export its styling; the shape and
 // the colours are the same, so the two read as one thing on screen.
 //

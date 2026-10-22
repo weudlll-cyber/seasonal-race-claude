@@ -16,7 +16,7 @@
 // ── WHY `RA_PUBLIC_ORIGIN` AND NOT A NEW VARIABLE ───────────────────────────────────────────────
 //
 // It already exists and already means exactly this: "canonical self-origin", documented in
-// DEPLOYMENT.md and read by the CSRF guard (`csrf.js:50`). Adding a second variable for the same
+// DEPLOYMENT.md and read by the CSRF guard (`csrf.js` → `corsOptions`). Adding a second variable for the same
 // fact would create precisely the drift the brief forbids — two addresses that have to be kept in
 // step, and a dead backend the day they are not. So ONE value now feeds three consumers:
 //

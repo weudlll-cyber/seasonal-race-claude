@@ -4,7 +4,7 @@
 // VISIBILITY IS TESTED ON THE BODY, NEVER ON THE CENTRE POINT. A centre-in-frame test has misled
 // this project before (LABEL-OVERLAP-3 read a shot as tight when it was the widest of the race), so
 // each racer is bounded by a circle of radius half his LARGER drawn dimension, projected per axis
-// with the renderer's own transform (renderRaceFrame.js:129/132/153):
+// with the renderer's own transform (`renderRaceFrame.js` → `renderRaceFrame`/132/153):
 //     closed track: eff = zoom * bs        open track: effX = effY = effectiveZoom(zoom, BASE)
 //     screen = world * eff + offset
 // OFF     — the whole bound is outside the canvas rect. Nothing of him is drawn.

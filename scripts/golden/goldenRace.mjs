@@ -20,7 +20,7 @@
 // `server/seeds/tracks/*.json`, so editing a seed moves it while the simulation is untouched — and
 // it moved once already, on 2026-09-02, as an instrument correction whose diff contained no engine
 // file. Re-verified at source for this piece: that read is still there, at
-// `scripts/fingerprint-default.mjs:182-196`.
+// `scripts/fingerprint-default.mjs` → `TRACKS`.
 //
 // So a golden race depends on NOTHING outside its own definition. Every value the engine reads is
 // stated in the fixture: the geometry, the track width, the racer's tuned values, every config
@@ -103,7 +103,7 @@ export function runGoldenRace(race, sharedConfigs) {
   const configs = sharedConfigs;
 
   // The geometry, from the fixture's own numbers. `getPosition` — the only shape method the engine
-  // calls (raceCore.js:389) — uses the CENTER spline and the declared width, so those are what the
+  // calls (`raceCore.js` → `createRaceFromIdentity`) — uses the CENTER spline and the declared width, so those are what the
   // fixture pins. Inner and outer are handed the same points: EditorShape builds splines from them,
   // and nothing on the race path reads either.
   const shape = new EditorShape({

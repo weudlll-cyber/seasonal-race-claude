@@ -151,8 +151,8 @@ function run(cfg, label) {
   // was `raceNumberLabel(undefined)` = the empty string, and the layout reasoned about 10 px boxes
   // (the padding alone) where the game draws 20-27 px. That gave the room test far more space than
   // it really has and is why it admitted names without collisions. Every other harness in this repo
-  // already does it the way RaceScreen does (`attachRacerDisplayFields`, index.jsx:809, which calls
-  // `assignRaceNumbers` in racerDisplayFields.js:50); this one did not.
+  // already does it the way RaceScreen does (`attachRacerDisplayFields`, RaceScreen/index.jsx, which calls
+  // `assignRaceNumbers` in `racerDisplayFields.js` → `attachRacerDisplayFields`); this one did not.
   const numbers = assignRaceNumbers(st.racers.length, SEED);
   for (const r of st.racers) r.raceNumber = numbers[r.index] ?? null;
   attachRenderState(st);
@@ -182,7 +182,7 @@ function run(cfg, label) {
     // `renderRaceFrame` computes `showAllTags` from `st.raceStart`:
     //     showAllTags = st.phase !== RACING || (ts - st.raceStart) < nameTagAllUntilMs
     // `scripts/lib/raceDriver.mjs` keeps `raceStart` as a LOCAL and never assigns it to the state —
-    // only the live RaceScreen does (index.jsx:1008). So on this driver `st.raceStart` is null,
+    // only the live RaceScreen does (`RaceScreen/index.jsx` → `loop`). So on this driver `st.raceStart` is null,
     // `raceElapsedMs` is 0, and showAllTags is TRUE FOR THE WHOLE RACE. `computeTagLayout` then takes
     // its START-FORMATION early return, which labels everyone, does no decluttering, and returns
     // `wide` EMPTY — so every harness on this driver reports ZERO names no matter what the config
@@ -304,7 +304,7 @@ function run(cfg, label) {
     const hitsBody = (a, b) => a.x0 < b.bx1 && b.bx0 < a.x1 && a.y0 < b.by1 && b.by0 < a.y1;
     // WHO IS EXEMPT. `renderRaceFrame` computes this itself — the director's anchor, or the leader
     // where the shot is a group and the anchor is null — and an exempt racer's name is drawn
-    // REGARDLESS of clearance (LABEL-FOCUS-1, nameTagLayout.js:440). So an overlapping exempt name is
+    // REGARDLESS of clearance (LABEL-FOCUS-1, `nameTagLayout.js` → `computeTagLayout`). So an overlapping exempt name is
     // the rule working as designed; an overlapping NON-exempt name is the room test admitting a name
     // that does not have the room. The two must be counted apart or the audit says nothing.
     let focusIdx = cd.anchorRacerIndex ?? null;

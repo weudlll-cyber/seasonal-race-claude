@@ -36,7 +36,7 @@
 //
 // ── ★★ WHY IT REFUSES WHEN A PER-STORE OVERRIDE POINTS OUTSIDE THE ROOT ────────────────────────
 // Three environment variables can each relocate ONE store away from the data root: `RA_USERS_DB`,
-// `RA_SESSION_DB`, `RA_RACES_DB`. They exist for test isolation (`raceStore.js:30-32` says so), not
+// `RA_SESSION_DB`, `RA_RACES_DB`. They exist for test isolation (`raceStore.js` says so), not
 // for deployment. A backup of the root alone would then be missing a store **and would not look
 // wrong** — exactly the silent-partial failure this tool exists to prevent. So it checks all three
 // and REFUSES, naming the variable and the path, rather than writing a convincing half-archive.

@@ -753,67 +753,54 @@ test("RULE F says in its OUTPUT that line citations are invisible to it", () => 
 });
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════
-// RULE F — THE PAIRED FORM (CITATION-PAIRS-1, 2026-09-04).
+// RULE F — THE LINKED FORM.
 //
-// SABOTAGE — the pair is the whole design. Converting the visible half alone would have been WORSE
-//   than the drift it replaces: the href's line still moves silently when code above it moves, so
-//   the text would say the right name while the click landed somewhere else, and a reader trusts a
-//   link more than a number.
-//   What breaks if I delete this: the rule falls back to "is the symbol in the file ANYWHERE",
-//   which is the blind spot the pairing exists to close, and 61 citations would then be checked
-//   far more weakly than they look.
+// SABOTAGE — a link's href RESOLVES THE FILE, which its visible name often cannot (four files here
+//   are called `index.jsx`). From CITATION-PAIRS-1 (2026-09-04) the href also carried a line range
+//   the symbol had to sit in; that half was retired on 2026-10-22 (chore/cite-by-name) with the line
+//   numbers themselves, because a range in an href goes stale exactly like a range in prose.
+//   What breaks if I delete this: linked citations could fall back to resolving by basename and
+//   be reported AMBIGUOUS instead of checked, or a leftover `#L` anchor could start deciding again.
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 
-// ★ THIS FIXTURE PINS A REAL SOURCE LINE RANGE and must move when that function moves. It did at
-// CHASE-SHIP-1 (2026-09-23): `governorPhaseWeight` slid from L92-L97 to L98-L103. The test asserts
-// that a CORRECT citation passes, so a stale range here would make it assert the opposite.
-test("RULE F PAIRED: a symbol genuinely at the linked lines passes", () => {
+test("RULE F LINKED: a symbol in the linked file passes, and is counted as LINKED", () => {
   withDocs(
-    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L160-L165).\n" },
+    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js).\n" },
     ({ code, out }) => {
       assert.equal(code, 0);
-      assert.match(out, /1 PAIRED/);
+      assert.match(out, /1 LINKED/);
     },
   );
 });
 
-test("★ RULE F PAIRED closes the BLIND SPOT: a real symbol from ANOTHER part of the file fails", () => {
-  // The case the bare arrow form passes and must not. `NATURALNESS_CEILING` IS declared in that
-  // file, at :30 — nowhere near L92-L97. Under the old rule this citation was indistinguishable from
-  // a correct one, because the symbol really is in the file.
+test("RULE F LINKED SABOTAGE: a symbol the linked file does not contain fails", () => {
   withDocs(
-    {
-      "a.md":
-        "see [`raceGovernor.js` → `NATURALNESS_CEILING`](../client/src/modules/raceGovernor.js#L92-L97).\n",
-    },
-    ({ code, out }) => {
-      assert.equal(code, 1, "a symbol in the file but NOT at the linked lines must fail");
-      assert.match(out, /is NOT in those lines/);
-      assert.match(
-        out,
-        /the LINK points somewhere else/,
-        "it must say WHICH half is wrong, or the reader edits the symbol instead of the line",
-      );
-    },
-  );
-});
-
-test("★ RULE F PAIRED catches the LINE half drifting, which is the failure the design exists for", () => {
-  withDocs(
-    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L900-L910).\n" },
+    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeightXX`](../client/src/modules/raceGovernor.js).\n" },
     ({ code, out }) => {
       assert.equal(code, 1);
-      assert.match(out, /is NOT in those lines|has only [0-9]+ lines/);
+      assert.match(out, /does not contain `governorPhaseWeightXX`/);
     },
   );
 });
 
-test("RULE F PAIRED resolves by the HREF, not by the ambiguous name in its text", () => {
+test("RULE F LINKED: a leftover line anchor decides nothing — the line half is retired", () => {
+  // A range far past the end of the file: under CITATION-PAIRS-1 this failed. It must now pass,
+  // because the symbol IS in the file and a line number is no longer a claim this rule checks.
+  withDocs(
+    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L9000-L9010).\n" },
+    ({ code, out }) => {
+      assert.equal(code, 0);
+      assert.match(out, /1 LINKED/);
+    },
+  );
+});
+
+test("RULE F LINKED resolves by the HREF, not by the ambiguous name in its text", () => {
   // Four files here are called `index.jsx`. The visible half cannot resolve them and the href always
   // can — resolving by basename left 14 of 61 unchecked on the first run, which is the rule declining
   // to check the very citations the conversion was for.
   withDocs(
-    { "a.md": "see [`index.jsx` → `handleStartRace`](../client/src/screens/SetupScreen/SetupScreen.jsx#L1-L20).\n" },
+    { "a.md": "see [`index.jsx` → `handleStartRace`](../client/src/screens/SetupScreen/SetupScreen.jsx).\n" },
     ({ out }) => {
       assert.doesNotMatch(out, /AMBIGUOUS/);
       assert.match(out, /symbol citation/);
@@ -821,16 +808,16 @@ test("RULE F PAIRED resolves by the HREF, not by the ambiguous name in its text"
   );
 });
 
-test("RULE F reports the two kinds SEPARATELY, because they are not equally strong", () => {
+test("RULE F reports the two kinds SEPARATELY, because they resolve the file differently", () => {
   withDocs(
     {
       "a.md":
         "bare: `raceGovernor.js` → `governorPhaseWeight`.\n" +
-        "paired: [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L92-L97).\n",
+        "linked: [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js).\n",
     },
     ({ out }) => {
-      assert.match(out, /1 PAIRED \(symbol checked AT the line the link points to\)/);
-      assert.match(out, /1 bare \(symbol checked anywhere in the file\)/);
+      assert.match(out, /1 LINKED \(file resolved by the link\)/);
+      assert.match(out, /1 bare \(file resolved by its name\)/);
     },
   );
 });

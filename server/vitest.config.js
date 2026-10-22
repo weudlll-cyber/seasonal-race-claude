@@ -9,6 +9,11 @@
 // never changed: measured, the worst unprotected test took 1,006 ms alone and up to 4,979 ms at
 // fourteen workers, against vitest's 5,000 ms default. GATE-RED-1 has the full account.
 //
+// **SINCE 2026-10-22 THE TESTS NO LONGER HASH AT 12** (fix/test-bcrypt-cost): `test/env-setup.js`
+// puts them at bcrypt's minimum, 4, about a millisecond a call; production stays at 12. Every
+// measurement below was taken at 12 and is kept as the record of why the group exists. The group
+// itself is left as it is — it costs nothing, and dropping it was not part of that change.
+//
 // `20868394` dropped `--no-file-parallelism` on purpose — that flag was serialisation standing in
 // for isolation, and the isolation is now real (one users store per file, `test/env-setup.js`).
 // **The owner's decision of 2026-08-26 is that the blanket serialisation does not come back.**

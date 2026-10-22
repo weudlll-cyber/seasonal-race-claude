@@ -9,8 +9,8 @@
 // The hash + schema + simulatability come from the SHARED module raceConfigWorld.js — imported, NEVER
 // re-implemented, so a hash produced here matches one the sim recomputes for the same blob by
 // construction. The config is gathered by calling the SAME load*Config functions the race reads at
-// start (`resolveRaceWorld`, called at RaceScreen/index.jsx:626; the loaders are imported in
-// raceWorldSetup.js:31-39) — never a hand-maintained key list, which is how the next silent
+// start (`resolveRaceWorld`, called at RaceScreen/index.jsx; the loaders are imported in
+// `raceWorldSetup.js`'s imports) — never a hand-maintained key list, which is how the next silent
 // divergence would creep in.
 // ============================================================
 import { loadRaceDynamicsConfig } from './raceDynamicsConfig.js';
@@ -38,7 +38,7 @@ import { splitConfigDiffs, raceRelevantWorldHash } from './parity/configFingerpr
 // CAMERA-REPRO-1 replay path applies a marker's config diff back onto the SAME object.
 
 // The racer-type config fields that affect the SIM (speed + avoidance geometry). getRacerType(id).config
-// already reflects any stored per-type overrides (racer-types/index.js:292 applies them at boot).
+// already reflects any stored per-type overrides (`racer-types/index.js` → `restoreTunableDefault` applies them at boot).
 const SIM_TYPE_FIELDS = [
   'speedMultiplier',
   'displaySize',

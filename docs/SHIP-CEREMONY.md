@@ -91,7 +91,7 @@ stays silent on files that can, in both directions at once, and it never looked 
   move no fingerprint. The example this used to give is closed: `scripts/sim-fairness.mjs` carried
   its own `Math.min(285, …)` copy of `raceParams.js`'s `W_REF_MAX`, so the world fingerprint was blind
   to the file that decides every start position, until W-REF-ONE-HOME-1 made it import the constant
-  (`scripts/sim-fairness.mjs:85-91`). **A green fingerprint is not a clearance for a hull file the instrument does not
+  (`scripts/sim-fairness.mjs`, its comment *ONE HOME FOR THE BODY-NARROW CEILING*). **A green fingerprint is not a clearance for a hull file the instrument does not
   read.** See HULL-FIX-1 for which ones those are.
 - **Dynamic imports whose specifier is not a literal.** A static walk follows
   `import(u("client/src/modules/raceCore.js"))` — that is how every instrument reaches the engine —
@@ -439,7 +439,7 @@ Nothing is proposed here; this is what the two commands are, so the difference i
    be red in CI.
 2. **`verify` RUNS NO `lint` AND NO `format:check`.** It runs `npm run format` (`scripts/verify.mjs`,
    the `format:` step) — **the formatter, which writes; not a check, which fails.** CI runs
-   `npm run lint` (`ci.yml:115`), `npm run format:check` (`:119`) and `npm run test:coverage`
+   `npm run lint` (`ci.yml` → step "ESLint"), `npm run format:check` (step "Prettier format check") and `npm run test:coverage`
    (`:125`). None of those three has any counterpart in `verify`.
 3. **THE ENVIRONMENT DIFFERS, AND THAT IS WHAT THE THREE DAYS COST.** The failure was
    `git commit-tree` refusing with *"Author identity unknown"* — a developer machine has a global
@@ -769,7 +769,7 @@ went missing).
       > The old sentence had it exactly the wrong way round, and the conclusion drawn from it — that
       > extra races are cheap at the margin — does not follow from the fixed cost at all.
       >
-      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:902`
+      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs` → `JOBS`
       > runs races **six at a time** by default, and `:972` starts that many workers. Two races
       > therefore overlap: on the measured run one finished at 209.2 s and the other at 262.6 s, and
       > the run's wall clock is the SLOWER of them, not their sum.

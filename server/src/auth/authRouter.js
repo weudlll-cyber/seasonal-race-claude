@@ -9,7 +9,12 @@
 import express from 'express';
 import { timingSafeEqual, createHash } from 'node:crypto';
 import { openSync, closeSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
-import defaultStore, { verifyPassword, toSafeUser, assertNewPassword } from './usersStore.js';
+import defaultStore, {
+  verifyPassword,
+  toSafeUser,
+  assertNewPassword,
+  timingDummyHash,
+} from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
 import { resolveCookieSecure, getActiveCookieName } from './session.js';
 import { restampSession } from './restampSession.js';
@@ -18,8 +23,9 @@ import { asyncRoute } from '../../utils/asyncRoute.js';
 
 // Timing-equalization dummy: a real bcrypt hash used in verifyPassword when a username is not
 // found, so that a user-miss takes the same wall time as a password-miss (prevents user enumeration
-// via timing). The plaintext that produced this hash is irrelevant and never authenticated against.
-const DUMMY_HASH = '$2b$12$bZsIjjH3iRDdWBkesqmTUuYehFIs0VBb6IEEfKooA.ki5Ey67uJsS';
+// via timing). It comes from `timingDummyHash()` (usersStore.js), at the SAME cost real hashes are
+// made with — 12 in production (the same fixed hash this file used to hold), the tests' low cost
+// under tests — so the two paths cost the same in both. The plaintext is never authenticated.
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -213,7 +219,7 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       const record = store.findAuthRecordByUsername(username);
 
       if (!record) {
-        await verifyPassword(password, DUMMY_HASH); // timing equalization — result ignored
+        await verifyPassword(password, timingDummyHash()); // timing equalization — result ignored
         return res.status(401).json({ error: 'invalid credentials' });
       }
 

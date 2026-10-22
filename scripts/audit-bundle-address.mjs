@@ -11,7 +11,7 @@
 //
 // ★ WHAT IT DELIBERATELY DOES NOT DO: build anything, and it is NOT a routed guard.
 //
-// It is named `audit-` rather than `check-` ON PURPOSE. `scripts/lib/routing.mjs:343` discovers
+// It is named `audit-` rather than `check-` ON PURPOSE. `scripts/lib/routing.mjs` → `guardScripts` discovers
 // every top-level `check-*.mjs` as a guard that must declare itself and be routed by `verify` — and
 // this one must not be, because it judges `client/dist`, an artefact `verify` does not build.
 // Routing it would redden `verify` on any tree without a fresh client build, which is a guard
