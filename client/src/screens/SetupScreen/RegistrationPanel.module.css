@@ -147,7 +147,8 @@
 }
 
 .badgeOpen,
-.badgeClosed {
+.badgeClosed,
+.badgeRaced {
   font-size: 0.7rem;
   font-weight: 700;
   padding: 0.05rem 0.45rem;
@@ -163,6 +164,12 @@
 .badgeClosed {
   border: 1px solid var(--color-muted);
   color: var(--color-muted);
+}
+
+/* A race was started with this registration's players (follow-up 2). */
+.badgeRaced {
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
 }
 
 .cardOpenButton {

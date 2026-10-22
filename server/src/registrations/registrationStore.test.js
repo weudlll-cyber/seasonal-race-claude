@@ -15,7 +15,9 @@ import { join } from 'node:path';
 import os from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { pathToFileURL } from 'node:url';
+import Database from 'better-sqlite3';
 import {
+  addRacedColumn,
   createRegistrationStore,
   CAPACITY_MAX,
   MAX_WINDOW_MS,
@@ -228,6 +230,62 @@ describe('deleting', () => {
     expect(store.get(r.id, TEAM)).toBeNull();
     expect(store.publicInfo(r.code)).toBeNull();
     expect(store.remove(r.id, TEAM)).toBe(false);
+  });
+});
+
+// ★ "RACED" (follow-up 2, the owner's decision of 2026-10-22): when a race was FIRST started with
+// the registration's players. What breaks if this is deleted: a second race could overwrite the
+// first time, another team could mark a registration, or an older database could refuse to open.
+describe('marking it raced', () => {
+  it('records the first time and keeps it; open or closed alike', () => {
+    const r = open();
+    expect(store.get(r.id, TEAM).racedAt).toBeNull();
+    clock = T0 + 2 * MIN;
+    expect(store.markRaced(r.id, TEAM).racedAt).toBe(at(T0 + 2 * MIN));
+    clock = T0 + 5 * MIN;
+    expect(store.markRaced(r.id, TEAM).racedAt).toBe(at(T0 + 2 * MIN));
+    // A closed one is marked too: the Setup screen decides when a race starts, not the state.
+    const other = open();
+    store.close(other.id, TEAM);
+    expect(store.markRaced(other.id, TEAM)).toMatchObject({ state: 'closed', racedAt: at(clock) });
+    expect(store.list(TEAM).find((x) => x.id === r.id).racedAt).toBe(at(T0 + 2 * MIN));
+  });
+
+  it("another team's id is not found, and the registration stays unmarked", () => {
+    const r = open();
+    expect(store.markRaced(r.id, OTHER)).toBeNull();
+    expect(store.markRaced('no-such-id', TEAM)).toBeNull();
+    expect(store.get(r.id, TEAM).racedAt).toBeNull();
+  });
+
+  it('a database made before the column opens, gains it, and keeps its registrations', () => {
+    store.closeDatabase();
+    rmSync(file, { force: true });
+    // The registrations table exactly as REGISTRATION-1 created it, without `raced_at_ms`.
+    const old = new Database(file);
+    old.exec(`CREATE TABLE registrations (
+      id TEXT PRIMARY KEY, code TEXT NOT NULL UNIQUE, team TEXT NOT NULL,
+      team_normalized TEXT NOT NULL, created_by TEXT NOT NULL, track_id TEXT NOT NULL,
+      track_name TEXT NOT NULL, capacity INTEGER NOT NULL, event_name TEXT,
+      created_at_ms INTEGER NOT NULL, opens_at_ms INTEGER NOT NULL, closes_at_ms INTEGER NOT NULL,
+      closed_early_ms INTEGER)`);
+    old
+      .prepare(
+        `INSERT INTO registrations VALUES ('old-1', 'code-old', ?, 'alpha racing', 'ada', 'dirt-oval',
+         'Dirt Oval', 3, 'Spring cup', ?, ?, ?, NULL)`
+      )
+      .run(TEAM, T0, T0, T0 + 15 * MIN);
+    old.close();
+
+    store = createRegistrationStore(file, { now: () => clock });
+    expect(store.get('old-1', TEAM)).toMatchObject({ eventName: 'Spring cup', racedAt: null });
+    expect(store.markRaced('old-1', TEAM).racedAt).toBe(at(clock));
+    // Opening it a second time finds the column and adds nothing.
+    store.closeDatabase();
+    const again = new Database(file);
+    expect(addRacedColumn(again)).toBe(false);
+    again.close();
+    store = createRegistrationStore(file, { now: () => clock });
   });
 });
 

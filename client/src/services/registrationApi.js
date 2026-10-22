@@ -72,6 +72,15 @@ export async function closeRegistration(id) {
   return res.json();
 }
 
+/**
+ * Mark it as raced: a race was started with its players (REGISTRATION-1 follow-up 2). The server
+ * keeps the FIRST time, so a repeat changes nothing; the Setup screen calls this without waiting.
+ */
+export async function markRegistrationRaced(id) {
+  const res = await apiCall(`${REGISTRATIONS}/${encodeURIComponent(id)}/raced`, { method: 'POST' });
+  return res.json();
+}
+
 export async function extendRegistration(id, closesAt) {
   const res = await apiCall(`${REGISTRATIONS}/${encodeURIComponent(id)}/extend`, {
     method: 'POST',

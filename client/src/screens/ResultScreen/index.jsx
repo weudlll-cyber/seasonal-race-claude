@@ -3,7 +3,8 @@
 // Path:        client/src/screens/ResultScreen/index.jsx
 // Project:     RaceArena
 // Created:     2026-04-20
-// Description: Post-race results screen — podium, rankings, and history tracking
+// Description: Post-race results screen — podium, rankings, and history tracking. Its brand
+//              block names the race by the race's own event name (follow-up 2, 2026-10-22).
 //
 //              ── THE PODIUM IS BUILT UP, NOT SHOWN FINISHED (PODIUM-BUILD-1) ────────────────────
 //              The screen arrives in beats: 3rd, then 2nd, then the winner — who is held twice as
@@ -352,7 +353,10 @@ function ResultScreen() {
         {activeBrand ? (
           <div className="brand-identity">
             <div className="brand-event-name" style={{ color: activeBrand.primaryColor }}>
-              {activeBrand.eventName}
+              {/* The RACE's event name — the one the race ran under, typed in Settings or composed
+                  from a registration (REGISTRATION-1 follow-up 2, 2026-10-22) — and the profile's
+                  only for a race that carries none. */}
+              {race?.eventName || activeBrand.eventName}
             </div>
             {activeBrand.subtitle && (
               <div className="brand-subtitle" style={{ color: activeBrand.secondaryColor }}>

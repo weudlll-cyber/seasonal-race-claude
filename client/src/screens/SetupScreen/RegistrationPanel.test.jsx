@@ -6,13 +6,15 @@
 //              count is the Players tab's own limit for the chosen track (closed and open), the
 //              chosen duration becomes the deadline sent, the shown registration has its link, its QR
 //              code and its names with a remove button each, Close now and Extend send what they say,
-//              "Use these players" hands over exactly the registered names and the track, Delete asks
-//              first, and the full-screen QR stage opens and closes.
+//              "Use these players" hands over exactly the registered names, the track, the id and the
+//              event name, a raced registration shows "Raced" and when (follow-up 2) and can still be
+//              used, Delete asks first, and the full-screen QR stage opens and closes.
 // ============================================================
 
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
+import { formatDeadline } from '../../modules/registration/timeLeft.js';
 
 const api = {
   listRegistrations: vi.fn(),
@@ -164,10 +166,26 @@ describe('one registration', () => {
     expect(await screen.findByText('Registration is closed.')).toBeTruthy();
   });
 
-  it('"Use these players" hands over exactly the registered names and the track', async () => {
+  it('"Use these players" hands over exactly the registered names, the track, the id and the event name', async () => {
     const { onUsePlayers } = await showOne({ state: 'closed' });
+    expect(screen.queryByTestId('registration-raced')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Use these players' }));
-    expect(onUsePlayers).toHaveBeenCalledWith({ names: ['Ada', 'Bob'], trackId: 'dirt-oval' });
+    expect(onUsePlayers).toHaveBeenCalledWith({
+      id: 'r1',
+      names: ['Ada', 'Bob'],
+      trackId: 'dirt-oval',
+      eventName: 'Friday cup',
+    });
+  });
+
+  it('a raced registration shows "Raced" and when, and its players can still be used', async () => {
+    const racedAt = inMinutes(-5);
+    const { onUsePlayers } = await showOne({ state: 'closed', racedAt });
+    expect(screen.getByTestId('registration-raced').textContent).toBe(
+      `Raced ${formatDeadline(Date.parse(racedAt))}`
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Use these players' }));
+    expect(onUsePlayers).toHaveBeenCalledTimes(1);
   });
 
   it('Delete asks first, and deletes only when confirmed', async () => {
@@ -304,6 +322,8 @@ describe('item 4 and 5 — the list of registrations', () => {
     expect(within(cards[2]).getByText('Closed')).toBeTruthy();
     expect(cards[1].textContent).toMatch(/River Run.*3 of 100 places.*left/);
     expect(cards[2].textContent).toMatch(/closed /);
+    // Nothing here has raced, so no card says so.
+    expect(screen.queryByTestId('registration-raced')).toBeNull();
     // Above the form, because something is open.
     const listEl = screen.getByTestId('registration-list');
     const form = screen.getByRole('form', { name: 'Open registration' });

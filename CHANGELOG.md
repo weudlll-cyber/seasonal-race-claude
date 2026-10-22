@@ -29,6 +29,11 @@ is.
   An external site with its own signed-in players can add them through a documented interface when
   the operator sets `RA_INTEGRATION_KEY` (docs/INTEGRATIONS.md); without it nothing changes.
   *(on `master`, 2026-10-21)*
+- Player registration names the race and remembers it: a race run with a registration's players
+  carries the event name of the brand profile and of the registration together (*Summer Fair –
+  Round 1*; still editable under *Settings*), on the race screen, the ceremony card and the result
+  screen, which now shows the race's own event name; and the registration's card says *Raced* and
+  when. *(branch `feat/registration-event-name`, not merged)*
 - A country-neutral privacy-policy template on the Dev Screen (*Accounts and system*, *Legal pages*):
   an "Insert template" button under the privacy-policy field, like the legal notice's — it fills an
   empty field, asks before replacing text, and saves nothing by itself. The template is written from
