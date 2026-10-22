@@ -87,7 +87,7 @@ export const GUARD = {
   blind: [
     "the rasteriser and the artwork — it records calls, not pixels",
     "the sprite blit itself: node has no Image, so the racer body falls back to its procedural branch",
-    "the REAL label count: text measurement is synthetic (recordingContext.js → its header comment), so this pins the tag-layout RULE — same widths in, same labels out — and not how many labels a real browser falls back to numbers on for want of space",
+    "the REAL label count: text measurement is synthetic (recordingContext.js:26-31), so this pins the tag-layout RULE — same widths in, same labels out — and not how many labels a real browser falls back to numbers on for want of space",
   ],
   dirs: [],
   files: [],

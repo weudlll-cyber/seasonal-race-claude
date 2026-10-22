@@ -1862,7 +1862,9 @@ proposal arriving again in six months looking new.
       `client/src/modules/camera/` (`CameraDirector.js`, `comebackDetector.js` and five of their
       tests), `racePlanner.js`, `raceParams.js`, `raceConfigWorld.js`, `storage/defaults.js`,
       `scripts/lib/cameraPlanDelivery.mjs`, `frameBox.mjs` and `raceDriver.mjs`. They are converted
-      when those stamps are next re-taken. **Noticed and not changed:** the stuck-mode constants
+      when those stamps are next re-taken. Also left: `GovernorDiagHUD.jsx` and one string in
+      `render-fingerprint.mjs`, which engine reach counts as able to change the race. **Noticed and
+      not changed:** the stuck-mode constants
       FORCE-MAP.md lists (`STUCK_P_THRESH` and two more) exist nowhere in the tree; the `mulberry32`
       stream CONCEPT-COHESION.md places in `raceGovernor.js` is not there; Rule F does not walk `.mjs`
       files or `server/utils/` and `shared/`, so 27 symbol citations into them are reported
