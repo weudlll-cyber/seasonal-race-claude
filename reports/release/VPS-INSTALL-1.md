@@ -225,6 +225,48 @@ Run the same way as before (A = `f7ddd528`; B = A plus `e2e-test-1`; C = A with 
 at start; B and C throwaway local branches, deleted after the run): **74 of 74 on the first run**.
 Every backup took `registrations.sqlite` through SQLite's online backup.
 
+## 2026-10-22 — the slow first start, found and fixed
+
+**The observation** (2026-10-18, above): in 2 of 8 starts on an empty data directory the app was not
+healthy within the compose health window, compose did not start Caddy, and `racearena start` failed
+after 120 s; the next command that ran `compose up` started Caddy and everything answered.
+
+**The cause, read from the code** (the failing runs' logs were not kept: the harness writes its
+directory afresh on every run):
+- The app's health window is the compose file's `start_period` (20 s) plus three failed checks
+  10 s apart, about 50 s. Past it Docker marks the app **unhealthy**.
+- Caddy `depends_on` the app being `service_healthy`, so `compose up -d` then **gives up on Caddy**
+  and exits non-zero. `up_detached` tolerates that on purpose (the health check decides).
+- `wait_healthy` demands the app's own check AND https through Caddy. The app turned healthy a few
+  seconds later on its own, but **nothing in `racearena` started Caddy again**, so https never
+  answered and the start failed after the whole 120 s. That is why the next `compose up` repaired
+  it.
+- What makes a first start slow: first-boot work that runs before the server listens. The routes'
+  modules copy the committed seed files — 24 files, 52 MB of tracks, backgrounds, brands and logos —
+  into the empty data directory synchronously at import. On a busy host (this machine runs other
+  projects' containers) that can take longer than the window; on later starts the copy is skipped.
+
+**The fix** (`deploy/racearena`, `68db4a14`): `wait_healthy` starts the stack again once the app is
+healthy and Caddy is not running, and says every 15 s what it is waiting for. The bound (120 s) is
+unchanged, so a version that never becomes healthy still fails, and an update to one still rolls back
+by itself. A longer health window was not chosen: it would only move the edge, and it would also slow
+the rollback of a version that never becomes healthy.
+
+**The test for it.** A fourth throwaway ref, D = B with a server that starts listening only after
+70 s (past the window, inside the bound), and a section after the restarts: both containers removed,
+the checkout on D, `racearena start`. The first run of it checked out D by NAME, which in the
+install's own clone exists only as `origin/e2e-d`; the checkout failed silently and the start ran on
+B, so its "https answers" passed without testing anything — caught because the image tag was B's.
+The section now checks out D by SHA and makes the checkout a check (`444305cf`).
+
+Run the same way as before (A = `68db4a14`; B = A plus `e2e-test-1`; C = A with a server that exits
+at start; D = B with a server that waits 70 s; B, C and D throwaway local branches, deleted after the
+run): **79 of 79**. In the slow start, compose marked the app unhealthy and did not start Caddy;
+`racearena` reported "waiting: the app is unhealthy (18s of 120s)", then "the app is healthy;
+starting Caddy, which the first 'up' gave up on", and https answered. No container of the stack was
+left. **shellcheck** v0.10.0 (digest `sha256:2097951f…221fb`): `e2e-local.sh`, `hardening-check.sh`,
+`install.sh`, `racearena` clean.
+
 ## What could NOT be tested here — on the owner's VPS, at the first install
 
 - the system detection on the real machine (the dry run checked the parser on Debian 12);

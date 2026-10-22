@@ -831,13 +831,23 @@ are in PART TWO with what closed them; these are the ones still standing.
       - the written pre-exposure bar (auth item 2 above; item 1, the CSP, is on since 2026-10-12).
 
       **Observed 2026-10-18 (the end-to-end test, seven runs to 2026-10-19, local Docker on
-      Windows), not fixed:** in 2 of 14 starts on an EMPTY data directory, right after the image was built, the app did not
+      Windows):** in 2 of 14 starts on an EMPTY data directory, right after the image was built, the app did not
       pass its health check within the compose `start_period` and retries, compose marked it
       unhealthy and did not start Caddy, and `racearena start` failed after 120 s; the next command
       that runs `compose up` (here a restore) started Caddy and everything answered. The other 12
       starts were healthy within seconds. Today's behaviour is kept. On the first VPS run, if
       `racearena start` reports this, running it (or the install command) again runs `compose up`
       again, which is what started Caddy in the test — expected to repair it, not yet seen there.
+      **★ FIXED 2026-10-22 — the cause was the start, not the app's speed.** When the app overruns
+      the compose health window, `compose up` gives up on Caddy, and nothing in `racearena` started
+      it again; the app turned healthy seconds later, but with no Caddy https never answered and the
+      start failed after the whole bound. What makes a first start slow is first-boot work before the
+      server listens — the 52 MB of seed files copied into the empty data directory — on a busy
+      host. `wait_healthy` (`deploy/racearena`) now starts the stack again once the app is healthy
+      and Caddy is not running, and says every 15 s what it is waiting for; the 120 s bound and the
+      update's automatic rollback are unchanged. The installer test gained a start on a version
+      whose server listens only after 70 s: compose gives up on Caddy, `racearena` starts it, https
+      answers — 79 of 79. [reports/release/VPS-INSTALL-1.md](../reports/release/VPS-INSTALL-1.md).
 - [ ] ★ **COPY THE BACKUPS OFF THE SERVER (VPS-INSTALL-1, 2026-10-07).** The install makes a backup
       every day into `/var/backups/racearena` on the SAME disk as the data, keeping 14 days. A copy
       on the same disk does not survive losing the disk. Nothing copies them elsewhere yet. The
