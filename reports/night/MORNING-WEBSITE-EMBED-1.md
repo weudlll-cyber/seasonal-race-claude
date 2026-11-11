@@ -15,8 +15,8 @@ code was followed and the line is in **Where the code disagreed** below.
 | --- | --- |
 | 2 — base path | **done** — `357192cc`, pushed |
 | 3a — website sign-in | **done** — `11a4d17f` (+ `46ae5ce9`, the stamp), pushed |
-| 3b — account-changes feed | **server part done** — `26c32049`, pushed; masking past races: see the end |
-| 4 — members join through the join page | **done** — see below |
+| 3b — account-changes feed | **server part done** — `26c32049`, pushed; **masking past races NOT built** — see below |
+| 4 — members join through the join page | **done** — `644c7447`, pushed |
 | end — verify, installer test, the owner's two addresses | open |
 
 ## Start
@@ -238,8 +238,21 @@ doubling dropped — each red, all restored. Website tests 46/46.
    that list; past races are masked at display time instead.
 5. *Backoff:* doubling per failure in a row, capped at ten minutes, reset by the first success.
 
-**Masking a deleted member in past races** needs the member's website id on each racer, which only
-exists once members join as website entries — piece 4. It is the last step of the chain; see below.
+**Masking a deleted member in past races — NOT BUILT, and why.** It needs the member's website id
+on each racer of a race taken from a registration, carried into the STORED race record, and the
+names masked wherever a past race is shown. Looked at after piece 4: the stored record is an
+immutable, content-addressed store (raceStore.js, contentAddress.js) with its own trust-boundary
+checks, the client uploads it and keeps a local copy (the race history), and a name appears in the
+roster, the results and the finish order across several screens. That is a change to the race
+record's contract, not a small addition, and it was the last item of a long chain. The brief's own
+fallback was taken — leave the masking out, keep the server part — **but for this reason, not the
+brief's** (no fingerprint or golden race was measured to move; carrying an optional field would
+most likely move neither). **The server part is built:** a deleted member's identity is marked
+deleted, their entries leave open registrations at once, and `identityStore.deletedIds()` is the
+list a display-time mask would read. The test "a past race of a deleted member still verifies and
+replays identically" is therefore not written: with nothing carried, a stored race is untouched by
+a deletion by construction. **Open, for a later piece:** carry `websiteUserIds` (aligned with the
+roster) into the stored record, and mask by it at display.
 
 ## Piece 4 — members join through the race's own join page (OWNER-1, OWNER-6)
 
@@ -289,4 +302,7 @@ restored.
 
 - Whether the Dev Screen should hide *Change password* and *User management* in website mode (both
   answer "not found" there now).
+- Masking a deleted member's name in PAST races (3b): not built — it changes the stored race record's
+  contract; whether to carry the website ids in the record, or to mask by another route, is a design
+  call for the next piece.
 - The look at the end: "/" unchanged, and the "Website members only / Anyone with the link" choice.

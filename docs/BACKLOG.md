@@ -40,7 +40,8 @@ considered separately, and that would not be true.
         from a trusted peer with the proxy secret, the role mapping recomputed at every sign-in, the
         race's own account doors closed, a local stand-in proxy (`scripts/website-standin.mjs`).
       - **Piece 3b — the account-changes feed (built, server part):** the poller, the durable cursor,
-        locked / unlocked / rights / deleted; masking a deleted member in past races follows piece 4.
+        locked / unlocked / rights / deleted. **Masking a deleted member in PAST races is NOT built**
+        (it changes the stored race record's contract; the morning sheet says why and what is open).
       - **Piece 4 — members join through the race's own join page (built):** a member joins as
         themselves, one entry per account (source `website`, the website id as external id); the
         director chooses *Website members only* (default) or *Anyone with the link*; website entries
