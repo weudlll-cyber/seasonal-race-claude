@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
     # ── LOG ROTATION (2026-10-08): without it Docker's json-file log has no ceiling (SOAK-1 found no
     # `logging:` here). Five files of 10 MB each, then the oldest goes — the same as
-    # deploy/docker-compose.prod.yml on feat/vps-install.
+    # deploy/docker-compose.prod.yml.
     logging:
       driver: json-file
       options:

@@ -66,24 +66,24 @@ is.
   the race's time. Not available once the last racer is home. *(on `master`, 2026-10-13)*
 - One-command install on a single rented server: one `install.sh` asks for the domain, an e-mail
   address and the first admin, then installs Docker, a firewall that lets in only SSH, HTTP and
-  HTTPS, and automatic security updates. *(branch `feat/vps-install`)*
+  HTTPS, and automatic security updates. *(on `master`, 2026-11-11)*
 - HTTPS by default on that install: Caddy runs in front of the app and obtains and renews the
-  certificate by itself; only Caddy is reachable from outside. *(branch `feat/vps-install`)*
+  certificate by itself; only Caddy is reachable from outside. *(on `master`, 2026-11-11)*
 - The `racearena` helper command on that install: `status`, `logs`, `backup`, `restore`, `update`,
   `rollback` and `version`; an update takes a backup first and goes back by itself if the new
-  version is not healthy within two minutes. *(branch `feat/vps-install`)*
+  version is not healthy within two minutes. *(on `master`, 2026-11-11)*
 - A daily backup with the last 14 days kept, and a status check every 10 minutes that alerts by
-  e-mail or in the system journal. *(branch `feat/vps-install`)*
+  e-mail or in the system journal. *(on `master`, 2026-11-11)*
 - fail2ban on that install: five failed SSH sign-ins within ten minutes ban the address for an hour.
-  *(branch `feat/vps-install`)*
+  *(on `master`, 2026-11-11)*
 - `racearena harden-ssh`: switches off SSH passwords and root sign-in, but only after it has seen
   the named user sign in with a key from a second session; it refuses otherwise.
-  *(branch `feat/vps-install`)*
+  *(on `master`, 2026-11-11)*
 - On that install the app trusts exactly one proxy, Caddy (`RA_TRUST_PROXY=1`), and keeps its race
   history in write-ahead-log mode (`RA_RACES_WAL=1`), so a backup no longer holds up a race being
-  saved. *(branch `feat/vps-install`)*
+  saved. *(on `master`, 2026-11-11)*
 - `racearena uninstall`: a final backup first, the domain typed to confirm; the data and backups are
-  kept unless `--purge-data`, which asks a second time. *(branch `feat/vps-install`)*
+  kept unless `--purge-data`, which asks a second time. *(on `master`, 2026-11-11)*
 - `HEAD /api/health` answers like `GET` (`200` with no body) instead of `401`, so an uptime checker
   that sends `HEAD` sees a healthy server as healthy. *(on `master`, 2026-10-18)*
 - `/api/health` answers `503`, status `error`, when the account store (`users.json`) cannot be read, so
@@ -154,7 +154,7 @@ is.
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
   keeps working. *(on `master`, 2026-10-12)*
 - The data and backup folders on a single-server install are private to the app's own account
-  (audit finding A5M-06), also after a restore. *(branch `feat/vps-install`)*
+  (audit finding A5M-06), also after a restore. *(on `master`, 2026-11-11)*
 - `SECURITY.md`: how to report a security problem privately (GitHub's "Report a vulnerability"),
   what is in scope, and that only the newest release receives fixes. *(on `master`, 2026-10-12)*
 - The development build tool (Vite) updated to 8.3.5, closing a high-severity advisory in the

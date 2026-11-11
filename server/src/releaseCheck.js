@@ -8,8 +8,8 @@
 // ── WHAT A RELEASE IS ──────────────────────────────────────────────────────────────────────────
 // A tag named `v<major>.<minor>` or `v<major>.<minor>.<patch>` — nothing else. The repository has
 // dozens of `v-…` ship markers (`v-ship-the-night`, `v-perf-complete`) and the odd `v1-…` note;
-// none of them is a release. This is the same rule as `newest_release_tag` in `deploy/racearena`
-// (branch feat/vps-install): `^v[0-9]+\.[0-9]+(\.[0-9]+)?$`, newest by version order (`sort -V`).
+// none of them is a release. This is the same rule as `newest_release_tag` in `deploy/racearena`:
+// `^v[0-9]+\.[0-9]+(\.[0-9]+)?$`, newest by version order (`sort -V`).
 //
 // ── WHY AT MOST ONCE A DAY, AND WHY A FAILURE IS CACHED TOO ────────────────────────────────────
 // Releases are rare and the box is opened often; GitHub rate-limits anonymous callers per IP, and an

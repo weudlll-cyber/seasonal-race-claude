@@ -806,10 +806,10 @@ are in PART TWO with what closed them; these are the ones still standing.
       [DEPLOYMENT.md](DEPLOYMENT.md), which carries a tested Caddy example (PROXY-PROBE-1). B4 is closed
       on that decision. **The domain, the proxy and HTTPS are still open, and so is this row.**
 
-      **2026-10-07/08 (VPS-INSTALL-1) — THE INSTALL IS BUILT, NOT MERGED, AND NOT YET RUN ON THE VPS.**
+      **2026-10-07/08 (VPS-INSTALL-1) — THE INSTALL IS BUILT, AND NOT YET RUN ON THE VPS.** ★ **Merged to `master` on 2026-11-11** (the owner's merge approval that day); built on `feat/vps-install`.
       **Decided 2026-10-07:** the game goes online on the owner's own VPS (Contabo); he installs it
       himself, with one command from GitHub; Docker is used inside it.
-      **Built on `feat/vps-install`** ([docs/VPS-INSTALL.md](VPS-INSTALL.md),
+      **What it is** ([docs/VPS-INSTALL.md](VPS-INSTALL.md),
       [reports/release/VPS-INSTALL-1.md](../reports/release/VPS-INSTALL-1.md)):
       - `deploy/install.sh` (the one command);
       - `deploy/racearena` (status, logs, backup, restore, update with automatic rollback,
@@ -2543,8 +2543,8 @@ proposal arriving again in six months looking new.
         `better-sqlite3-session-store` is GPL-3.0-only; the "-only" pins the shipped image's combined
         work to version 3.)*
       - **A12 · retention** — decided 2026-10-12: left as is; stored races are kept for ever as
-        decided 2026-10-08, and backup archives are the operator's to prune (the VPS install on the
-        unmerged `feat/vps-install` keeps 14 days). *(As it stood: player names are stored forever in `races.sqlite`, immutable rows
+        decided 2026-10-08, and backup archives are the operator's to prune (the VPS install, merged to `master` on 2026-11-11,
+        keeps 14 days). *(As it stood: player names are stored forever in `races.sqlite`, immutable rows
         with no delete route, and backup archives are never pruned.)*
       - **A9-01 · one 1,007 KB JavaScript chunk** — decided 2026-10-12: left as is; code splitting
         changes how the app loads, and the size is a build warning, not a failure. *(As it stood: 295 KB

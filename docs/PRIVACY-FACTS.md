@@ -27,7 +27,7 @@ is marked as such. Where this page and the code disagree, the code is right.
   project's release tags, at most once a day, carrying nothing from the installation (see below).
 - ★ **Player names in stored races are kept forever, and there is no way in the app to remove them.**
 - ★ **Backups contain everything, including the password hashes, and nothing deletes old backups**
-  (except on the unmerged VPS install, see below).
+  (except on the VPS install, see below).
 
 ## What is stored, where, for how long, and who can read it
 
@@ -61,8 +61,8 @@ install path is in [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md), section 1.
   a password change, a user without a team. Start-up lines about the install's configuration.
 - **Nothing is logged per request**, so there is no access log of who opened which page.
 - **A reverse proxy is outside the app.** On a plain Node or Docker install, whether an access log with
-  IP addresses exists depends on the proxy the operator puts in front. On the VPS install (branch
-  `feat/vps-install`, **not merged**), Caddy's configuration has no `log` directive, so it writes no
+  IP addresses exists depends on the proxy the operator puts in front. On the VPS install,
+  Caddy's configuration has no `log` directive, so it writes no
   access log — only its own start-up and certificate messages.
 
 ## What leaves the machine
@@ -102,7 +102,7 @@ that event.
 - Archives and their checksum files are readable by their owner only.
 - **On a plain Node or Docker install nothing ever deletes an archive.** Every backup taken is a
   full copy of everyone's data until someone removes it.
-- On the VPS install (branch `feat/vps-install`, **not merged**), the daily backup deletes archives
+- On the VPS install, the daily backup deletes archives
   older than 14 days **on that server**. Copies taken off the server are not touched.
 - A copy of a backup on another machine carries the same data and needs the same care.
 
