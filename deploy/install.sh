@@ -609,7 +609,7 @@ website_detect() {
     [[ -n "$TRUSTED" ]] || die "the network $SITE_NETWORK has no subnet to trust"
   fi
   website_routes
-  say "website: $PROXY mode, $SITE_ORIGIN · its container $site on $SITE_NETWORK · route file $ROUTES_DIR/$ROUTE_FILE · the race trusts $TRUSTED"
+  say "website: $PROXY mode, $SITE_ORIGIN · its container $site on $SITE_NETWORK · route file $ROUTES_DIR/$ROUTE_FILE"
 }
 
 # Where the route file goes and how the proxy reaches the race and the website (F5).
@@ -656,6 +656,7 @@ website_port_and_subnet() {
 # and is never trusted there. (Caddy mode: the website's network, set by website_detect.)
 website_trust() {
   if [[ "$PROXY" == nginx ]]; then TRUSTED="$SUBNET"; fi
+  say "the race trusts as its proxy: $TRUSTED"
 }
 
 # ── w5 · layout, checkout, the secret, the settings ──────────────────────────────────────────────
@@ -675,7 +676,8 @@ website_lay_out() {
   # The settings are written on every run from what the website and its record say now (the
   # session secret alone is kept: regenerating it would sign everybody out).
   local session
-  session="$( [[ -f "$RA_ETC/racearena.env" ]] && sed -n 's/^RA_SESSION_SECRET=//p' "$RA_ETC/racearena.env" | tail -n 1 )"
+  # (No file on a first install: an empty answer, never a failed command under set -e.)
+  session="$(sed -n 's/^RA_SESSION_SECRET=//p' "$RA_ETC/racearena.env" 2>/dev/null | tail -n 1 || true)"
   [[ -n "$session" ]] || session="$(secret_hex 64)"
   {
     printf 'RA_PUBLIC_ORIGIN=%s\n' "$SITE_ORIGIN"
