@@ -4,16 +4,46 @@
 // Project:     RaceArena
 // Created:     2026-06-14
 // Description: Login page — sign in with username/password; the legal footer fixed to the window's
-//              bottom edge (LEGAL-PAGES-1, components/LegalFooter).
+//              bottom edge (LEGAL-PAGES-1, components/LegalFooter). In website mode
+//              (WEBSITE-EMBED-1 piece 3a) the website owns the accounts, so the page offers ONE
+//              button instead: "Sign in through Seasonal Entertainment", which goes to
+//              <base>/auth/website through the website's proxy. Standalone draws the form as before.
 // ============================================================
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import LegalFooter from '../../components/LegalFooter/LegalFooter.jsx';
+import { BASE_PATH, SITE_MODE } from '../../modules/runtimeMarker.js';
 import styles from './Auth.module.css';
 
+/** The page: the website's sign-in in website mode, the password form everywhere else. */
 export default function LoginScreen() {
+  return SITE_MODE === 'website' ? <WebsiteSignIn /> : <PasswordSignIn />;
+}
+
+/**
+ * Website mode: one button. A full navigation (not a router link): /auth/website is a server route,
+ * answered by the website's proxy with the member's identity, and it redirects back into the app.
+ */
+function WebsiteSignIn() {
+  return (
+    <div className={styles.screen}>
+      <div className={styles.card}>
+        <div className={styles.logo}>
+          Race<span>Arena</span>
+        </div>
+        <h1 className={styles.title}>Sign in</h1>
+        <a className={styles.button} href={`${BASE_PATH}/auth/website`}>
+          Sign in through Seasonal Entertainment
+        </a>
+      </div>
+      <LegalFooter />
+    </div>
+  );
+}
+
+function PasswordSignIn() {
   const { login, getSetupNeeded } = useAuth();
   const navigate = useNavigate();
 

@@ -1,11 +1,11 @@
 // ============================================================
 // File:        runtimeMarker.js
 // Path:        client/src/modules/runtimeMarker.js
-// Project:     RaceArena — WEBSITE-EMBED-1 piece 2
+// Project:     RaceArena — WEBSITE-EMBED-1 pieces 2 and 3a
 // Created:     2026-11-11
 // Description: THE ONE CLIENT HOME of the runtime marker the RaceArena server injects into the page
-//              (server/src/runtimeConfig.js): its global's name and the base path the app is
-//              served under. api.js reads the API address from the same marker and
+//              (server/src/runtimeConfig.js): its global's name, the base path the app is served
+//              under, and the site mode. api.js reads the API address from the same marker and
 //              imports the name from here.
 //
 // ── WHY IT LIVES IN modules/, NOT services/ ────────────────────────────────────────────────────
@@ -23,6 +23,7 @@
 //     "/assets/…", and stored records may carry the same form) and the join link
 //     (RegistrationPanel.jsx). Everything Vite writes into the build is relative (`base: './'`) and
 //     needs nothing; the API's address carries the base path already (api.js).
+//   · SITE_MODE — 'standalone' unless the server says 'website' (RA_MODE, piece 3a).
 // ============================================================
 
 /** The global the server writes. Must equal `RUNTIME_CONFIG_GLOBAL` in server/src/runtimeConfig.js. */
@@ -44,6 +45,9 @@ function runtimeBasePath() {
 
 /** "" at the root (today's install); "/games/race" under a base path. */
 export const BASE_PATH = runtimeBasePath();
+
+/** 'website' only when the server's marker says so; every other page is 'standalone'. */
+export const SITE_MODE = marker()?.mode === 'website' ? 'website' : 'standalone';
 
 /**
  * A root-absolute app path made to work under the base path: "/assets/x.png" →

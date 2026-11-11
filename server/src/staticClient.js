@@ -50,6 +50,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectRuntimeConfig, resolvePublicOrigin, resolveBasePath } from './runtimeConfig.js';
+import { resolveSiteMode } from './website/websiteConfig.js';
 import { isApiPath } from '../utils/apiPath.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -146,11 +147,13 @@ export function mountSpaFallback(app, dist = CLIENT_DIST, env = process.env) {
   // so neither gets a marker, and both keep falling through to `VITE_API_URL` / `localhost:4000`
   // exactly as before. That is the escape hatch, and it is structural rather than a flag.
   const publicOrigin = resolvePublicOrigin(env);
-  // WEBSITE-EMBED-1: the base path rides in the same marker and rewrites the shell's <base href>.
+  // WEBSITE-EMBED-1: the base path rides in the same marker and rewrites the shell's <base href>;
+  // in website mode the marker says so too (piece 3a).
   const injectedHtml = injectRuntimeConfig(
     readFileSync(indexFile, 'utf8'),
     publicOrigin,
-    resolveBasePath(env)
+    resolveBasePath(env),
+    resolveSiteMode(env)
   );
   app.use((req, res, next) => {
     // THE API IS NEVER ANSWERED WITH THE APP. This is the whole guard, and it is first.

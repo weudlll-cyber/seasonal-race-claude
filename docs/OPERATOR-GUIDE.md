@@ -22,6 +22,13 @@ directory `$RA_HOME/racearena-<version>`, the settings file `$RA_ENV_FILE`, and 
 into the shell with `set -a; . "$RA_ENV_FILE"; set +a`. Commands for the Docker path run in the
 folder that holds `docker-compose.yml`, whose service is called `server`.
 
+**Website mode** (WEBSITE-EMBED-1) is not a fourth
+path but a setting of any of them: `RA_MODE=website` runs the game inside the Seasonal
+Entertainment website, under its path (`RA_BASE_PATH`) and with its accounts. Everything on this
+page is unchanged without it; with it, the race's own sign-in and account management are closed and
+members sign in through the website. Settings: [ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*;
+how sign-in works: [AUTH.md](AUTH.md) §10.
+
 ---
 
 ## 1. What the server is, and where its data lives

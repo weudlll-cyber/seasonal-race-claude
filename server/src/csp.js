@@ -32,6 +32,7 @@
 // ============================================================
 
 import { resolvePublicOrigin, resolveBasePath, runtimeConfigScriptHash } from './runtimeConfig.js';
+import { resolveSiteMode } from './website/websiteConfig.js';
 
 /**
  * The directives, for helmet's `contentSecurityPolicy.directives`.
@@ -41,8 +42,11 @@ export function cspDirectives(env = process.env) {
   const origin = resolvePublicOrigin(env);
   return {
     defaultSrc: ["'self'"],
-    // WEBSITE-EMBED-1: the hash covers the script as rendered, base path included (runtimeConfig.js).
-    scriptSrc: ["'self'", runtimeConfigScriptHash(origin, resolveBasePath(env))],
+    // WEBSITE-EMBED-1: the hash covers the script as rendered, base path and mode included.
+    scriptSrc: [
+      "'self'",
+      runtimeConfigScriptHash(origin, resolveBasePath(env), resolveSiteMode(env)),
+    ],
     styleSrc: ["'self'"],
     imgSrc: ["'self'", 'data:', 'blob:'],
     connectSrc: origin ? ["'self'", origin] : ["'self'"],

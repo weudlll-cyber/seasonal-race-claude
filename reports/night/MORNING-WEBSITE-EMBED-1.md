@@ -13,8 +13,8 @@ code was followed and the line is in **Where the code disagreed** below.
 
 | piece | state |
 | --- | --- |
-| 2 — base path | **done** — see below |
-| 3a — website sign-in | open |
+| 2 — base path | **done** — `357192cc`, pushed |
+| 3a — website sign-in | **done** — see below |
 | 3b — account-changes feed | open |
 | 4 — members join through the join page | open |
 | end — verify, installer test, the owner's two addresses | open |
@@ -112,11 +112,97 @@ sprites and the join link follow the base path; the session cookie's Path is the
 - Noticed, left: Git for Windows on this OneDrive tree fails `git diff docs/` and any checkout that
   removes a file under `docs/` with "cannot stat 'docs'"; `git diff` without the pathspec works.
 
+## Piece 3a — website sign-in
+
+**What it does.** `RA_MODE=website` (default `standalone`) turns on: `GET <base>/auth/website`, the
+ONE route that reads the website's identity headers, believed only from a peer in
+`RA_WEBSITE_TRUSTED_PROXIES` (the TCP peer, `req.socket.remoteAddress`) AND with the secret from
+`RA_WEBSITE_PROXY_SECRET_FILE` (timing-safe; only its digest is kept; never logged); otherwise 403
+with no detail. Missing secret or empty network list → the server refuses to start. The mapping is
+recomputed at every sign-in: website admin → race admin, Can-Host → operator, other member → player
+identity only (no user record), guest → nothing. Directors and admins get a user record
+`website:<id>` with no password and team `RA_WEBSITE_TEAM` (default "Seasonal Entertainment").
+Locked and deleted members are refused; `returnTo` cannot leave the base path. Local sign-in,
+first-admin setup, change-password and `/api/users` answer 404; the sign-in screen shows only
+"Sign in through Seasonal Entertainment"; `/setup-admin` goes to it. recover-admin is untouched.
+
+**Reused, not written again:** the user record and every guard (`usersStore.js` gained one
+check-then-create method, `upsertWebsiteUser`, inside the store's existing lock); the session epoch
+idea (`sessionEpoch`, guards.js) — the website identity has its own epoch, compared the same way;
+the registrations database file and its check-then-create schema pattern for the identities;
+Node's `net.BlockList` for the CIDR check (no dependency); `routingPath` (utils/apiPath.js) for the
+closed doors, so they close in any letter case as Express routes them.
+
+**New files:** `server/src/website/` — `websiteConfig.js` (settings), `identityStore.js`
+(identities + the feed cursor for 3b), `websiteSession.js` (is a website session still good — one
+answer for the guard and the join page), `websiteSignIn.js` (the route), `closedInWebsiteMode.js`;
+`scripts/website-standin.mjs` (the local stand-in for the website proxy, 127.0.0.1 only, not in the
+image).
+
+**Tests.**
+- `websiteSignIn.test.js` (15): settings and each refusal (the secret never in a message), the
+  four kinds' mapping, organiser-without-host → player, nothing above admin, UTF-8 names, returnTo.
+- `websiteMode.integration.test.js` (12, the real app under /games/race): wrong secret, untrusted
+  peer, headers on another route → all ignored; admin / host / member / guest; a revoked host loses
+  the director role on the next request; locked refused; the closed doors; standalone untouched.
+- `standin.integration.test.js` (5): the stand-in in front of a real website-mode app — pick host →
+  operator with the display name; member → no director API; forged headers get nowhere.
+- `runtimeConfig.test.js` +1 (the marker's `mode` key, only in website mode),
+  `LoginScreen.website.test.jsx` (2).
+- Sabotage: the peer check removed → the untrusted-peer test red; the closed doors unmounted → red;
+  the guard's website check removed → the revoked-host test red; all restored green.
+  ★ Two sabotages that stay green, said so rather than hidden: (1) removing only the epoch bump on a
+  role change — the guard ALSO checks the member's last mapped role, so either alone ends a revoked
+  host's session (belt and braces, both kept); (2) removing the stand-in's header stripping — the
+  race's own secret check already refuses a forged request.
+- Server: 555 tests in the touched areas green. Fingerprints: re-verified after piece 2's move
+  (4 roles agree); again for 3a (`runtimeMarker.js` gained `SITE_MODE`) — see the 3a commit.
+
+**Forks decided.**
+1. *X-Acting-User-Email-Verified and X-Acting-User-Steps are accepted and not used.* The brief's
+   mapping needs neither; storing them would keep personal data nothing reads.
+2. *An organiser who may not host is a player.* The brief: "any other member → player identity only".
+3. *A display name is decoded from UTF-8* when Node's latin1 reading of the header bytes is valid
+   UTF-8 ("Zoë"), cut to 60 characters; an id must be 1–128 of `A-Za-z0-9_.:@-`. Malformed → 400.
+4. *A deleted member who signs in again is refused*, like a locked one: a deletion is final here.
+5. *A guest sign-in ends whatever the browser was signed in as* — the website says this browser is a
+   guest now.
+6. *The website team is founded on the first director sign-in if no such team exists*
+   (`allowNewTeam`), and an existing spelling is adopted.
+7. *Website records skip the last-admin guard:* the role is the website's decision at every sign-in;
+   recover-admin.mjs still makes a local admin if one is ever needed.
+8. *The identities live in `registrations.sqlite`* (the server's existing mutable SQLite file, already
+   in the backup), not in `users.json` — most members are players, who get no user record.
+9. *`/api/auth/me` adds `displayName` only for a website director;* a local user's answer is unchanged.
+10. *The marker's `mode` key is written only in website mode*, so the standalone page and CSP hash
+    do not move.
+
+**Hygiene.**
+- Changed: `server/src/app.js` (+18: the website mount), `index.js` (+3: the start gate),
+  `auth/guards.js` (+10: the website director check), `auth/usersStore.js` (+55:
+  `upsertWebsiteUser`), `auth/authRouter.js` (/me), `registrations/registrationStore.js` (the file
+  path exported; a redundant alias removed), `runtimeConfig.js`, `csp.js`, `staticClient.js` (the
+  mode); client `LoginScreen.jsx` (split: `WebsiteSignIn` / `PasswordSignIn`), `App.jsx`,
+  `Auth.module.css` (`a.button`), `modules/runtimeMarker.js` (`SITE_MODE`).
+- Docs: AUTH.md §10 (new), ENVIRONMENT.md *Website mode* (new), API.md (the route, the 404s, /me;
+  the route count recounted to 80), OPERATOR-GUIDE.md (a pointer).
+- ★ Noticed and FIXED in API.md (a file this piece edits): its "complete" route list was missing
+  `POST /api/registrations/:id/raced` (REGISTRATION-1 follow-up 2, 2026-10-22), so its count was one
+  short. Added the row; the count is now from the routers again.
+- Noticed, left: in website mode the Dev Screen still shows *Change password* and *User
+  management*; both now answer "not found". Hiding them is a UI change the brief did not ask for —
+  on **Needs the owner's word**.
+- An incident, recorded: one doc edit was first attempted as an inline `node -e "…"` whose text held
+  backticks; bash ran them as commands. Nothing was changed by them — one of them started
+  `scripts/recover-admin.mjs` with no arguments, which printed its usage and stopped ("unknown
+  action") — and the garbled AUTH.md was restored from git and rewritten from a file.
+
 ## Where the code disagreed with the summary
 
 - (none yet)
 
 ## Needs the owner's word
 
-- (nothing yet — the look at the end: "/" unchanged, and the "Website members only / Anyone with
-  the link" choice)
+- Whether the Dev Screen should hide *Change password* and *User management* in website mode (both
+  answer "not found" there now).
+- The look at the end: "/" unchanged, and the "Website members only / Anyone with the link" choice.

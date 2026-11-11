@@ -49,7 +49,9 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 80441a70 2026-10-18 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 357192cc 2026-11-11 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+
+★★ **RE-MEASURED 2026-11-11 (WEBSITE-EMBED-1 pieces 2 and 3a), IDENTICAL TO THE DIGIT** to the current table — 6.87 s / 5.20 s / 7 of 7 / 20 of 20 / 132, 8.65 s / 6.12 s / 11 of 11 / 40 of 40 / 187, 5.18 s / 3.17 s / 1 of 1 / 20 of 20 / 10, 6.97 s / 4.67 s / 6 of 6 / 40 of 40 / 100. `racer-types/spriteLoader.js` and the new `modules/runtimeMarker.js`, in the closure, resolve a sprite under a base path, which is the identity without one. Run rather than argued.
 
 ★★ **RE-STAMPED 2026-10-12 (AUDIT-1 B), NOT RE-MEASURED — UNCHANGED BY CONSTRUCTION.** The owner decided that day to re-stamp rather than re-run. What moved in the closure is comments only: the audit's held-back comment corrections ([b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)), one German word in `raceGovernor.js`, and the `file:line` citations those edits shifted. Every changed JavaScript file has the identical token stream and the identical line breaks between tokens before and after (`scripts/lib/inertChange.mjs`'s predicate), so nothing this measurement executes changed. The row below is the 2026-10-06 run.
 

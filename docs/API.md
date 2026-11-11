@@ -2,9 +2,11 @@
 
 **Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Complete as of 2026-10-21: all 78 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
+**Complete as of 2026-11-11: all 80 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
 the two settings routes, AUDIT-1 D2 the admin status route, LEGAL-PAGES-1 the two legal-pages routes,
-REGISTRATION-1 the ten registration routes). Counted from source, not from earlier
+REGISTRATION-1 the ten registration routes, its follow-up 2 the "raced" route, which this page was
+missing until WEBSITE-EMBED-1 recounted, and WEBSITE-EMBED-1 the website sign-in, `GET <base>/auth/website`,
+the one route outside `/api`, mounted only in website mode). Counted from source, not from earlier
 counts: the `router.<verb>(` calls in the fourteen routers `server/src/app.js` mounts under `/api` (68), the three promote/export sub-routes
 `attachPromoteExport`
 (`server/src/routes/_defaultPromote.js`) adds to each of tracks, player groups and brands (9), and
@@ -238,9 +240,25 @@ the first admin (`server/src/auth/authRouter.js` → its header comment).
 - **Who:** any signed-in user (`server/src/auth/guards.js` → `createRequireAuth`). The handler repeats the check
   inline (`server/src/auth/authRouter.js` → `GET /me`).
 - **Request:** none.
-- **Response:** 200 `{username, role, team}`, where `team` may be `null` (`server/src/auth/authRouter.js`).
+- **Response:** 200 `{username, role, team}`, where `team` may be `null`, plus `displayName` for a
+  director who signed in through the website (WEBSITE-EMBED-1) — absent for every local user
+  (`server/src/auth/authRouter.js`).
 - **Errors:** 401 from the guard (`server/src/auth/guards.js` → `createRequireAuth`). The handler's own
   401s (`server/src/auth/authRouter.js` → `GET /me`) are defensive.
+
+### `GET <base>/auth/website` — website mode only (WEBSITE-EMBED-1)
+
+- **Who:** the Seasonal Entertainment website's proxy: the TCP peer must be in
+  `RA_WEBSITE_TRUSTED_PROXIES` AND `X-Ra-Proxy-Secret` must match (`server/src/website/websiteSignIn.js`).
+  Mounted only when `RA_MODE=website` (`server/src/app.js`).
+- **Request:** the identity headers ([AUTH.md](AUTH.md) §10); optional `?returnTo=<path under the base path>`.
+- **Response:** 303 to `returnTo` (or the base path), with a new session: a director or admin
+  (a user record `website:<id>`), a player identity only, or none for a guest.
+- **Errors:** 403 `Forbidden` (wrong peer or secret, no detail); 400 (malformed identity headers);
+  403 (a locked or deleted member).
+- **In website mode these answer 404** (`server/src/website/closedInWebsiteMode.js`):
+  `POST /api/auth/login`, `GET /api/auth/setup-needed`, `POST /api/auth/setup`,
+  `POST /api/auth/change-password`, and everything under `/api/users`.
 
 ---
 
@@ -1158,6 +1176,8 @@ id**. A user with no team gets 503. A body with a field not listed is 400 (`unkn
 - **`POST /api/registrations/:id/close`** — closed now; closing a closed one changes nothing. 200, 404.
 - **`POST /api/registrations/:id/extend`** `{ closesAt }` — a later deadline, at most 30 days from
   creation, **only while open**. 200; 400 (not later, too far, under a minute from now); 409 closed; 404.
+- **`POST /api/registrations/:id/raced`** — a race was started with its players (the Setup screen
+  sends it); the FIRST time is kept, open or closed alike. No body. 200 with the registration; 404.
 - **`DELETE /api/registrations/:id/entries/:entryId`** — remove one name; its place is free again.
   200 with the registration; 404.
 - **`DELETE /api/registrations/:id`** — delete it and every name in it. 204; 404.
@@ -1293,11 +1313,13 @@ Read-only facts about the installation for the status box at the top of the Dev 
 | 71 | GET | `/api/registrations/:id` | signed-in (own team) |
 | 72 | POST | `/api/registrations/:id/close` | signed-in (own team) |
 | 73 | POST | `/api/registrations/:id/extend` | signed-in (own team) |
-| 74 | DELETE | `/api/registrations/:id/entries/:entryId` | signed-in (own team) |
-| 75 | DELETE | `/api/registrations/:id` | signed-in (own team) |
-| 76 | GET | `/api/join/:code` | **public** (the join link) |
-| 77 | POST | `/api/join/:code` | **public** (the join link, rate-limited) |
-| 78 | POST | `/api/integrations/registrations/:code/entries` | `RA_INTEGRATION_KEY` holder; 404 while unset |
+| 74 | POST | `/api/registrations/:id/raced` | signed-in (own team) |
+| 75 | DELETE | `/api/registrations/:id/entries/:entryId` | signed-in (own team) |
+| 76 | DELETE | `/api/registrations/:id` | signed-in (own team) |
+| 77 | GET | `/api/join/:code` | **public** (the join link) |
+| 78 | POST | `/api/join/:code` | **public** (the join link, rate-limited) |
+| 79 | POST | `/api/integrations/registrations/:code/entries` | `RA_INTEGRATION_KEY` holder; 404 while unset |
+| 80 | GET | `<base>/auth/website` | the website proxy only (trusted peer AND secret); mounted only when `RA_MODE=website` |
 ---
 
 ## Planned (Phase 5)

@@ -36,8 +36,9 @@ considered separately, and that would not be true.
       - **Piece 2 — the base path (built):** `RA_BASE_PATH` (e.g. `/games/race`) mounts the whole app
         below it, 404 outside it; one build serves "/" and the base path (`base: './'`, a rewritten
         `<base href>`); router, API address, sprites, join link and the session cookie follow it.
-      - **Piece 3a — website sign-in (open):** `RA_MODE=website`, `<base>/auth/website` behind a
-        trusted proxy and its secret, the role mapping, a local stand-in proxy for tests.
+      - **Piece 3a — website sign-in (built):** `RA_MODE=website`, `<base>/auth/website` believed only
+        from a trusted peer with the proxy secret, the role mapping recomputed at every sign-in, the
+        race's own account doors closed, a local stand-in proxy (`scripts/website-standin.mjs`).
       - **Piece 3b — the account-changes feed (open):** locked / unlocked / rights / deleted.
       - **Piece 4 — members join through the race's own join page (open).**
 

@@ -358,3 +358,49 @@ not work.
 | client API calls                       | `client/src/services/authApi.js`           |
 | client session state                   | `client/src/contexts/AuthContext.jsx`      |
 | client route guard                     | `client/src/components/ProtectedRoute.jsx` |
+| website mode (§10)                     | `server/src/website/`                      |
+
+---
+
+## 10. Website mode — the Seasonal Entertainment website owns the accounts (WEBSITE-EMBED-1)
+
+**Off unless `RA_MODE=website`** ([ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*); standalone is
+everything above, unchanged. In website mode the race runs under the website's path (`RA_BASE_PATH`)
+behind the website's proxy, and the website decides who is who.
+
+**The one door: `GET <base>/auth/website`** (`server/src/website/websiteSignIn.js`). The website's
+proxy sets the identity headers on this route only — `X-Acting-User-Id`, `X-Acting-User` (the
+display name), `X-Acting-User-Roles` (`member` / `organiser` / `admin`), `X-Acting-User-Can-Host`,
+or `X-Acting-Guest: true` alone — plus the race's secret, `X-Ra-Proxy-Secret`. **They are believed
+only when the TCP peer (`req.socket.remoteAddress`, not `req.ip`) is inside
+`RA_WEBSITE_TRUSTED_PROXIES` AND the secret matches** (compared timing-safe); otherwise `403` with no
+detail. No other route reads them. `X-Acting-User-Email-Verified` and `X-Acting-User-Steps` are
+accepted and not used.
+
+**The mapping, recomputed at every sign-in.** Website `admin` → race **admin**; `Can-Host: true` →
+race **operator** (a director); any other member → a **player** identity only; a guest → no identity
+(and whatever the browser was signed in as ends). Nothing maps above admin. Directors and admins get
+an ordinary user record `website:<id>` with no password, the website's display name and the team
+`RA_WEBSITE_TEAM` (`upsertWebsiteUser`, `server/src/auth/usersStore.js`), so every guard above treats
+them like a local director. Players get **no** user record, only the identity in their session. A
+locked or deleted member is refused. The browser is then sent to `returnTo` if that is a path under
+the base path, else to the base path.
+
+**How a website session ends.** What the race knows of each member — display name, mapped role, an
+**epoch**, locked, deleted — is kept in `registrations.sqlite` (`server/src/website/identityStore.js`).
+A session carries the epoch it was made under and is good only while it equals the member's
+(`server/src/website/websiteSession.js`). For directors `requireAuth` checks it beside
+`sessionEpoch`, and also that the last sign-in still made them a director, so **a host whose hosting
+right is revoked loses the director role on their next request** once they sign in again anywhere. A
+sign-in that maps a member to a different role bumps the epoch.
+
+**Closed in website mode** (`server/src/website/closedInWebsiteMode.js`): local sign-in
+(`POST /api/auth/login`), first-admin setup (`GET /api/auth/setup-needed`, `POST /api/auth/setup`),
+`POST /api/auth/change-password` and everything under `/api/users` answer `404`. The sign-in screen
+shows one button, *Sign in through Seasonal Entertainment*, to `<base>/auth/website`.
+`scripts/recover-admin.mjs` is a command on the server and keeps working.
+
+**For tests and a look, never for an install:** `scripts/website-standin.mjs`, a local stand-in for
+the website's proxy on 127.0.0.1. It forwards the full path, sets the headers and the secret for a
+fake member picked on its page (member, host, admin, guest) on `<base>/auth/website` only, and strips
+such headers from everything else.

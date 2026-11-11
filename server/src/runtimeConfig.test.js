@@ -210,6 +210,16 @@ describe('the marker and the shell under a base path', () => {
     );
   });
 
+  it('website mode (piece 3a): the marker says so; standalone says nothing new', () => {
+    expect(runtimeConfigScript(null, '/games/race', 'website')).toContain(
+      '{"apiBaseUrl":"/games/race","basePath":"/games/race","mode":"website"}'
+    );
+    expect(runtimeConfigScript(null, '', 'standalone')).toBe(runtimeConfigScript(null));
+    expect(runtimeConfigScriptHash(null, '/games/race', 'website')).not.toBe(
+      runtimeConfigScriptHash(null, '/games/race')
+    );
+  });
+
   it('the CSP hash follows the script it covers', () => {
     expect(runtimeConfigScriptHash(null, '/games/race')).not.toBe(runtimeConfigScriptHash(null));
     expect(runtimeConfigScriptHash(null, '')).toBe(runtimeConfigScriptHash(null));

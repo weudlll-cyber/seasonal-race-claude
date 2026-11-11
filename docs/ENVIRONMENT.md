@@ -95,6 +95,19 @@ minute per address, generous because every phone at a venue may share one addres
 | --- | --- | --- |
 | `RA_INTEGRATION_KEY` | **off**: `POST /api/integrations/registrations/<code>/entries` answers `404`, exactly like a path that does not exist. The game is complete without it. | An external site with its own signed-in players may add a player to an open registration, sending `Authorization: Bearer <this value>`. Use a long random value (32 characters or more), keep it secret like a password, and change it by setting a new value and restarting. Read per request; compared in constant time. What it allows and how to call it: [INTEGRATIONS.md](INTEGRATIONS.md). Added 2026-10-21, REGISTRATION-1. |
 
+## Website mode — optional (WEBSITE-EMBED-1)
+
+RaceArena inside the Seasonal Entertainment website: the website owns the accounts, and its proxy
+forwards to this install under a base path (`RA_BASE_PATH`, above). **Every setting here is off
+unless `RA_MODE=website`**; how sign-in then works is [AUTH.md](AUTH.md) §10.
+
+| variable | default | notes |
+| --- | --- | --- |
+| `RA_MODE` | `standalone` — everything as it always was | `website` turns website mode on. **Any other value → the server refuses to start**, naming the variable. |
+| `RA_WEBSITE_PROXY_SECRET_FILE` | — | The path of a file (mode 0600) holding the secret the website proxy sends in `X-Ra-Proxy-Secret`. Read once at start; only its digest is kept; never logged. **In website mode, unset, unreadable or empty → the server refuses to start**, naming the file, never the secret. |
+| `RA_WEBSITE_TRUSTED_PROXIES` | — | The network(s) the website proxy connects from, comma-separated (`172.18.0.0/16`, `127.0.0.1`): in Docker, the compose network the proxy's connections arrive from. The TCP peer is checked, not `X-Forwarded-For`. **In website mode, empty or holding anything that is not an address or a CIDR network → the server refuses to start.** |
+| `RA_WEBSITE_TEAM` | `Seasonal Entertainment` | The team every website director and admin lands in (OWNER-2); founded on the first such sign-in if it does not exist. |
+
 ## Build identity — optional, and only affects a status line
 
 `RA_BUILD_COMMIT`, `RA_BUILD_BRANCH`, `RA_BUILD_DIRTY` supply what `GET /api/health` reports as the

@@ -10,6 +10,7 @@ import { createApp } from './app.js';
 import { clientBuildExists } from './staticClient.js';
 import { reportStartupReadiness } from './startupReadiness.js';
 import { assertPublicOriginUsable, resolveBasePath } from './runtimeConfig.js';
+import { websiteConfig } from './website/websiteConfig.js';
 import { assertSourceUrlUsable } from './sourceUrl.js';
 import { sweepOrphanTmp } from '../utils/sweepOrphanTmp.js';
 import { resolveDataRoot } from './dataPaths.js';
@@ -39,6 +40,9 @@ let bindAddress;
 try {
   assertPublicOriginUsable(process.env);
   resolveBasePath(process.env); // WEBSITE-EMBED-1: a base path that is not a clean path stops here
+  // WEBSITE-EMBED-1 piece 3a: RA_MODE, and in website mode a missing proxy secret or an empty
+  // trusted-network list, stop here — the secret is read once, now, and never logged.
+  websiteConfig();
   assertSourceUrlUsable(process.env); // LEGAL-PAGES-1: a value that is not a link stops here
   bindAddress = resolveBindAddress(process.env);
   resolveTrustProxy(process.env); // AUDIT-1 A5M-07: a value that is not a hop count stops here

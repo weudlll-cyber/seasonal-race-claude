@@ -334,7 +334,10 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     }
     const safe = toSafeUser(record);
     // `team` is null for a user who predates the backfill — reported, never a reason to refuse.
-    res.json({ username: safe.username, role: safe.role, team: safe.team ?? null });
+    // WEBSITE-EMBED-1 piece 3a: a website director's record carries the website's display name; the
+    // key is added only then, so a local user's answer is exactly what it was.
+    const name = safe.displayName ? { displayName: safe.displayName } : {};
+    res.json({ username: safe.username, role: safe.role, team: safe.team ?? null, ...name });
   });
 
   return router;

@@ -28,7 +28,7 @@ import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import TestAidsSyncOnAuth from './components/TestAidsSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
 import ServerStatusBanner from './components/ServerStatusBanner.jsx';
-import { BASE_PATH } from './modules/runtimeMarker.js';
+import { BASE_PATH, SITE_MODE } from './modules/runtimeMarker.js';
 import ServerRecoveryProbe from './components/ServerRecoveryProbe.jsx';
 import PendingRaceSync from './components/PendingRaceSync.jsx';
 import { useTestAidsState } from './modules/testAids.js';
@@ -157,7 +157,14 @@ function App() {
               }
             />
             <Route path="/login" element={<LoginScreen />} />
-            <Route path="/setup-admin" element={<SetupAdminScreen />} />
+            {/* WEBSITE-EMBED-1 piece 3a: in website mode the website owns the accounts; there is no
+                first admin to set up, so the page sends the visitor to the sign-in button. */}
+            <Route
+              path="/setup-admin"
+              element={
+                SITE_MODE === 'website' ? <Navigate to="/login" replace /> : <SetupAdminScreen />
+              }
+            />
             {/* LEGAL-PAGES-1: PUBLIC — no ProtectedRoute. The operator's legal notice and privacy
                 policy are read before anyone signs in (footer: components/LegalFooter). */}
             <Route path="/legal-notice" element={<LegalPage kind="legalNotice" />} />

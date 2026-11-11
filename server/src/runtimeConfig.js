@@ -209,9 +209,10 @@ export function resolveBasePath(env = process.env) {
  *
  * @param {string|null} origin
  * @param {string} [basePath]  `''` (the root) unless RA_BASE_PATH is set
+ * @param {string} [mode]      'standalone' unless RA_MODE=website (WEBSITE-EMBED-1 piece 3a)
  * @returns {string}
  */
-export function runtimeConfigScript(origin, basePath = '') {
+export function runtimeConfigScript(origin, basePath = '', mode = 'standalone') {
   // ★★ THE MARKER IS WRITTEN EVEN WITH NO ORIGIN (the owner's decision, 2026-09-23: same-origin by
   // default for real deployments). `apiBaseUrl: ''` is not "unconfigured" — it is a POSITIVE
   // statement that this page was served by the RaceArena server and the API is on the page's own
@@ -221,6 +222,9 @@ export function runtimeConfigScript(origin, basePath = '') {
   // none the payload is exactly the old one, so the standalone page and its CSP hash do not move.
   const config = { apiBaseUrl: `${origin ?? ''}${basePath}` };
   if (basePath) config.basePath = basePath;
+  // Piece 3a: the sign-in screen offers the website's sign-in instead of a password form. Written
+  // only in website mode, for the same reason as `basePath`: standalone's payload does not move.
+  if (mode === 'website') config.mode = 'website';
   const payload = JSON.stringify(config).replace(/</g, '\\u003c');
   return `<script>window.${RUNTIME_CONFIG_GLOBAL}=${payload};</script>`;
 }
@@ -232,10 +236,11 @@ export function runtimeConfigScript(origin, basePath = '') {
  *
  * @param {string|null} origin
  * @param {string} [basePath]
+ * @param {string} [mode]
  * @returns {string}
  */
-export function runtimeConfigScriptHash(origin, basePath = '') {
-  const body = runtimeConfigScript(origin, basePath)
+export function runtimeConfigScriptHash(origin, basePath = '', mode = 'standalone') {
+  const body = runtimeConfigScript(origin, basePath, mode)
     .replace(/^<script>/, '')
     .replace(/<\/script>$/, '');
   return `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`;
@@ -256,13 +261,14 @@ const BASE_HREF_ROOT = /<base\s+href="\/"\s*\/?>/i;
  * @param {string} html
  * @param {string|null} origin
  * @param {string} [basePath]
+ * @param {string} [mode]
  * @returns {string}
  */
-export function injectRuntimeConfig(html, origin, basePath = '') {
+export function injectRuntimeConfig(html, origin, basePath = '', mode = 'standalone') {
   // ★ `origin` may be null — that is the SAME-ORIGIN case and it is injected, not skipped. This used
   // to `return html` unchanged, which is what left a standalone image's page indistinguishable from
   // a page served by any other static server.
-  const script = runtimeConfigScript(origin ?? null, basePath);
+  const script = runtimeConfigScript(origin ?? null, basePath, mode);
   // `basePath` has passed `judgeBasePath`: URL-safe characters only, so it needs no escaping here.
   const page = basePath ? html.replace(BASE_HREF_ROOT, `<base href="${basePath}/" />`) : html;
   const headOpen = /<head(\s[^>]*)?>/i;

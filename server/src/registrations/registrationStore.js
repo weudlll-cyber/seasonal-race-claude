@@ -51,7 +51,8 @@ import { normalizeTeam, isWellFormedTeam } from '../auth/teams.js';
 import { isNameLengthValid, nameTooLongMessage } from '../../../shared/nameLimits.mjs';
 import { playerNameKey } from '../../../shared/playerNames.mjs';
 
-const DEFAULT_REGISTRATIONS_PATH = join(DATA_ROOT, 'registrations.sqlite');
+/** The file, exported so the website identity store opens the SAME one (website/identityStore.js). */
+export const REGISTRATIONS_DB_PATH = join(DATA_ROOT, 'registrations.sqlite');
 
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -156,7 +157,7 @@ export function newRegistrationCode() {
  * @param {{ now?: () => number }} [opts] the clock, in ms; tests pass their own
  */
 export function createRegistrationStore(
-  filePath = DEFAULT_REGISTRATIONS_PATH,
+  filePath = REGISTRATIONS_DB_PATH,
   { now = () => Date.now() } = {}
 ) {
   const db = new Database(filePath);

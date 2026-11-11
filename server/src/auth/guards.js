@@ -8,6 +8,7 @@
 
 import defaultStore from './usersStore.js';
 import { routingPath, isApiPath } from '../../utils/apiPath.js';
+import { websiteDirectorSessionOk } from '../website/websiteSession.js';
 
 // ── Allow-list (no auth required) ────────────────────────────────────────────
 // Each GET entry admits HEAD as well (`matchesPublicPath` below): `HEAD /api/health` is public.
@@ -178,7 +179,11 @@ export function requiredRole(method, path) {
 
 // ── Guard factories ───────────────────────────────────────────────────────────
 
-export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultStore } = {}) {
+export function createRequireAuth({
+  publicPaths = PUBLIC_PATHS,
+  store = defaultStore,
+  websiteDirectorOk = websiteDirectorSessionOk,
+} = {}) {
   return function requireAuth(req, res, next) {
     const path = normalizePath(req.path);
 
@@ -204,6 +209,15 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
     // predate the reset carry the old epoch and are rejected. Missing epoch on either side
     // defaults to 0 so existing sessions/records are never invalidated on deploy.
     if ((req.session.sessionEpoch ?? 0) !== (user.sessionEpoch ?? 0)) {
+      return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
+    }
+
+    // WEBSITE-EMBED-1 piece 3a: a website director's record is only as good as the website says.
+    // Its session must still match the member's identity epoch (bumped when the member is locked,
+    // when their rights change, or when a sign-in maps them to a different role) and the last
+    // sign-in must still have made them a director. Only records made through the website carry
+    // `websiteUserId`, so a local user never reaches this check (website/websiteSession.js).
+    if (user.websiteUserId && !websiteDirectorOk(req.session, user)) {
       return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
     }
 
