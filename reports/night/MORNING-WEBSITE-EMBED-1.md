@@ -17,7 +17,7 @@ code was followed and the line is in **Where the code disagreed** below.
 | 3a — website sign-in | **done** — `11a4d17f` (+ `46ae5ce9`, the stamp), pushed |
 | 3b — account-changes feed | **server part done** — `26c32049`, pushed; **masking past races NOT built** — see below |
 | 4 — members join through the join page | **done** — `644c7447`, pushed |
-| end — verify, installer test, the owner's two addresses | open |
+| end — verify, installer test, the owner's two addresses | **done** — see below |
 
 ## Start
 
@@ -292,6 +292,49 @@ restored.
    unchanged duplicate-name rule (409, its own sentence).
 4. *A member's own entry is found by their account*, not by a device cookie; no `ra_join` cookie is set
    for a website entry.
+
+## End of the chain
+
+**Verify, the whole branch against master `691f7429` (ONE run, 60 changed files):** 32 passed,
+2 failed, 4 skipped, 1202 s. Both failures were generated documents behind the code, not faults:
+`ceremony-counts` (SHIP-CEREMONY.md's engine-reach counts — the new `modules/runtimeMarker.js` is
+one more hull file and one more module, 231 → 232, 88 → 89) and, in `script-suite`,
+`gen-engine-reach-doc.test.mjs` (SIM.md's generated hull list). Both regenerated with their own
+generators (`gen-ceremony-costs.mjs --counts`, `gen-engine-reach-doc.mjs`), `--check` green for
+both, the test file alone 10/10 — commit `08f78d80`. Every fingerprint (world, camera, render),
+the golden races, the image start and the browser-free frame checks passed in the run.
+
+**The standalone installer test (deploy/test/e2e-local.sh): 79 of 79.** Refs made as before, in a
+scratch clone from the URL (push disabled): A = `68ad6eac` (the branch; later commits are docs only),
+B = A + `e2e-test-1`, C = A with a server that exits at start, D = B with a server that listens only
+after 70 s — throwaway local branches, never pushed. ★ The FIRST attempt reported 29/50 and tested
+nothing: I passed Git Bash paths (`/c/tmp/…`) where the script wants Windows paths (it turns path
+conversion off), so its first clone failed. Re-run with `C:/tmp/…`: 79/79. No container of the stack
+is left.
+
+**The owner's dev server, at "/", on this branch:** API `http://localhost:4000` and the app
+**http://localhost:5173/** (hidden, started as the dev-start skill does but without its "stop every
+node" step — nothing was running on 4000, 5173 or 4173). Build badge: **`08f78d80 ·
+feat/website-embedding · clean`** (`/api/health`). 4173 was not started.
+
+**The website-mode look:** open **http://127.0.0.1:4790/** — the local stand-in for the website
+(127.0.0.1 only). Pick **"Hugo Host — host"** to be a director: the race opens at
+`http://127.0.0.1:4790/games/race/`, signed in as Hugo; *Players* → *Player registration* shows
+**"Who may join: Website members only / Anyone with the link"**. Copy the join link, go back to
+http://127.0.0.1:4790/, pick **"Mia Member — member"**, open the link: **"Join as Mia Member"**. Pick
+**"A guest"** and open it again: a members-only registration is read-only with *Sign in through
+Seasonal Entertainment*; an "anyone" one shows the name form. The stand-in page's *Account changes*
+links lock / unlock / revoke / delete a fake member; the instance reads the feed every 15 s.
+Behind it: a website-mode instance on 127.0.0.1:4791 (`RA_MODE=website`, `RA_BASE_PATH=/games/race`),
+its own data, secret and token under `%LOCALAPPDATA%\racearena-website-look` (generated, never
+printed), the branch's built client. Checked: picking "host" lands on `/games/race/` as
+`role: operator`, team "Seasonal Entertainment", display name "Hugo Host".
+
+**Left on this machine, all mine:** `C:\tmp\ra-installer-1111` (the scratch clone with the throwaway
+refs), `C:\tmp\ra-e2e-1111b` (the passing run's folder), `C:\tmp\ra-e2e-1111` (the failed run's
+folder — its deletion was refused by the permission system, so it stays), and
+`%LOCALAPPDATA%\racearena-website-look`. The four started processes: API 4000, Vite 5173,
+website instance 4791, stand-in 4790.
 
 ## Where the code disagreed with the summary
 
