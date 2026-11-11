@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **231 files that can change the race** — the engine's own imports AND the imports of every
+the **232 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -190,6 +190,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/racerNames.js` | THE quick-test roster. |
 | `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
 | `modules/rowLayoutConfig.js` | Storage CRUD for D7c row-start layout config. |
+| `modules/runtimeMarker.js` | THE ONE CLIENT HOME of the runtime marker the RaceArena server injects into the page (server/src/runtimeConfig.js): its global's name, the base path the app is served under, and… |
 | `modules/sim-fairness.test.js` | Sanity-check tests for scripts/sim-fairness.mjs. |
 | `modules/stateOverlayTemplates.js` | Template pools and selection logic for per-state narrative overlay text. |
 | `modules/storage/configDiff.js` | CONFIG-DIFF-2 |
@@ -362,7 +363,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 | `shared/playerNames.mjs` | PERIOD-EVALUATION-1 (the owner's decisions of 2026-10-04) |
 
-231 files, 24 of them UNKNOWN.
+232 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 
