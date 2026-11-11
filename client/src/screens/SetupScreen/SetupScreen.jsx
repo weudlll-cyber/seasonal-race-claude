@@ -32,6 +32,8 @@ import { listRegistrations, markRegistrationRaced } from '../../services/registr
 import {
   composeEventName,
   nextRegistrationToMark,
+  websiteIdsByName,
+  websiteRacersFor,
 } from '../../modules/registration/raceFromRegistration.js';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
@@ -283,7 +285,17 @@ function SetupScreen() {
   // The registration whose players are in the roster now, which the race marks "Raced" when it
   // starts — null for none. Kept and dropped by `nextRegistrationToMark`'s rules.
   const [registrationToMark, setRegistrationToMark] = useState(null);
-  const noteRoster = (event) => setRegistrationToMark((id) => nextRegistrationToMark(id, event));
+  // WEBSITE-EMBED-1 piece 6: the website ids of the registration's members, by name, from the last
+  // registration taken — null for none (always in standalone). Kept while the roster is that
+  // registration's, dropped with it (a group added, the roster emptied); read at Start Race
+  // (`websiteRacersFor`), so a name edited away carries no id.
+  const [websiteIds, setWebsiteIds] = useState(null);
+  const noteRoster = (event) => {
+    setRegistrationToMark((id) => nextRegistrationToMark(id, event));
+    if (event.type === 'group' || (event.type === 'names' && event.count === 0)) {
+      setWebsiteIds(null);
+    }
+  };
   // "Use these players": the registered names become the roster — through the same `setPlayers`
   // every other way of filling the field uses, REPLACING what was there (a registration is a way
   // to fill the race, not to add to it) — and the registration's track is selected. The tab goes
@@ -291,8 +303,9 @@ function SetupScreen() {
   // Follow-up 2: the race's event name becomes "<brand profile's event name> – <registration's>",
   // built from the PROFILE, not the field, so a second registration replaces the first one's part;
   // the Settings field shows it and stays editable.
-  function handleUseRegisteredPlayers({ id, names, trackId, eventName }) {
+  function handleUseRegisteredPlayers({ id, names, trackId, eventName, entries }) {
     setPlayers(names.map((name) => ({ name })));
+    setWebsiteIds(websiteIdsByName(entries));
     setSelectedTrackId(trackId);
     setPlayersMode('names');
     noteRoster({ type: 'take', id });
@@ -495,7 +508,7 @@ function SetupScreen() {
     if (!armed) return;
     // The banner reads this; the start below does not depend on it having settled.
     setRepeatBuildId(armed.buildId ?? null);
-    startRaceFromIdentifier(armed.identifier, armed.buildId ?? null);
+    startRaceFromIdentifier(armed.identifier, armed.buildId ?? null, armed.websiteRacers ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks.length]);
 
@@ -872,7 +885,7 @@ function SetupScreen() {
    *        `pastedIdentifier` is memoised on state that may not have settled yet when a repeat
    *        starts, and a decode against the wrong build is the one mistake this must not make.
    */
-  function startRaceFromIdentifier(text, buildIdForDecode = null) {
+  function startRaceFromIdentifier(text, buildIdForDecode = null, websiteRacers = null) {
     // The SAME decode the Start button was enabled on — see `pastedIdentifier`. Decoding a second
     // time here would let the gate and the run disagree about the same string.
     const parsed =
@@ -945,6 +958,9 @@ function SetupScreen() {
       // running a real race, so it counts like one. Marking it separately would invent a third
       // kind, and this is the one `setItem` a careless change misses.
       raceSource: RACE_SOURCE.RACE,
+      // WEBSITE-EMBED-1 piece 6: a REPEAT of a race with website members carries them (the same
+      // roster, so the same indexes); absent otherwise. Never an engine input.
+      ...(websiteRacers?.length ? { websiteRacers } : {}),
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -1017,6 +1033,7 @@ function SetupScreen() {
     // Resolved before the payload is built so the SAME value goes into the race and into the
     // last-race record — one draw, two consumers, no chance of them disagreeing.
     const startSeed = resolveQuickTestSeed(raceSeed).seed;
+    const websiteRacers = websiteRacersFor(players, websiteIds);
     const race = {
       racers: players,
       trackId: selectedTrackId,
@@ -1054,6 +1071,9 @@ function SetupScreen() {
       // ★ THERE ARE THREE WRITERS OF `activeRace` IN THIS FILE and all three set this field:
       // here, `startRaceFromIdentifier` (also ORDINARY) and `handleQuickTest`.
       raceSource: RACE_SOURCE.RACE,
+      // WEBSITE-EMBED-1 piece 6: which racers are website members, beside the race and only when
+      // there are any — never an engine input; the result screen records it with the race.
+      ...(websiteRacers ? { websiteRacers } : {}),
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));

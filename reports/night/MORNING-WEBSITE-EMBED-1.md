@@ -15,10 +15,11 @@ code was followed and the line is in **Where the code disagreed** below.
 | --- | --- |
 | 2 — base path | **done** — `357192cc`, pushed |
 | 3a — website sign-in | **done** — `11a4d17f` (+ `46ae5ce9`, the stamp), pushed |
-| 3b — account-changes feed | **server part done** — `26c32049`, pushed; **masking past races NOT built** — see below |
+| 3b — account-changes feed | **server part done** — `26c32049`, pushed; masking past races: piece 6 |
 | 4 — members join through the join page | **done** — `644c7447`, pushed |
 | end — verify, installer test, the owner's two addresses | **done** — see below |
-| 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — see below |
+| 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — `52628908`, pushed |
+| 6 — "Deleted player" in past races (2026-11-11, second chain) | **done** — see below; the race screen of a repeat still draws stored names (fork 1) |
 
 ## Start
 
@@ -357,6 +358,109 @@ made always true → the website test red; restored.
 devScreenChapters.js 253 → 263 (the flag, its header line, the two parts written out). Nothing removed
 or moved. engine-reach: all three paths outside the hull.
 
+## Piece 6 — "Deleted player" in past races (OWNER-3, the owner's decision of 2026-11-11)
+
+### Step 6.0 — the check before building
+
+**(a) Where the three screens get racer names.**
+- *Result screen* — this device only: `sessionStorage 'raceResults'` (client/src/screens/ResultScreen/index.jsx:289),
+  written by the race screen (client/src/screens/RaceScreen/index.jsx:1160) from `buildRaceResults`
+  (client/src/screens/RaceScreen/raceResults.js:51, `name: r.name`, with `index`).
+- *Race history* — both: the team's server page (`fetchRacesPage`, RaceHistory.jsx:195 → `rowFromServerRace`
+  :85, `race.winners`) and this device's history (`useStorage(KEYS.RACE_HISTORY)` :166 → `rowFromLocalEntry` :106,
+  `entry.winners`). It shows the winners only.
+- *Replay* — "Run it again" re-encodes the stored inputs (client/src/modules/repeatRace.js:99-100, the identifier
+  carries `names`, client/src/modules/raceIdentifier.js:158) and the setup screen starts a new race with
+  `racers: decoded.names.map(…)` (client/src/screens/SetupScreen/SetupScreen.jsx:933). The race screen draws `r.name`
+  itself: name tags (RaceScreen/drawing/racerRendering.js:85, the label function renderRaceFrame.js:271, the tag
+  layout nameTagLayout.js:267), the start board (drawing/startBoardRendering.js:652), the standings
+  (ScoreboardCard.jsx:92), the winner card (WinnerCard.jsx:113), the overlay text (stateOverlaySelection.js:42).
+  The name is also physics (client/src/modules/raceBehavior.js:225 `stablePairBit`) and the coat
+  (RaceScreen/racerDisplayFields.js:55). The server's *Verify* replays from the store (scripts/lib/storedRaceReplay.mjs:148).
+
+**(b) What is hashed, and the upload path.**
+- *Server content id:* `contentId(row)` (server/src/races/raceStore.js:510) over `row`, which is built from NAMED fields
+  only (:468); the roster is its own content id over `{ names }` only (:431), the racer values over two named fields
+  (:437). A field the store does not name cannot enter any of the three.
+- *Client:* the race identifier encodes the entry's `inputs` (client/src/modules/raceHistory.js:126), not the entry.
+- *Upload:* the result screen records the race locally first (ResultScreen/index.jsx:318) and sends it at once
+  (:321 → client/src/modules/pendingRaces.js:49 `postRace(toServerPayload(entry))` → client/src/services/racesApi.js:27 →
+  `POST /api/races`, server/src/routes/races.js:134 → `storeRace`).
+- *Offline:* the entry stays `sync: pending` in the local history (raceHistory.js:147); `flushPendingRaces`
+  (pendingRaces.js:86) sends every pending entry when the server is reachable again (`startPendingRaceSync` :110,
+  mounted by client/src/components/PendingRaceSync.jsx:23). The queue IS the history entry.
+
+**(c) Can the mapping travel outside the hashed record? YES.** On the device it sits at the top of the history entry,
+beside `raceSource` and outside `inputs` (raceHistory.js:116), so it waits in the pending queue with the race and
+goes up in the same POST (`toServerPayload` :161). On the server the route takes it OFF the body before the store
+sees it (routes/races.js:168) — and even unstripped the store would ignore it, by (b). ★ The store's header asks for
+the opposite for facts ABOUT a race ("a later field about the race belongs in here, not beside it", raceStore.js,
+storeRace, Option A — a technical rule of 2026-09-25, not the owner's); the owner's decision of 2026-11-11 is that this
+mapping goes beside, so the two do not conflict: it is a fact about a website account, not about the race.
+
+**(d) Fingerprints and golden races.** `engine-reach --check` on every path this piece changes: all outside the hull,
+so no fingerprint or golden-race check is selected. The only part that would reach the hull — the replay's own labels
+(a) — is not built (fork 1). **Decision: 6.0 passes; piece 6 built.**
+
+### What it does
+
+In website mode, a race whose players were taken from a registration carries `websiteRacers` —
+`[{ index, websiteUserId }]` for each racer whose name is a website member's entry (`websiteIdsByName`,
+`websiteRacersFor`, client/src/modules/registration/raceFromRegistration.js) — beside the race to the result
+screen, the local entry, the upload and a repeat. The server checks it (index in the roster, a member it has met;
+anything else dropped, never a refusal — server/src/website/websiteRacers.js) and writes it to one new table,
+`race_website_racers` (race id, racer index, website id; check-then-create, immutable rows, `INSERT OR IGNORE`)
+in the race store, team-scoped through the race it points at. `GET /api/races/deleted-racers?clientRaceIds=…`
+(website mode only, 404 in standalone) answers which racer indexes belong to members the feed marked deleted
+(`identityStore.deletedIds()`, piece 3b). The result screen and the race history ask for what they show, at once and
+every 15 s while open (client/src/modules/deletedRacers.js), and show **"Deleted player"** for those racers. Without an
+answer the stored name stays. Standalone sends nothing and stores nothing.
+
+**Reused:** the registration's own `source`/`externalId` per entry (piece 4) and the existing registration→race rules
+file; `raceSource`'s pattern for a non-engine fact on the race payload (all writers of `activeRace`, the entry's top
+level, `toServerPayload`); the existing upload and pending queue (no new call, no new queue); the store's
+check-then-create schema and immutability-trigger pattern; the identity store's `deletedIds` and the feed's
+`applyFeedPage` (tests); `apiCall` and `SITE_MODE`. New: two small modules (deletedRacers.js 85 lines,
+websiteRacers.js 64 lines) — no existing helper masked a name or validated an index list.
+
+**Tests.** `server/src/website/deletedPlayer.integration.test.js` (6, the real app in website mode, then standalone):
+the stored row, roster and id identical with and without the mapping; masking only after a `deleted` feed event
+(and a resend writes nothing twice); two members named "Sam Same" in two races (one name twice in ONE race is refused,
+shared/playerNames.mjs), only the deleted one masked; unknown member, out-of-roster index and another team not masked;
+a race of a deleted member verifies identically (an engine-made race, a real replay); standalone stores no row and has
+no route. Client: ResultScreen.website (4), raceHistory +2, raceFromRegistration +3, RegistrationPanel.website +1.
+**Sabotage, each restored:** S1 the mapping folded into the stored record → 2 red (bytes, verify); S2 masking the
+members NOT deleted → 4 red; S3 masking everyone once anyone is deleted → 1 red (same name); S4 the website-mode check
+removed from the write → 1 red (standalone); S5 masking by rewriting the stored name → 3 red (incl. verify); S6 the
+team filter removed → 1 red; C1 the hook asking in standalone → 1 red; C2 no mask applied → 1 red; C3 the entry always
+carrying the field → 1 red; C4 every entry taken as a member → 2 red; C5 the panel not handing the entries over → 1 red.
+The standalone panel test caught that the entries were handed over in every mode; they now go only in website mode.
+
+**Forks decided.**
+1. **The replay's race screen still draws the stored names.** The brief asks for "replay labels" masked AND for the
+   replay to "look identical". The race screen draws the name at the sites listed in (a), every one in the engine
+   hull, and the name tags' layout is measured from the text, so a longer "Deleted player" would move the picture.
+   Kept as today, so the stored race and the hull are untouched. **What IS masked for a repeat:** the repeat carries the
+   race's `websiteRacers` (same roster, same indexes), so its result screen, its history row and its stored mapping
+   show "Deleted player" like the race it repeats. Open for the owner's word.
+2. **The client asks every 15 s while a result or the history is open** (website mode, only for races on screen;
+   the result screen only when its race had website members). The owner's look needs the result to change while it is
+   open; the feed's fastest interval is 15 s.
+3. **A repeat from a server row of ANOTHER device carries no mapping**: the server does not hand website ids out; this
+   device carries them only for races it recorded. Its result is masked only if the original race's mapping is local.
+4. **Export CSV keeps the stored names** (it exports this device's local history as it always did).
+5. **Two members with one display name in one race cannot happen** — the race refuses one name twice — so the test
+   puts them in two races.
+6. **A name edited after taking the registration carries no id** (the mapping is by name at Start Race).
+
+**Hygiene.** Lines before → after: raceHistory.js 266 → 277, raceFromRegistration.js 60 → 101, repeatRace.js 117 → 127,
+RaceHistory.jsx 592 → 613, ResultScreen/index.jsx 491 → 502, RegistrationPanel.jsx 639 → 642, SetupScreen.jsx
+1979 → 1999, racesApi.js 161 → 177, raceStore.js 728 → 790, routes/races.js 297 → 358; new deletedRacers.js 85,
+websiteRacers.js 64. Nothing removed or moved out. Header comments on every touched file; API.md's races line
+references re-read and updated in this commit. **Noticed, left:** client/src/services/racesApi.js's header still
+describes only the POST of a race (it holds eight calls now); several BACKLOG entries cite line
+numbers in races.js and raceStore.js that have drifted (dated records, left as written).
+
 ## Where the code disagreed with the summary
 
 - The account-changes feed's field names are not in the summary (piece 3b, fork 2): read tolerantly
@@ -366,7 +470,7 @@ or moved. engine-reach: all three paths outside the hull.
 
 - ~~Whether the Dev Screen should hide *Change password* and *User management* in website mode~~ —
   decided 2026-11-11 (hide), built as piece 5.
-- Masking a deleted member's name in PAST races (3b): not built — it changes the stored race record's
-  contract; whether to carry the website ids in the record, or to mask by another route, is a design
-  call for the next piece.
+- ~~Masking a deleted member's name in PAST races~~ — decided 2026-11-11 (a side table), built as piece 6.
+- Piece 6, fork 1: whether the race screen of a REPEAT should draw "Deleted player" too (it draws the
+  stored names today; changing it touches the engine hull and moves the name-tag layout).
 - The look at the end: "/" unchanged, and the "Website members only / Anyone with the link" choice.

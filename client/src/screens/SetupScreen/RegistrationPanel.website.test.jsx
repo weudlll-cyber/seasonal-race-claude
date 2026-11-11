@@ -6,7 +6,8 @@
 // Description: The director's registration panel in website mode (the server's runtime marker
 //              says so, set before the panel is imported): the form asks who may join — "Website
 //              members only" (the default) or "Anyone with the link" — and sends it; the list marks
-//              a member's entry "from the website"; the join link carries the base path.
+//              a member's entry "from the website"; the join link carries the base path; and
+//              (piece 6) "Use these players" hands the entries over, so the race knows its members.
 //              Standalone is RegistrationPanel.test.jsx, which runs unchanged and never sees the
 //              choice.
 // ============================================================
@@ -58,13 +59,13 @@ const registration = (over = {}) => ({
   ...over,
 });
 
-function renderPanel() {
+function renderPanel(onUsePlayers = vi.fn()) {
   render(
     <RegistrationPanel
       tracks={TRACKS}
       raceDefaults={{}}
       selectedTrackId="dirt-oval"
-      onUsePlayers={vi.fn()}
+      onUsePlayers={onUsePlayers}
     />
   );
 }
@@ -98,5 +99,18 @@ describe('RegistrationPanel in website mode', () => {
     expect(screen.getByTestId('registration-link').textContent).toMatch(
       /\/games\/race\/join\/Ab3_-xYz0123456789AbCd$/
     );
+  });
+
+  it('★ "Use these players" hands the entries over too, so the race knows its members (piece 6)', async () => {
+    const closed = registration({ state: 'closed' });
+    api.listRegistrations.mockResolvedValue([closed]);
+    api.fetchRegistration.mockResolvedValue(closed);
+    const onUsePlayers = vi.fn();
+    renderPanel(onUsePlayers);
+    // A closed registration is opened from its card, as in the standalone panel test.
+    fireEvent.click(await screen.findByRole('button', { name: /^Open registration 1/ }));
+    await screen.findByTestId('registration-view');
+    fireEvent.click(screen.getByRole('button', { name: 'Use these players' }));
+    expect(onUsePlayers.mock.calls[0][0].entries).toEqual(closed.entries);
   });
 });

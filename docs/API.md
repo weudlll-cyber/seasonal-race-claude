@@ -2,12 +2,13 @@
 
 **Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Complete as of 2026-11-11: all 80 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
+**Complete as of 2026-11-11: all 81 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
 the two settings routes, AUDIT-1 D2 the admin status route, LEGAL-PAGES-1 the two legal-pages routes,
 REGISTRATION-1 the ten registration routes, its follow-up 2 the "raced" route, which this page was
 missing until WEBSITE-EMBED-1 recounted, and WEBSITE-EMBED-1 the website sign-in, `GET <base>/auth/website`,
-the one route outside `/api`, mounted only in website mode). Counted from source, not from earlier
-counts: the `router.<verb>(` calls in the fourteen routers `server/src/app.js` mounts under `/api` (68), the three promote/export sub-routes
+the one route outside `/api`, mounted only in website mode, and in piece 6
+`GET /api/races/deleted-racers`, which answers only in website mode). Counted from source, not from earlier
+counts: the `router.<verb>(` calls in the fourteen routers `server/src/app.js` mounts under `/api` (69), the three promote/export sub-routes
 `attachPromoteExport`
 (`server/src/routes/_defaultPromote.js`) adds to each of tracks, player groups and brands (9), and
 `GET /api/health` (1). Every entry says who may call it, what it takes, what it answers and every
@@ -956,8 +957,8 @@ deliberately open to every signed-in user, operators included (`server/src/route
 
 Finished races written to the server and read back by their own team, plus the period evaluation and
 its points rule (`server/src/routes/races.js` → its header comment). The router is built by `createRacesRouter`
-(`:91-295`). **This is the only team-scoped router.** The team always comes from `req.authUser.team`
-and never from the request (`:31-36`).
+(`:107-356`). **This is the only team-scoped router.** The team always comes from `req.authUser.team`
+and never from the request (`:41-46`).
 
 A stored race (`hydrate`, `server/src/races/raceStore.js`) has these fields: `id, clientRaceId,
 shortKey, team, teamNormalized, finishedAt, identifierVersion, buildId, geometryId, racerTypeId,
@@ -969,35 +970,43 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 - **Who:** any signed-in user (operator+). The prefix is deliberately left out of `ROUTE_POLICY`
   (`server/src/routes/races.js` → its header comment). The race is filed under the caller's team, and a `team` in
-  the body is overwritten (`:133`).
+  the body is overwritten (`:169`).
 - **Request:** a JSON race record. The store requires (`server/src/races/raceStore.js` → `createRaceStore`, `required`):
   - `names`: a non-empty array with no name twice.
   - `results` and `winners`: arrays.
   - Non-empty `clientRaceId`, `finishedAt`, `identifierVersion`, `buildId`, `geometryId`,
     `racerTypeId`, `racePlanSeed`, `raceActionStage`.
   - Every scalar field that is present is a string or a finite number, and `finishedAt` a date
-    (`:358-373`); anything else is 400 `INVALID_RACE`.
+    (`:385-400`); anything else is 400 `INVALID_RACE`.
   - Optional: `racePlanEnabled`, `targetLaps`, `targetDurationSec`, `worldSchemaVersion`,
     `worldConfigs`, `elapsedSec`, `racerTypeOverrides`, `effectiveRacerTypes`, `raceSource`. An
-    unrecognised `raceSource` is stored with no marker, which counts as a test race (`:414-423`).
+    unrecognised `raceSource` is stored with no marker, which counts as a test race (`:441-450`).
+  - **Website mode only** (WEBSITE-EMBED-1 piece 6, the owner's decision of 2026-11-11):
+    `websiteRacers`, `[{index, websiteUserId}]` — which racers of the roster were which website
+    member. It is taken off the body BEFORE the race is stored, so the stored race and its id are
+    the same with or without it, and written to the store's side table `race_website_racers`
+    (`server/src/races/raceStore.js` → `recordWebsiteRacers`), on the 201 and the 200 answer alike
+    (repeat-safe). An entry is kept only when its index is a racer of this race and its id a
+    member the race has met (`server/src/website/websiteRacers.js` → `acceptedWebsiteRacers`);
+    anything else is dropped, never a reason to refuse the race. Standalone ignores the field.
 - **Response:**
   - 201 `{id, shortKey, alreadyStored}`: newly stored, or identical content was already there
     (`server/src/routes/races.js` → `POST /`).
   - 200 `{id, shortKey, alreadyStored: true}`: the same `clientRaceId` was already stored, i.e. a
-    retry (`:121-130`). **The check is within the caller's team** (`server/src/races/raceStore.js` → `getRaceByClientId`,
-    and the store's own check at `:392`): another team's `clientRaceId` is not recognised, and the
+    retry (`:153-164`). **The check is within the caller's team** (`server/src/races/raceStore.js` → `getRaceByClientId`,
+    and the store's own check at `:419`): another team's `clientRaceId` is not recognised, and the
     race is stored as usual (201). The id is unique per team in the table
-    (`UNIQUE (team_normalized, client_race_id)`, `:195`); a database from before this was rebuilt
+    (`UNIQUE (team_normalized, client_race_id)`, `:206`); a database from before this was rebuilt
     by the migration `client-id-per-team-1` (`server/src/races/migrateClientIdPerTeam.js`).
     *(Until SERVER-DEFECTS-1, 2026-10-06, the check looked across every team and answered another
     team's id with that team's `id` and `shortKey`.)*
 - **Errors:**
   - 503: the caller's account has no team (`server/src/routes/races.js` → `POST /`).
   - 400 `{error, code}` with `code` one of `INVALID_RACE`, `INVALID_ROSTER`, `INVALID_RESULTS` or
-    `INVALID_TEAM` (`:144-151`). A 400 means do not retry.
-  - 500 `internal error` for anything else, which is retryable (`:153-156`).
+    `INVALID_TEAM` (`:178-189`). A 400 means do not retry.
+  - 500 `internal error` for anything else, which is retryable (`:190-193`).
   - 401. CSRF 403.
-  - With `clientRaceId` missing, `getRaceByClientId(undefined)` runs first (`:122`); the store
+  - With `clientRaceId` missing, `getRaceByClientId(undefined)` runs first (`:154`); the store
     binds it as an empty string (`server/src/races/raceStore.js` → `getRaceRowByClientId`), which matches no row, so the
     request falls through to the intended
     400 `INVALID_RACE` (`server/src/races/raceStore.js` → `createRaceStore`). Settled 2026-10-06 against
@@ -1018,12 +1027,12 @@ racerTypeOverrides, effectiveRacerTypes`.
 - **Who:** any signed-in user; it covers the caller's team only (`server/src/routes/races.js` → `GET /evaluation`).
 - **Request:** query `from` and `to`, both required, each parsable by `Date.parse`, with
   `from < to` and a span of at most 366 days. The window is half-open: `from <= finishedAt < to`
-  (`server/src/routes/races.js` → `GET /evaluation`, `:81`, `server/src/races/raceStore.js` → `raceResultsInPeriod`). The races are read one at a time, two fields each (BOUNDED-EVAL-1, 2026-10-07).
+  (`server/src/routes/races.js` → `GET /evaluation`, `:97`, `server/src/races/raceStore.js` → `raceResultsInPeriod`). The races are read one at a time, two fields each (BOUNDED-EVAL-1, 2026-10-07).
 - **Response:** 200 `{from: <ISO>, to: <ISO>, counted, quickTestsExcluded, rows: [{name, races, wins,
   podiums, places: {<place>: count}}]}` (`server/src/routes/races.js` → `GET /evaluation`,
   `server/src/races/periodEvaluation.js` → `evaluatePeriod`). A user with no team gets an evaluation of zero races.
 - **Errors:** 400 for a missing, invalid or reversed period (`server/src/routes/races.js` → `valid`).
-  400 for a period longer than 366 days (`:196-200`). 401.
+  400 for a period longer than 366 days (`:233-237`). 401.
 
 ### `GET /api/races/evaluation/points-rule`
 
@@ -1045,6 +1054,20 @@ racerTypeOverrides, effectiveRacerTypes`.
 - **Response:** 200 with the stored rule (`server/src/routes/races.js` → `PUT /evaluation/points-rule`, `server/utils/jsonSettingStore.js` → `set`).
 - **Errors:** 400 `{error}` with the validator's sentence (`server/src/routes/races.js` → `PUT /evaluation/points-rule`). 401. 403
   (`server/src/auth/guards.js` → `createRequireAdmin`). CSRF 403.
+
+### `GET /api/races/deleted-racers`
+
+- **Who:** any signed-in user, for the caller's team. **Website mode only**: standalone answers 404
+  `no such API route`, as a route that does not exist (`server/src/routes/races.js` →
+  `GET /deleted-racers`). WEBSITE-EMBED-1 piece 6 (OWNER-3).
+- **Request:** query `clientRaceIds`, the client's own race ids, comma-separated, at most 200.
+- **Response:** 200 `{deleted: {<clientRaceId>: [index…]}}` — for each asked race of the caller's
+  team, the racer indexes whose website member the account feed marked deleted
+  (`server/src/website/websiteRacers.js` → `deletedRacersByRace`, over
+  `server/src/races/raceStore.js` → `websiteRacersOf` and the identity store's `deletedIds`); a race
+  with none, another team's race and an unknown id are absent. The client shows "Deleted player"
+  for those racers (`client/src/modules/deletedRacers.js`); the stored race is untouched.
+- **Errors:** 400 for more than 200 ids. 401.
 
 ### `GET /api/races/:shortKey`
 
@@ -1071,17 +1094,17 @@ racerTypeOverrides, effectiveRacerTypes`.
   `scripts/lib/storedRaceReplay.mjs` → `replayStoredRace`).
 - **Errors:**
   - 404 `No race with that key.` (`server/src/routes/races.js` → `POST /:shortKey/verify`).
-  - 429 `{error}`: another verify is running on this server (`:267-271`).
-  - 501: the race engine module is not present in this install (`:273-277`; the worker reports it,
+  - 429 `{error}`: another verify is running on this server (`:328-332`).
+  - 501: the race engine module is not present in this install (`:334-338`; the worker reports it,
     `server/src/races/verifyReplay.worker.js`).
   - 422 `{error}`: `StoredRaceRefusal`, meaning the record cannot be replayed honestly — no matching
-    `geometryId`, a lap mismatch, or a missing world block (`:278`,
+    `geometryId`, a lap mismatch, or a missing world block (`:339`,
     `scripts/lib/storedRaceReplay.mjs` → `StoredRaceRefusal`, `need`, `replayStoredRace`).
   - 401. 403 (`server/src/auth/guards.js` → `createRequireAdmin`). CSRF 403.
   - 500 `{ error: 'internal error' }`: any other error, including one thrown by `readInstallTracks`
     on a malformed track file (`server/src/routes/races.js` → `readInstallTracks`), read on the server's thread
-    before the worker starts (`:264`). An error inside the worker is rethrown (`:279`) and `asyncRoute`
-    answers it (`:256`, `server/utils/asyncRoute.js` → `asyncRoute`): logged server-side
+    before the worker starts (`:325`). An error inside the worker is rethrown (`:340`) and `asyncRoute`
+    answers it (`:317`, `server/utils/asyncRoute.js` → `asyncRoute`): logged server-side
     with the route, and the server keeps running. *(Until SERVER-DEFECTS-1, 2026-10-06, the rethrow
     escaped the async handler: the request got no answer and the process exited.)*
 
@@ -1312,25 +1335,26 @@ Read-only facts about the installation for the status box at the top of the Dev 
 | 59 | GET | `/api/races/evaluation` | signed-in (own team) |
 | 60 | GET | `/api/races/evaluation/points-rule` | signed-in |
 | 61 | PUT | `/api/races/evaluation/points-rule` | admin |
-| 62 | GET | `/api/races/:shortKey` | signed-in (own team) |
-| 63 | POST | `/api/races/:shortKey/verify` | admin (own team) |
-| 64 | GET | `/api/settings/test-aids` | signed-in |
-| 65 | PUT | `/api/settings/test-aids` | admin |
-| 66 | GET | `/api/settings/legal-pages` | **public** |
-| 67 | PUT | `/api/settings/legal-pages` | admin |
-| 68 | GET | `/api/admin/status` | admin |
-| 69 | POST | `/api/registrations` | signed-in (own team) |
-| 70 | GET | `/api/registrations` | signed-in (own team) |
-| 71 | GET | `/api/registrations/:id` | signed-in (own team) |
-| 72 | POST | `/api/registrations/:id/close` | signed-in (own team) |
-| 73 | POST | `/api/registrations/:id/extend` | signed-in (own team) |
-| 74 | POST | `/api/registrations/:id/raced` | signed-in (own team) |
-| 75 | DELETE | `/api/registrations/:id/entries/:entryId` | signed-in (own team) |
-| 76 | DELETE | `/api/registrations/:id` | signed-in (own team) |
-| 77 | GET | `/api/join/:code` | **public** (the join link) |
-| 78 | POST | `/api/join/:code` | **public** (the join link, rate-limited) |
-| 79 | POST | `/api/integrations/registrations/:code/entries` | `RA_INTEGRATION_KEY` holder; 404 while unset |
-| 80 | GET | `<base>/auth/website` | the website proxy only (trusted peer AND secret); mounted only when `RA_MODE=website` |
+| 62 | GET | `/api/races/deleted-racers` | signed-in (own team); 404 unless `RA_MODE=website` |
+| 63 | GET | `/api/races/:shortKey` | signed-in (own team) |
+| 64 | POST | `/api/races/:shortKey/verify` | admin (own team) |
+| 65 | GET | `/api/settings/test-aids` | signed-in |
+| 66 | PUT | `/api/settings/test-aids` | admin |
+| 67 | GET | `/api/settings/legal-pages` | **public** |
+| 68 | PUT | `/api/settings/legal-pages` | admin |
+| 69 | GET | `/api/admin/status` | admin |
+| 70 | POST | `/api/registrations` | signed-in (own team) |
+| 71 | GET | `/api/registrations` | signed-in (own team) |
+| 72 | GET | `/api/registrations/:id` | signed-in (own team) |
+| 73 | POST | `/api/registrations/:id/close` | signed-in (own team) |
+| 74 | POST | `/api/registrations/:id/extend` | signed-in (own team) |
+| 75 | POST | `/api/registrations/:id/raced` | signed-in (own team) |
+| 76 | DELETE | `/api/registrations/:id/entries/:entryId` | signed-in (own team) |
+| 77 | DELETE | `/api/registrations/:id` | signed-in (own team) |
+| 78 | GET | `/api/join/:code` | **public** (the join link) |
+| 79 | POST | `/api/join/:code` | **public** (the join link, rate-limited) |
+| 80 | POST | `/api/integrations/registrations/:code/entries` | `RA_INTEGRATION_KEY` holder; 404 while unset |
+| 81 | GET | `<base>/auth/website` | the website proxy only (trusted peer AND secret); mounted only when `RA_MODE=website` |
 ---
 
 ## Planned (Phase 5)

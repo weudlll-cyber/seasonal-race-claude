@@ -407,6 +407,14 @@ their website id, one entry per account. A director chooses, when opening a regi
 *Website members only* (the default; a guest sees it read-only with a sign-in button that comes back
 to the page) and *Anyone with the link* (a guest types a name, as today).
 
+**A deleted member in past races** (piece 6, the owner's decision of 2026-11-11, OWNER-3) is shown
+as *Deleted player* on the result screen and in the race history. A race whose players came from a
+registration carries, BESIDE the race, which racer was which website member
+(`websiteRacers`); the server keeps it in its own table and never in the stored race, which stays
+byte-identical, and answers `GET /api/races/deleted-racers` from the account feed's deleted list.
+The stored name, the coat, the colours and a replay are unchanged; the race screen of a repeat
+still draws the stored names (the sheet says why). Details: API.md, *Races*.
+
 **Closed in website mode** (`server/src/website/closedInWebsiteMode.js`): local sign-in
 (`POST /api/auth/login`), first-admin setup (`GET /api/auth/setup-needed`, `POST /api/auth/setup`),
 `POST /api/auth/change-password` and everything under `/api/users` answer `404`. The sign-in screen

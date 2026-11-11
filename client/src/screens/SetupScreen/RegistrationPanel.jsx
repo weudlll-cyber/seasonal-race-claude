@@ -100,7 +100,7 @@ const errorText = (err) => err?.message || 'Something went wrong. Try again.';
 /**
  * @param {{ tracks: object[], raceDefaults: object, selectedTrackId: string|null,
  *           onUsePlayers: (p: { id: string, names: string[], trackId: string,
- *                               eventName: string|null }) => void }} props
+ *                               eventName: string|null, entries?: object[] }) => void }} props
  */
 export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackId, onUsePlayers }) {
   const [list, setList] = useState(null);
@@ -186,6 +186,9 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
           onUsePlayers({
             id: shown.id,
             names: shown.entries.map((e) => e.name),
+            // WEBSITE-EMBED-1 piece 6: in website mode the entries too, so the race knows its
+            // website members; standalone hands over exactly what it always did.
+            ...(SITE_MODE === 'website' ? { entries: shown.entries } : {}),
             trackId: shown.trackId,
             eventName: shown.eventName,
           })

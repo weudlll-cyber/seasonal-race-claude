@@ -40,14 +40,19 @@ considered separately, and that would not be true.
         from a trusted peer with the proxy secret, the role mapping recomputed at every sign-in, the
         race's own account doors closed, a local stand-in proxy (`scripts/website-standin.mjs`).
       - **Piece 3b — the account-changes feed (built, server part):** the poller, the durable cursor,
-        locked / unlocked / rights / deleted. **Masking a deleted member in PAST races is NOT built**
-        (it changes the stored race record's contract; the morning sheet says why and what is open).
+        locked / unlocked / rights / deleted. Masking a deleted member in PAST races: piece 6.
       - **Piece 4 — members join through the race's own join page (built):** a member joins as
         themselves, one entry per account (source `website`, the website id as external id); the
         director chooses *Website members only* (default) or *Anyone with the link*; website entries
         are marked "from the website".
       - **Piece 5 — the Dev Screen in website mode (built):** *Your password* and *Race directors*
         are not shown there (the owner's decision of 2026-11-11); standalone shows both.
+      - **Piece 6 — "Deleted player" in past races (built):** the owner's decision of 2026-11-11
+        (OWNER-3) — a side table beside the race (`race_website_racers`), the stored race
+        byte-identical; the result screen and the race history show "Deleted player". **Open:** the
+        race screen of a repeat still draws the stored names (drawn at several sites in the engine hull;
+        the sheet says why), Export CSV keeps the stored names, and a repeat from another device's
+        server row carries no mapping.
 
       **verify:** the owner's look at the rehearsal — "/" unchanged, and the "Website members only /
       Anyone with the link" choice on the join flow; until then no command decides it.
