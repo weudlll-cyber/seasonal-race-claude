@@ -23,6 +23,8 @@ let dir;
 let race;
 let standin;
 let origin;
+let syncToken;
+let feedModules;
 
 const listen = (app) =>
   new Promise((resolve) => {
@@ -38,13 +40,26 @@ beforeAll(async () => {
   vi.stubEnv('RA_BASE_PATH', BASE);
   vi.stubEnv('RA_WEBSITE_PROXY_SECRET_FILE', secretFile);
   vi.stubEnv('RA_WEBSITE_TRUSTED_PROXIES', '127.0.0.1/32, ::1');
+  // Piece 3b: the stand-in is also the website's feed; the test drives the poller against it.
+  const tokenFile = join(dir, 'sync-token');
+  syncToken = randomBytes(24).toString('base64url');
+  writeFileSync(tokenFile, syncToken, { mode: 0o600 });
+  vi.stubEnv('RA_WEBSITE_FEED_URL', 'http://127.0.0.1:9');
+  vi.stubEnv('RA_WEBSITE_SYNC_TOKEN_FILE', tokenFile);
   const { createApp } = await import('../app.js');
+  // The same module instances the app uses, so the poller writes what the app reads.
+  feedModules = {
+    ...(await import('./accountFeed.js')),
+    ...(await import('./identityStore.js')),
+    ...(await import('../routes/registrations.js')),
+  };
   race = await listen(createApp());
   standin = await startStandin({
     port: 0,
     target: `http://127.0.0.1:${race.address().port}`,
     base: BASE,
     secret: SECRET,
+    token: syncToken,
   });
   origin = `http://127.0.0.1:${standin.address().port}`;
 });
@@ -117,6 +132,33 @@ describe('the website stand-in in front of a website-mode race', () => {
       },
     });
     expect((await b.go(`${BASE}/api/auth/me`)).status).toBe(401);
+  });
+
+  it('★ piece 3b: an event fired on the stand-in page reaches the race through the feed', async () => {
+    const b = browser();
+    await b.go('/_standin/as/host');
+    expect((await b.go(`${BASE}/api/auth/me`)).status).toBe(200);
+    // The website locks Hugo Host.
+    expect(
+      (await fetch(`${origin}/_standin/event/locked/host`, { redirect: 'manual' })).status
+    ).toBe(303);
+    const poller = feedModules.createFeedPoller({
+      config: { url: origin, token: syncToken, intervalMs: 60_000 },
+      identities: feedModules.getDefaultIdentityStore(),
+      registrations: feedModules.getDefaultRegistrationStore(),
+      log: () => {},
+    });
+    const page = await poller.pollOnce();
+    expect(page.events).toEqual([{ type: 'locked', userId: 'standin-host-1' }]);
+    // His director session ends on the next request, and he cannot sign in again.
+    expect((await b.go(`${BASE}/api/auth/me`)).status).toBe(401);
+    const again = await b.go('/_standin/as/host');
+    expect(again.status).toBe(403);
+    // A wrong token gets nothing from the feed.
+    const refused = await fetch(`${origin}/api/games/race/account-changes`, {
+      headers: { 'X-Games-Sync-Token': 'wrong' },
+    });
+    expect(refused.status).toBe(403);
   });
 
   it('outside the base path the stand-in answers 404', async () => {

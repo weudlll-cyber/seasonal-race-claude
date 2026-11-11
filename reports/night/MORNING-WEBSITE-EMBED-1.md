@@ -14,8 +14,8 @@ code was followed and the line is in **Where the code disagreed** below.
 | piece | state |
 | --- | --- |
 | 2 — base path | **done** — `357192cc`, pushed |
-| 3a — website sign-in | **done** — see below |
-| 3b — account-changes feed | open |
+| 3a — website sign-in | **done** — `11a4d17f` (+ `46ae5ce9`, the stamp), pushed |
+| 3b — account-changes feed | **server part done** — see below; masking past races follows piece 4 |
 | 4 — members join through the join page | open |
 | end — verify, installer test, the owner's two addresses | open |
 
@@ -197,9 +197,54 @@ image).
   `scripts/recover-admin.mjs` with no arguments, which printed its usage and stopped ("unknown
   action") — and the garbled AUTH.md was restored from git and rewritten from a file.
 
+## Piece 3b — the account-changes feed (OWNER-3)
+
+**What it does.** In website mode a poller asks `<RA_WEBSITE_FEED_URL>/api/games/race/account-changes`
+(header `X-Games-Sync-Token`, the token from `RA_WEBSITE_SYNC_TOKEN_FILE`), every
+`RA_WEBSITE_FEED_INTERVAL_MS` (default 60 s, 15–120 s): **locked** → the member's sessions end and
+sign-in is refused; **unlocked** → allowed again; **rights** → sessions end, the role is recomputed at
+the next sign-in; **deleted** → their website entries leave every OPEN registration at once (closed
+ones keep their list), and the identity is marked deleted. A full page (500) is followed at once but
+never sooner than a second after the last request (under 60 a minute); errors back off — doubling per
+failure, up to ten minutes — and a success resets it. The cursor is in SQLite; a page's identity
+changes and its cursor are one transaction, the open-registration removals just before it, so a crash
+replays the page and every event is safe twice. The poller starts after the server listens
+(`index.js`), only in website mode; its timer never holds the exit.
+
+**Reused:** the identity store's epoch (3a) for "sessions end"; the registration store for the
+removal (`removeOpenWebsiteEntries`, one statement beside `removeEntry`); the stand-in (3a) is now
+also the feed, with links on its page to lock, unlock, revoke or delete each fake member.
+
+**Tests.** `accountFeed.test.js` (13, a fake feed and real stores in one temporary
+`registrations.sqlite`): the settings and refusals; the tolerant reader; **paging past 500** (the
+second page asked within a second, `?since=<cursor>`, the cursor advancing); **a repeated batch**
+changing nothing; **an error, then backoff** (0, 2×, 4×, 8×, 10 min, 10 min, then the interval
+again); each event's effect; website mode without the feed refuses to start.
+`standin.integration.test.js` +1: a lock fired on the stand-in's page reaches the race through the
+real poller — Hugo's director session ends on the next request, his sign-in is refused, a wrong token
+gets nothing. Sabotage: the open-registration removal dropped, "a full page means more" dropped, the
+doubling dropped — each red, all restored. Website tests 46/46.
+
+**Forks decided.**
+1. *The feed is REQUIRED in website mode* (URL and token file; the server refuses to start without
+   them). The brief does not say; a website-mode race without it would keep a deleted member's name
+   in open registrations and a locked member's sessions alive, so "off" was not a safe default.
+2. *The answer's field names are not in the summary,* so the reader accepts `events`/`changes`,
+   `type`/`event`, `userId`/`user_id`/`id`, `nextCursor`/`cursor`, and `hasMore` (or a full page of
+   500 for "ask again now"). An answer without a cursor is an error (it could not be remembered); an
+   event of an unknown kind, or naming nobody, is skipped. **To confirm against the website's feed.**
+3. *A lock for a member the race has never met is remembered*, so their first sign-in is refused.
+4. *A deleted member's entries stay in CLOSED registrations* — a race may already have been run from
+   that list; past races are masked at display time instead.
+5. *Backoff:* doubling per failure in a row, capped at ten minutes, reset by the first success.
+
+**Masking a deleted member in past races** needs the member's website id on each racer, which only
+exists once members join as website entries — piece 4. It is the last step of the chain; see below.
+
 ## Where the code disagreed with the summary
 
-- (none yet)
+- The account-changes feed's field names are not in the summary (piece 3b, fork 2): read tolerantly
+  and to be confirmed against the website's real answer.
 
 ## Needs the owner's word
 

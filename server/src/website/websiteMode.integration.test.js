@@ -26,11 +26,14 @@ const BASE = '/games/race';
 const SECRET = randomBytes(24).toString('base64url');
 let dir;
 let secretFile;
+let tokenFile;
 
 beforeAll(() => {
   dir = mkdtempSync(join(os.tmpdir(), 'ra-website-'));
   secretFile = join(dir, 'proxy-secret');
   writeFileSync(secretFile, SECRET, { mode: 0o600 });
+  tokenFile = join(dir, 'sync-token');
+  writeFileSync(tokenFile, randomBytes(24).toString('base64url'), { mode: 0o600 });
 });
 afterAll(() => {
   vi.unstubAllEnvs();
@@ -53,6 +56,9 @@ const websiteEnv = (trusted) => ({
   RA_BASE_PATH: BASE,
   RA_WEBSITE_PROXY_SECRET_FILE: secretFile,
   RA_WEBSITE_TRUSTED_PROXIES: trusted,
+  // Piece 3b: required in website mode; the poller is started by index.js only, so never asked here.
+  RA_WEBSITE_FEED_URL: 'http://127.0.0.1:9',
+  RA_WEBSITE_SYNC_TOKEN_FILE: tokenFile,
 });
 
 /** The headers the website proxy sets for one fake member. */

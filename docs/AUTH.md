@@ -394,6 +394,13 @@ A session carries the epoch it was made under and is good only while it equals t
 right is revoked loses the director role on their next request** once they sign in again anywhere. A
 sign-in that maps a member to a different role bumps the epoch.
 
+**The website's account changes** (piece 3b, `server/src/website/accountFeed.js`). In website mode
+the race follows the website's feed (`RA_WEBSITE_FEED_URL`, `RA_WEBSITE_SYNC_TOKEN_FILE`): **locked**
+ends the member's sessions and refuses sign-in, **unlocked** allows it again, **rights** ends their
+sessions so the role is recomputed at the next sign-in, **deleted** removes their entries from open
+registrations at once and marks the identity deleted. The cursor is kept in the same SQLite file, and
+a page's changes and its cursor are written together, so every event is safe to apply twice.
+
 **Closed in website mode** (`server/src/website/closedInWebsiteMode.js`): local sign-in
 (`POST /api/auth/login`), first-admin setup (`GET /api/auth/setup-needed`, `POST /api/auth/setup`),
 `POST /api/auth/change-password` and everything under `/api/users` answer `404`. The sign-in screen

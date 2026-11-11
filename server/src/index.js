@@ -11,6 +11,9 @@ import { clientBuildExists } from './staticClient.js';
 import { reportStartupReadiness } from './startupReadiness.js';
 import { assertPublicOriginUsable, resolveBasePath } from './runtimeConfig.js';
 import { websiteConfig } from './website/websiteConfig.js';
+import { createFeedPoller } from './website/accountFeed.js';
+import { getDefaultIdentityStore } from './website/identityStore.js';
+import { getDefaultRegistrationStore } from './routes/registrations.js';
 import { assertSourceUrlUsable } from './sourceUrl.js';
 import { sweepOrphanTmp } from '../utils/sweepOrphanTmp.js';
 import { resolveDataRoot } from './dataPaths.js';
@@ -100,6 +103,16 @@ const server = listenOn(
     // AUDIT-1 A5M-07: one line recommending RA_TRUST_PROXY while it is unset; see trustProxy.js.
     const trustNotice = trustProxyNotice(process.env);
     if (trustNotice) console.warn(trustNotice);
+    // WEBSITE-EMBED-1 piece 3b: in website mode, follow the website's account changes. Off in
+    // standalone (websiteConfig() is null there); the timer is unref'd, so it never holds the exit.
+    const site = websiteConfig();
+    if (site) {
+      createFeedPoller({
+        config: site.feed,
+        identities: getDefaultIdentityStore(),
+        registrations: getDefaultRegistrationStore(),
+      }).start();
+    }
   },
   refuseToStart
 );

@@ -39,7 +39,8 @@ considered separately, and that would not be true.
       - **Piece 3a — website sign-in (built):** `RA_MODE=website`, `<base>/auth/website` believed only
         from a trusted peer with the proxy secret, the role mapping recomputed at every sign-in, the
         race's own account doors closed, a local stand-in proxy (`scripts/website-standin.mjs`).
-      - **Piece 3b — the account-changes feed (open):** locked / unlocked / rights / deleted.
+      - **Piece 3b — the account-changes feed (built, server part):** the poller, the durable cursor,
+        locked / unlocked / rights / deleted; masking a deleted member in past races follows piece 4.
       - **Piece 4 — members join through the race's own join page (open).**
 
       **verify:** the owner's look at the rehearsal — "/" unchanged, and the "Website members only /

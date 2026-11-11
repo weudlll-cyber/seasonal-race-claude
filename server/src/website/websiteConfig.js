@@ -28,6 +28,7 @@
 import { readFileSync } from 'node:fs';
 import { BlockList, isIP } from 'node:net';
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { loadFeedConfig } from './accountFeed.js';
 
 /** The two modes; anything else is refused at start. */
 export const SITE_MODES = ['standalone', 'website'];
@@ -111,6 +112,7 @@ function readSecret(secretFile, readFile) {
  * @param {{ readFile?: (path: string) => string }} [io] tests pass their own reader
  * @returns {null | {
  *   team: string,
+ *   feed: { url: string, token: string, intervalMs: number },
  *   trustedProxies: string[],
  *   isTrustedPeer: (address: string) => boolean,
  *   secretMatches: (value: unknown) => boolean,
@@ -142,8 +144,12 @@ export function loadWebsiteConfig(
   }
 
   const team = String(env.RA_WEBSITE_TEAM ?? '').trim() || DEFAULT_WEBSITE_TEAM;
+  // Piece 3b: the account-changes feed is REQUIRED in website mode — without it a deleted member's
+  // name would stay in open registrations, and a locked one would keep their sessions.
+  const feed = loadFeedConfig(env, { readFile });
   return {
     team,
+    feed,
     trustedProxies: entries,
     isTrustedPeer(address) {
       const peer = normalizePeerAddress(address);

@@ -107,6 +107,9 @@ unless `RA_MODE=website`**; how sign-in then works is [AUTH.md](AUTH.md) §10.
 | `RA_WEBSITE_PROXY_SECRET_FILE` | — | The path of a file (mode 0600) holding the secret the website proxy sends in `X-Ra-Proxy-Secret`. Read once at start; only its digest is kept; never logged. **In website mode, unset, unreadable or empty → the server refuses to start**, naming the file, never the secret. |
 | `RA_WEBSITE_TRUSTED_PROXIES` | — | The network(s) the website proxy connects from, comma-separated (`172.18.0.0/16`, `127.0.0.1`): in Docker, the compose network the proxy's connections arrive from. The TCP peer is checked, not `X-Forwarded-For`. **In website mode, empty or holding anything that is not an address or a CIDR network → the server refuses to start.** |
 | `RA_WEBSITE_TEAM` | `Seasonal Entertainment` | The team every website director and admin lands in (OWNER-2); founded on the first such sign-in if it does not exist. |
+| `RA_WEBSITE_FEED_URL` | — | The website's address for its account-changes feed (OWNER-3), e.g. `http://site:3800`; the race asks `<it>/api/games/race/account-changes`. **Required in website mode** — without it a deleted member's name would stay in open registrations — **unset or not http(s) → the server refuses to start.** |
+| `RA_WEBSITE_SYNC_TOKEN_FILE` | — | A root-only file holding the token the race sends in `X-Games-Sync-Token`. Read once at start; never logged. **Required in website mode; unreadable or empty → the server refuses to start.** |
+| `RA_WEBSITE_FEED_INTERVAL_MS` | `60000` | How often the race asks the feed, 15000–120000; a full page (500 events) is followed at once, never more than once a second. On errors the wait doubles per failure, up to ten minutes. **Outside the range → the server refuses to start.** |
 
 ## Build identity — optional, and only affects a status line
 

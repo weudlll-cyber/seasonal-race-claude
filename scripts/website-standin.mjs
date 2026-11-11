@@ -22,9 +22,15 @@
 //              The secret is read from the same file the race instance reads
 //              (RA_WEBSITE_PROXY_SECRET_FILE); it is never printed.
 //
+//              PIECE 3b: it is also the website's account-changes FEED for that instance —
+//              GET /api/games/race/account-changes?since=<cursor> with X-Games-Sync-Token (the
+//              token from --token-file, the file the race reads as RA_WEBSITE_SYNC_TOKEN_FILE), at
+//              most 500 events an answer. Its page can lock, unlock, revoke the rights of, or delete
+//              each fake member, so the effect can be seen in the race.
+//
 // Usage:
 //   node scripts/website-standin.mjs --port=4790 --target=http://127.0.0.1:4791 \
-//        --base=/games/race --secret-file=<path>
+//        --base=/games/race --secret-file=<path> --token-file=<path>
 // ============================================================
 
 import { createServer, request as httpRequest } from 'node:http';
@@ -76,7 +82,12 @@ function picked(req) {
   return m && m[1] in FAKE_MEMBERS ? m[1] : 'guest';
 }
 
-function page(base, current) {
+/** The feed's events, in order; the cursor is the index after the last one handed out. */
+const FEED_PATH = '/api/games/race/account-changes';
+const FEED_PAGE = 500;
+const EVENT_TYPES = ['locked', 'unlocked', 'rights', 'deleted'];
+
+function page(base, current, events) {
   const links = Object.keys(FAKE_MEMBERS)
     .map((k) => {
       const m = FAKE_MEMBERS[k];
@@ -88,20 +99,52 @@ function page(base, current) {
 <h1>Seasonal Entertainment — local stand-in</h1>
 <p>Pick who you are. The race then signs you in as that member.</p>
 <ul>${links}</ul>
-<p><a href="${base}/">Open the race</a></p>`;
+<p><a href="${base}/">Open the race</a></p>
+<h2>Account changes (the feed)</h2>
+<ul>${Object.keys(FAKE_MEMBERS)
+    .filter((k) => FAKE_MEMBERS[k])
+    .map(
+      (k) =>
+        `<li>${FAKE_MEMBERS[k].name}: ` +
+        EVENT_TYPES.map((t) => `<a href="/_standin/event/${t}/${k}">${t}</a>`).join(' · ') +
+        '</li>'
+    )
+    .join('\n')}</ul>
+<p>${events.length} event(s) so far.</p>`;
 }
 
 /**
  * Start the stand-in. Exported so a test can run it in-process.
  * @returns {Promise<import('node:http').Server>}
  */
-export function startStandin({ port, target, base, secret, host = '127.0.0.1' }) {
+export function startStandin({ port, target, base, secret, token = null, host = '127.0.0.1' }) {
   const targetUrl = new URL(target);
+  const events = [];
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://standin.invalid');
     if (url.pathname === '/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      return res.end(page(base, picked(req)));
+      return res.end(page(base, picked(req), events));
+    }
+    // The feed, as the website serves it to the race (piece 3b).
+    if (url.pathname === FEED_PATH && token) {
+      if (req.headers['x-games-sync-token'] !== token) {
+        res.writeHead(403, { 'content-type': 'text/plain' });
+        return res.end('Forbidden');
+      }
+      const since = Math.max(0, Number.parseInt(url.searchParams.get('since') ?? '0', 10) || 0);
+      const slice = events.slice(since, since + FEED_PAGE);
+      const next = since + slice.length;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(
+        JSON.stringify({ events: slice, nextCursor: String(next), hasMore: next < events.length })
+      );
+    }
+    const ev = /^\/_standin\/event\/([a-z]+)\/([a-z]+)$/.exec(url.pathname);
+    if (ev && EVENT_TYPES.includes(ev[1]) && FAKE_MEMBERS[ev[2]]) {
+      events.push({ type: ev[1], userId: FAKE_MEMBERS[ev[2]].id });
+      res.writeHead(303, { location: '/' });
+      return res.end();
     }
     const as = /^\/_standin\/as\/([a-z]+)$/.exec(url.pathname);
     if (as && as[1] in FAKE_MEMBERS) {
@@ -149,6 +192,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const target = arg('target', 'http://127.0.0.1:4791');
   const base = arg('base', '/games/race');
   const secretFile = arg('secret-file', process.env.RA_WEBSITE_PROXY_SECRET_FILE);
+  const tokenFile = arg('token-file', process.env.RA_WEBSITE_SYNC_TOKEN_FILE);
   if (!secretFile) {
     console.error(
       'website-standin: --secret-file=<path> is required (the race reads the same file).'
@@ -156,7 +200,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exitCode = 1;
   } else {
     const secret = readFileSync(secretFile, 'utf8').trim();
-    await startStandin({ port, target, base, secret });
+    const token = tokenFile ? readFileSync(tokenFile, 'utf8').trim() : null;
+    await startStandin({ port, target, base, secret, token });
     console.log(`website stand-in on http://127.0.0.1:${port}/ → ${target}${base}`);
   }
 }

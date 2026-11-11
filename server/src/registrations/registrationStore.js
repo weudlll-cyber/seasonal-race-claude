@@ -376,6 +376,26 @@ export function createRegistrationStore(
     return res.changes === 0 ? null : get(id, team);
   }
 
+  /**
+   * WEBSITE-EMBED-1 piece 3b: a website member was deleted — remove their entries (source 'website',
+   * keyed by their website id, OWNER-6) from every registration that is still OPEN, at once. Closed
+   * registrations keep their list: a race may already have been run with it, and past races are
+   * masked at display time instead. Safe to apply twice: the second time finds nothing.
+   *
+   * @param {string} websiteUserId
+   * @returns {number} how many entries were removed
+   */
+  function removeOpenWebsiteEntries(websiteUserId) {
+    const at = now();
+    return db
+      .prepare(
+        `DELETE FROM registration_entries WHERE source = 'website' AND external_id = ?
+           AND registration_id IN (SELECT id FROM registrations
+                                   WHERE closed_early_ms IS NULL AND closes_at_ms > ?)`
+      )
+      .run(String(websiteUserId), at).changes;
+  }
+
   /** Delete the registration and every name in it. True when something was deleted. */
   function remove(id, team) {
     const row = rowById(id, team);
@@ -482,6 +502,7 @@ export function createRegistrationStore(
     extend,
     markRaced,
     removeEntry,
+    removeOpenWebsiteEntries,
     remove,
     addEntry,
     publicInfo,

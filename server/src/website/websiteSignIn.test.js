@@ -19,6 +19,8 @@ import {
 import { readIdentityHeaders, mapWebsiteRole, safeReturnTo } from './websiteSignIn.js';
 
 const SECRET = 'unit-test-secret-not-a-real-one';
+// Piece 3b: the account-changes feed is required in website mode.
+const FEED = { RA_WEBSITE_FEED_URL: 'http://site:3800', RA_WEBSITE_SYNC_TOKEN_FILE: '/t' };
 const reader = (files) => (path) => {
   if (!(path in files)) throw Object.assign(new Error('nope'), { code: 'ENOENT' });
   return files[path];
@@ -85,8 +87,9 @@ describe('loadWebsiteConfig', () => {
         RA_MODE: 'website',
         RA_WEBSITE_PROXY_SECRET_FILE: '/s',
         RA_WEBSITE_TRUSTED_PROXIES: '172.18.0.0/16, ::1',
+        ...FEED,
       },
-      { readFile: reader({ '/s': `${SECRET}\n` }) }
+      { readFile: reader({ '/s': `${SECRET}\n`, '/t': 'token' }) }
     );
     expect(cfg.team).toBe(DEFAULT_WEBSITE_TEAM);
     expect(cfg.isTrustedPeer('172.18.0.1')).toBe(true);
@@ -108,8 +111,9 @@ describe('loadWebsiteConfig', () => {
         RA_WEBSITE_PROXY_SECRET_FILE: '/s',
         RA_WEBSITE_TRUSTED_PROXIES: '10.0.0.1',
         RA_WEBSITE_TEAM: 'Crew',
+        ...FEED,
       },
-      { readFile: reader({ '/s': SECRET }) }
+      { readFile: reader({ '/s': SECRET, '/t': 'token' }) }
     );
     expect(cfg.team).toBe('Crew');
   });
