@@ -18,6 +18,7 @@ code was followed and the line is in **Where the code disagreed** below.
 | 3b — account-changes feed | **server part done** — `26c32049`, pushed; **masking past races NOT built** — see below |
 | 4 — members join through the join page | **done** — `644c7447`, pushed |
 | end — verify, installer test, the owner's two addresses | **done** — see below |
+| 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — see below |
 
 ## Start
 
@@ -336,6 +337,26 @@ folder — its deletion was refused by the permission system, so it stays), and
 `%LOCALAPPDATA%\racearena-website-look`. The four started processes: API 4000, Vite 5173,
 website instance 4791, stand-in 4790.
 
+## Piece 5 — the Dev Screen in website mode (the owner's decision of 2026-11-11)
+
+**What it does.** In website mode the Dev Screen leaves out *Your password* (ChangePasswordSection)
+and *Race directors* (UserManagementSection); a sub-group left empty is not shown, as the operator
+view already did. Standalone shows both, unchanged. The server routes keep answering 404 in website
+mode (`closedInWebsiteMode.js`, unchanged).
+
+**Reused, no second source:** the mode is `SITE_MODE` from `client/src/modules/runtimeMarker.js`, the
+same constant the sign-in page reads (`LoginScreen.jsx`); the filter is the screen's existing
+`chaptersFor` (DevScreen.jsx), which already drops operator-hidden parts and empty sub-groups — the two
+parts carry `standaloneOnly: true` in `devScreenChapters.js`.
+
+**Tests.** `DevScreen.website.test.jsx` (2): website mode hides both and keeps the rest of the chapter;
+standalone shows both. The Dev Screen's 30 other files unchanged, 384/384. Sabotage: `shownInMode`
+made always true → the website test red; restored.
+
+**Hygiene.** DevScreen.jsx 204 → 213 lines (`shownInMode` and the website arm of `chaptersFor`);
+devScreenChapters.js 253 → 263 (the flag, its header line, the two parts written out). Nothing removed
+or moved. engine-reach: all three paths outside the hull.
+
 ## Where the code disagreed with the summary
 
 - The account-changes feed's field names are not in the summary (piece 3b, fork 2): read tolerantly
@@ -343,8 +364,8 @@ website instance 4791, stand-in 4790.
 
 ## Needs the owner's word
 
-- Whether the Dev Screen should hide *Change password* and *User management* in website mode (both
-  answer "not found" there now).
+- ~~Whether the Dev Screen should hide *Change password* and *User management* in website mode~~ —
+  decided 2026-11-11 (hide), built as piece 5.
 - Masking a deleted member's name in PAST races (3b): not built — it changes the stored race record's
   contract; whether to carry the website ids in the record, or to mask by another route, is a design
   call for the next piece.

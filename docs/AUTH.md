@@ -410,7 +410,9 @@ to the page) and *Anyone with the link* (a guest types a name, as today).
 **Closed in website mode** (`server/src/website/closedInWebsiteMode.js`): local sign-in
 (`POST /api/auth/login`), first-admin setup (`GET /api/auth/setup-needed`, `POST /api/auth/setup`),
 `POST /api/auth/change-password` and everything under `/api/users` answer `404`. The sign-in screen
-shows one button, *Sign in through Seasonal Entertainment*, to `<base>/auth/website`.
+shows one button, *Sign in through Seasonal Entertainment*, to `<base>/auth/website`. The Dev
+Screen leaves out *Your password* and *Race directors* there (the owner's decision of 2026-11-11;
+the parts marked `standaloneOnly` in `client/src/screens/DevScreen/devScreenChapters.js`).
 `scripts/recover-admin.mjs` is a command on the server and keeps working.
 
 **For tests and a look, never for an install:** `scripts/website-standin.mjs`, a local stand-in for

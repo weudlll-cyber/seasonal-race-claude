@@ -14,6 +14,9 @@
 //              `own` names a control the screen itself renders (DevScreen.jsx). `tier` is the
 //              part's visibility exactly as the section's tier was before: 'operator' parts are
 //              shown in the operator view, everything else only to an admin in the All view.
+//              `standaloneOnly` (WEBSITE-EMBED-1 piece 5, the owner's decision of 2026-11-11): the part
+//              is not shown in website mode, where the website owns accounts and the part's server
+//              routes answer 404 (DevScreen.jsx, chaptersFor).
 // ============================================================
 
 import PlayerGroupsManager from './sections/PlayerGroupsManager.jsx';
@@ -243,8 +246,15 @@ export const CHAPTERS = [
       // AUDIT-1 D2: the read-only status box, first — admin only (advanced tier, and the box itself
       // renders nothing for anyone else).
       { title: 'Installation status', parts: [{ component: AdminStatusSection, tier: ADV }] },
-      { title: 'Your password', parts: [{ component: ChangePasswordSection, tier: OP }] },
-      { title: 'Race directors', parts: [{ component: UserManagementSection, tier: ADV }] },
+      // WEBSITE-EMBED-1 piece 5: in website mode the website owns passwords and accounts.
+      {
+        title: 'Your password',
+        parts: [{ component: ChangePasswordSection, tier: OP, standaloneOnly: true }],
+      },
+      {
+        title: 'Race directors',
+        parts: [{ component: UserManagementSection, tier: ADV, standaloneOnly: true }],
+      },
       { title: 'Backup and reset', parts: [{ component: SystemSettings, tier: ADV }] },
       // LEGAL-PAGES-1 (2026-10-18): the operator's legal notice and privacy policy — admin only.
       { title: 'Legal pages', parts: [{ component: LegalPagesSection, tier: ADV }] },

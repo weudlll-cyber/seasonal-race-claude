@@ -46,6 +46,8 @@ considered separately, and that would not be true.
         themselves, one entry per account (source `website`, the website id as external id); the
         director chooses *Website members only* (default) or *Anyone with the link*; website entries
         are marked "from the website".
+      - **Piece 5 — the Dev Screen in website mode (built):** *Your password* and *Race directors*
+        are not shown there (the owner's decision of 2026-11-11); standalone shows both.
 
       **verify:** the owner's look at the rehearsal — "/" unchanged, and the "Website members only /
       Anyone with the link" choice on the join flow; until then no command decides it.
