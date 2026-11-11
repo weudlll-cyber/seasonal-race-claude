@@ -399,7 +399,13 @@ the race follows the website's feed (`RA_WEBSITE_FEED_URL`, `RA_WEBSITE_SYNC_TOK
 ends the member's sessions and refuses sign-in, **unlocked** allows it again, **rights** ends their
 sessions so the role is recomputed at the next sign-in, **deleted** removes their entries from open
 registrations at once and marks the identity deleted. The cursor is kept in the same SQLite file, and
-a page's changes and its cursor are written together, so every event is safe to apply twice.
+a page's changes and its cursor are written together, so every event is safe to apply twice. **The
+answer is read exactly as the website sends it** (piece 5c; the website's
+`server/src/accounts/accountChanges.js`): `{"changes":[{"id":42,"kind":"locked"}],"next":"118"}` —
+`kind` one of the four above, `id` a JSON number kept as `String(id)` (the same string the sign-in
+route records from `X-Acting-User-Id`), `next` a digit string, at most 500 changes a page (a full page
+is followed at once). The first request asks `since=0`. Any other shape is an error: nothing is
+applied, the cursor stays, and the poller backs off.
 
 **Joining a race** (piece 4, `server/src/routes/join.js`). A member signed in through the website
 joins a registration through the race's own join page as themselves — their display name, keyed by

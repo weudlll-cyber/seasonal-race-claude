@@ -55,6 +55,10 @@ considered separately, and that would not be true.
         and places the route file; `racearena` keeps the mode through updates; tested in a throwaway
         Ubuntu 24.04 machine behind real nginx and real Caddy (`deploy/test/e2e-website.sh`). **Open:** the
         rehearsal on the real website (the owner says when it is ready).
+      - **Piece 5c — five fixes from the website planning's answers (built, fourth chain):** the
+        feed read exactly as the website sends it; the website's record /etc/seasonal/install.conf
+        (RACE=yes, SITE_DOMAIN, MODE, INSTALL_DIR); the site container by its compose labels; port 3940
+        and subnet 172.30.251.0/24; race.conf / race.caddy in the website's real layout.
       - **Piece 6 — "Deleted player" in past races (built):** the owner's decision of 2026-11-11
         (OWNER-3) — a side table beside the race (`race_website_racers`), the stored race
         byte-identical; the result screen and the race history show "Deleted player". **Decided by the

@@ -20,7 +20,8 @@ code was followed and the line is in **Where the code disagreed** below.
 | end — verify, installer test, the owner's two addresses | **done** — see below |
 | 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — `52628908`, pushed |
 | 5a — the route file inside the website's proxy (third chain) | **done** — `3d658d7f`, pushed |
-| 5b — the installer's website mode (third chain) | **done** — see below |
+| 5b — the installer's website mode (third chain) | **done** — `53c48c00`, pushed |
+| 5c — five fixes from the website planning's answers (fourth chain) | **done** — see below |
 | 6 — "Deleted player" in past races (2026-11-11, second chain) | **done** — see below; the race screen of a repeat keeps the stored names — decided 2026-11-11 (fork 1) |
 
 ## Start
@@ -621,6 +622,70 @@ Caddy, node and Ubuntu images were on this machine before and stay. The network 
 hull changed in this chain; no fingerprint check was due. The four processes keep running: the client and the server
 did not change in this chain, so they still serve `05365fed` (badge `05365fed · feat/website-embedding · clean`).
 Scratch folders left: C:/tmp/ra-route-test, C:/tmp/ra-e2e-web1, C:/tmp/ra-e2e-std1.
+
+## Piece 5c — five fixes from the website planning's answers (fourth chain, 2026-11-11)
+
+**References, read-only** (the owner's decision of 2026-11-11): the website repository
+`seasonal-entertainment` (master `eb1bbe9`, contains merge `da618e7`), `seasonal-bingo-royale`
+(`f655df9`) and `seasonal-mini-games` (`67306ff`), cloned into C:/tmp/ra-refs only. Nothing there was
+edited, committed, pushed or changed.
+
+**1. The feed, exactly as the website sends it** (`server/src/website/accountFeed.js` readFeedPage). Only
+`{"changes":[{"id":<number>,"kind":"deleted|locked|unlocked|rights"}],"next":"<digits>"}`; a page of 500
+means more; the first request asks `since=0`; ids kept as `String(id)`, the same string the sign-in route
+records from `X-Acting-User-Id`. Every other shape is an error: nothing applied, the cursor unchanged, the
+poller backs off. The tolerant branches are gone. **Red before:** the new tests on `63bce4c5`'s reader — 4
+red (the website's example threw "without a cursor": the old reader looked for `nextCursor`/`cursor`,
+never `next`, and skipped numeric ids); **green after:** 16/16. The stand-in now sends exactly that answer
+(its fake members have numeric ids 9001–9003); a new test pins its raw answer; 10/10.
+
+**2. The website's record** (`install.sh` website_record): `/etc/seasonal/install.conf` read line by line,
+never sourced or printed; `RACE` must be `yes` (else stop, before ANY change — it is now the first website
+step — with "run the website's installer again with --race"); `SITE_DOMAIN` gives `https://<SITE_DOMAIN>`
+(`--site-origin` only overrides); `MODE` first, cross-checked against what runs (the website's Caddy of
+compose project seasonal-site, or nginx on 80/443), a disagreement stops; `INSTALL_DIR` for the Caddy
+routes folder.
+
+**3. The website's container and network:** by the labels compose project `seasonal-site`, service `site`;
+its network `seasonal-site_default`, else its only one, else `--site-network`. The feed is `http://site:3800`
+over it. **nginx mode trusts only the race's own subnet, never that network; Caddy mode trusts the website's
+network** — its Caddy reaches the race there as `racearena:4000`, as Bingo's does. The website's Caddy is no
+longer connected to the race's network (5b did that; nothing of the website's runtime is touched now).
+
+**4. Port and subnet:** fixed 3940 and 172.30.251.0/24 (Bingo 3900 / 172.30.249.0/24, Mini Games 3920 /
+172.30.250.0/24 — named in VPS-INSTALL.md), `--port` / `--subnet` to override, refused when in use, a
+re-run's values kept (website.conf). The "first free in 3900–3999" search is gone.
+
+**5. The route file:** nginx `/etc/seasonal/routes/race.conf`; Caddy `<INSTALL_DIR>/deploy/site/routes/race.caddy`
+(the website's Caddy mounts it as /etc/caddy/routes, imports /etc/caddy/routes/*.caddy) — after checking the
+running Caddy has that mount; root-owned 0600; a refused check now puts the PREVIOUS file back (not just
+removes it). status and uninstall use the same paths. **Found in the references, fixed with it:** the website's
+authorize endpoint refuses a check without `X-Original-Method` (fail closed, its embeddedRoutes.js; Bingo's
+own rehearsal found it), and it always answers 204 — a member's headers, anyone else `X-Acting-Guest`. The
+nginx route now sends Cookie, Origin, X-Original-Method and X-Original-URI to it, the Caddy route
+`header_up X-Original-Method {method}`; the nginx location is `^~ /games/race/` (a website regex location
+cannot take the race's paths) and `/games/race` redirects to `/games/race/`. The fakes do the same.
+
+**Tests.** Route tests on the real layout: **nginx 17/17, Caddy 18/18** (new: the method on the authorize
+call; the rollback to the previous file byte for byte; Caddy without the routes mount refused, nothing
+written). A new fast unit test of install.sh's website decisions, docker and ss stubbed
+(`deploy/test/website-install-unit.sh`): **25/25**. The website-mode harness in the real layout (install.conf,
+compose project seasonal-site in /srv/site, Caddy's ./routes as /etc/caddy/routes, site-local-port 3801):
+**nginx 36/36, Caddy 37/37** — new: RACE=no stops before any change; a taken 172.30.251.0/24 is
+refused before the checkout; the origin from SITE_DOMAIN; race.conf / race.caddy root 0600; port 3940; the
+race's subnet; the app on seasonal-site_default; trust per mode. **The harness found one real defect** in my
+5c code: on a FIRST install, reading the earlier session secret (`[[ -f … ]] && sed …` in a command
+substitution) failed under `set -e` and ended the install silently — fixed in `01e23d17`.
+**Sabotage, one per fix, all red, all restored:** fix 1 ids as numbers → 4 red; fix 2 RACE not required → 3
+red, SITE_DOMAIN unused → 1 red; fix 3 the only network preferred → 1 red, nginx trusting the website network
+→ 1 red; fix 4 port 3900 → 2 red, a taken subnet not refused → 1 red; fix 5 racearena.conf → 1 red, the
+Caddy file in /etc/seasonal/routes → 1 red.
+
+**Forks decided.** (1) An unknown `kind` is an error, like every other off-format answer (literal F1);
+a new kind from the website would stop the feed until the race knows it. (2) `--proxy` and `--feed-url`
+(piece 5b) are removed: MODE comes from the record, the feed is always site:3800. (3) Caddy mode follows
+Bingo (the website's network trusted, the race reached on it) rather than 5b's network connect. (4) The record
+is read first, before the team question, so RACE=no changes nothing at all.
 
 ## Where the code disagreed with the summary
 

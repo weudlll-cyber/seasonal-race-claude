@@ -92,11 +92,12 @@ something goes wrong — is in the [operator guide](OPERATOR-GUIDE.md).
 
 ## Inside Seasonal Entertainment (website mode)
 
-*(WEBSITE-EMBED-1 pieces 5a and 5b, 2026-11-11, on branch `feat/website-embedding`; not merged until the
-rehearsal on the real website.)* The same command installs RaceArena **inside** the Seasonal
+*(WEBSITE-EMBED-1 pieces 5a, 5b and 5c, 2026-11-11, on branch `feat/website-embedding`; not merged
+until the rehearsal on the real website.)* The same command installs RaceArena **inside** the Seasonal
 Entertainment website, on the website's own server: under `/games/race`, behind the website's proxy,
 with the website's accounts (sign-in: [AUTH.md](AUTH.md) §10; settings:
-[ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*).
+[ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*). It follows the website's own layout, as Seasonal
+Bingo Royale and Seasonal Mini Games do.
 
 **Which install.** When the server carries the website's markers — `/etc/seasonal/site-local-port`,
 `/etc/seasonal/games-sync-token` and the folder `/etc/seasonal/routes/` — the installer asks first
@@ -104,21 +105,32 @@ whether to install inside it (Enter = yes). Without them there is no question an
 exactly as it was. `--mode standalone|website` decides without asking. The mode is kept in
 `/etc/racearena/mode`; `racearena update` keeps it.
 
-**What it asks:** only **the team** the website's hosts run races in (Enter = *Seasonal
-Entertainment*). No domain, no certificate e-mail, no first admin. **`--site-origin
-https://<the website's domain>` is required:** the website's public address cannot be read from the
-server, and the installer does not guess it.
+**First, the website's record**, `/etc/seasonal/install.conf`, written by the website's installer
+(root only, no secrets). It is read line by line — **never sourced, never printed** — for four keys:
 
-**What it finds out by itself** (`deploy/install.sh` → `website_detect`), and the flag for when it
-cannot:
+| key | what the race takes from it |
+| --- | --- |
+| `RACE` | must be `yes`: the owner enabled the race in the website's installer. Anything else **stops before any change**, with the instruction to run the website's installer again with `--race` |
+| `SITE_DOMAIN` | the race's public address, `https://<SITE_DOMAIN>` (`--site-origin <url>` only overrides it) |
+| `MODE` | `nginx` or `caddy` — used first, then cross-checked against what runs: the website's Caddy (compose project `seasonal-site`, service `caddy`) or nginx on ports 80/443. A disagreement stops |
+| `INSTALL_DIR` | the website's checkout; in Caddy mode the race's route file goes into its `deploy/site/routes` |
+
+**What it asks:** only **the team** the website's hosts run races in (Enter = *Seasonal
+Entertainment*). No domain, no certificate e-mail, no first admin.
+
+**What it finds by itself** (`deploy/install.sh` → `website_detect`), and the flag when it cannot:
 
 | | how | flag |
 | --- | --- | --- |
-| the website's proxy | the extension of the other games' files in `/etc/seasonal/routes/` (`.conf` nginx, `.caddy` Caddy); else nginx running on the server and no Caddy container, or the reverse | `--proxy nginx\|caddy` |
-| the website's Caddy (Caddy mode) | the one running Caddy container that mounts `/etc/seasonal/routes` | — (exactly one, or it stops) |
-| the website's port | `/etc/seasonal/site-local-port` | — |
-| the website's account feed | the container answering as `site` on one of its networks → `http://site:3800`; the race's app joins that network | `--feed-url <url>` |
-| the race's network | `172.30.250.0/24` unless another Docker network uses it (Bingo's is `172.30.249.0/24`) — then it stops | `--subnet <cidr>` |
+| the website's app | the container of compose project `seasonal-site`, service `site` | — (it must run) |
+| the website's network | `seasonal-site_default` when the site container is on it, else its only network | `--site-network <name>` when it is on several |
+| the account feed | `http://site:3800` over that network (the race's app joins it) | — |
+| the website's port (nginx) | `/etc/seasonal/site-local-port` — the authorize subrequest goes to `127.0.0.1:<that port>` | — |
+
+**The race's own port and subnet**, fixed beside the other games — **Bingo 3900 and
+`172.30.249.0/24`, Mini Games 3920 and `172.30.250.0/24`, the race 3940 and `172.30.251.0/24`.** Either
+in use stops the install, naming `--port <n>` / `--subnet <cidr>`; a re-run keeps the values the first
+install recorded (`/etc/racearena/website.conf`).
 
 **What it does:**
 
@@ -127,18 +139,19 @@ cannot:
 | Docker | installed the same way as above **only if it is missing**. No firewall rule and no fail2ban: the server is the website's |
 | lays out | the same folders as above, and `/etc/racearena/website/proxy-secret` — generated once, readable by the app's account only (0400), **never printed** |
 | the sync token | the website's `games-sync-token` (root-only) is copied for the app's account (0400) and taken again at every `racearena start` and `update`, so a renewed token reaches the race |
-| starts | **the app only** — no Caddy of the race, nothing on 80 or 443. nginx mode: published on `127.0.0.1:<a free port 3900–3999>`; Caddy mode: not published, the website's Caddy joins the race's network and reaches it as `racearena:4000`. The race's network (its subnet) is the only trusted proxy |
-| the route | `racearena route install` writes `/etc/seasonal/routes/racearena.conf` (or `.caddy`) with `deploy/website-route.sh`, **0600** (it carries the proxy secret), checks it with the proxy's own check — `nginx -t`, or `caddy validate` in the website's container — and reloads the proxy. A refused check takes the file out again, reloads, and stops with the reason. **No file of the website is ever edited** |
+| starts | **the app only** — no Caddy of the race, nothing on 80 or 443 — on its own network (`172.30.251.0/24`) and the website's. **nginx mode:** published on `127.0.0.1:3940`; the race's own subnet alone is the trusted proxy, **never the website's network** (it carries the feed only). **Caddy mode:** not published; the website's Caddy reaches it on the website's network as `racearena:4000`, so that network's subnets are the trusted proxy (as for Bingo) |
+| the route | `racearena route install` writes the race's file with `deploy/website-route.sh`, **root's, 0600** (it carries the proxy secret — Bingo's pattern too): **nginx** `/etc/seasonal/routes/race.conf` (the website includes `/etc/seasonal/routes/*.conf`), checked with `nginx -t`; **Caddy** `<INSTALL_DIR>/deploy/site/routes/race.caddy` (mounted read-only into the website's Caddy as `/etc/caddy/routes`, imported as `/etc/caddy/routes/*.caddy`) — after checking that the running Caddy has that mount — checked with `caddy validate` in its container. Then the proxy is reloaded. A refused check puts the previous file back (or removes the new one), reloads, and stops with the reason. **No file of the website is ever edited** |
 | schedules | the same daily backup and status check as above; **backups stay the race's own** |
 
 What the route file does on every request, and how it is proven behind both real proxies:
-[reports/night/MORNING-WEBSITE-EMBED-1.md](../reports/night/MORNING-WEBSITE-EMBED-1.md), *Piece 5a*.
+[reports/night/MORNING-WEBSITE-EMBED-1.md](../reports/night/MORNING-WEBSITE-EMBED-1.md), *Piece 5a* and
+*Piece 5c*.
 
 **The `racearena` command in website mode:** `status` names the mode and the route file's state
 (present, owner-only, and what this version writes) instead of https; `route [install|remove|status]`
 manages the route file; `uninstall` takes out **only** the race's route file (then reloads the
-website's proxy), the race's containers and network — the website's Caddy leaves the race's network
-first — and the race's settings; **the data and the backups are kept**, as above. `logs caddy` and
+website's proxy), the race's containers and its own network — it only leaves the website's network —
+and the race's settings; **the data and the backups are kept**, as above. `logs caddy` and
 `harden-ssh` are the standalone install's.
 
 ## If it stops
@@ -171,3 +184,6 @@ first — and the race's settings; **the data and the backups are kept**, as abo
   website markers and the stand-in (`scripts/website-standin.mjs --site`) as the website, one proxy at
   a time (`deploy/test/e2e-website.sh`). **Not yet on the real website**: that rehearsal is the
   owner's call, when the website is ready.
+- **Website mode in the website's real layout (piece 5c, 2026-11-11):** the record `/etc/seasonal/install.conf`,
+  compose project `seasonal-site`, `race.conf` / `race.caddy`, port 3940 and subnet 172.30.251.0/24 —
+  `deploy/test/website-install-unit.sh`, `route-test.sh` and `e2e-website.sh`.
