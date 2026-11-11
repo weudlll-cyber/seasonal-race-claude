@@ -28,9 +28,17 @@
 //              most 500 events an answer. Its page can lock, unlock, revoke the rights of, or delete
 //              each fake member, so the effect can be seen in the race.
 //
+//              PIECE 5b: with --site it stands in for THE WEBSITE ITSELF instead of its proxy — for
+//              the installer test, behind a REAL proxy carrying the race's route file
+//              (deploy/website-route.sh). It then answers GET /api/games/race/authorize by its own
+//              session cookie se.sid (member, host, admin, guest; none → 401) with the identity
+//              headers and WITHOUT the secret, which is the proxy's to add; picking a member sets
+//              se.sid; and it forwards nothing to the race — the proxy routes /games/race/.
+//
 // Usage:
 //   node scripts/website-standin.mjs --port=4790 --target=http://127.0.0.1:4791 \
 //        --base=/games/race --secret-file=<path> --token-file=<path>
+//   node scripts/website-standin.mjs --site --port=3800 --host=0.0.0.0 --token-file=<path>
 // ============================================================
 
 import { createServer, request as httpRequest } from 'node:http';
@@ -44,9 +52,24 @@ const arg = (name, fallback) => {
 
 /** The fake members. Fixed ids, so a second sign-in is the same member. */
 export const FAKE_MEMBERS = {
-  member: { id: 'standin-member-1', name: 'Mia Member', roles: 'member', canHost: false },
-  host: { id: 'standin-host-1', name: 'Hugo Host', roles: 'member', canHost: true },
-  admin: { id: 'standin-admin-1', name: 'Ada Admin', roles: 'member,admin', canHost: true },
+  member: {
+    id: 'standin-member-1',
+    name: 'Mia Member',
+    roles: 'member',
+    canHost: false,
+  },
+  host: {
+    id: 'standin-host-1',
+    name: 'Hugo Host',
+    roles: 'member',
+    canHost: true,
+  },
+  admin: {
+    id: 'standin-admin-1',
+    name: 'Ada Admin',
+    roles: 'member,admin',
+    canHost: true,
+  },
   guest: null,
 };
 
@@ -81,6 +104,13 @@ function picked(req) {
   const m = /(?:^|;\s*)standin_as=([a-z]+)/.exec(req.headers.cookie ?? '');
   return m && m[1] in FAKE_MEMBERS ? m[1] : 'guest';
 }
+
+/** --site: the member the website's own session cookie names, or null for none (→ 401). */
+function siteSession(req) {
+  const m = /(?:^|;\s*)se\.sid=([a-z]+)/.exec(req.headers.cookie ?? '');
+  return m && m[1] in FAKE_MEMBERS ? m[1] : null;
+}
+const AUTHORIZE_PATH = '/api/games/race/authorize';
 
 /** The feed's events, in order; the cursor is the index after the last one handed out. */
 const FEED_PATH = '/api/games/race/account-changes';
@@ -117,8 +147,16 @@ function page(base, current, events) {
  * Start the stand-in. Exported so a test can run it in-process.
  * @returns {Promise<import('node:http').Server>}
  */
-export function startStandin({ port, target, base, secret, token = null, host = '127.0.0.1' }) {
-  const targetUrl = new URL(target);
+export function startStandin({
+  port,
+  target,
+  base,
+  secret,
+  token = null,
+  host = '127.0.0.1',
+  site = false,
+}) {
+  const targetUrl = site ? null : new URL(target);
   const events = [];
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://standin.invalid');
@@ -137,7 +175,11 @@ export function startStandin({ port, target, base, secret, token = null, host = 
       const next = since + slice.length;
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(
-        JSON.stringify({ events: slice, nextCursor: String(next), hasMore: next < events.length })
+        JSON.stringify({
+          events: slice,
+          nextCursor: String(next),
+          hasMore: next < events.length,
+        })
       );
     }
     const ev = /^\/_standin\/event\/([a-z]+)\/([a-z]+)$/.exec(url.pathname);
@@ -148,11 +190,29 @@ export function startStandin({ port, target, base, secret, token = null, host = 
     }
     const as = /^\/_standin\/as\/([a-z]+)$/.exec(url.pathname);
     if (as && as[1] in FAKE_MEMBERS) {
+      // --site: the WEBSITE's session cookie, the one the route file must strip from the race.
+      const cookie = site ? `se.sid=${as[1]}` : `standin_as=${as[1]}`;
       res.writeHead(303, {
-        'set-cookie': `standin_as=${as[1]}; Path=/; HttpOnly; SameSite=Lax`,
+        'set-cookie': `${cookie}; Path=/; HttpOnly; SameSite=Lax`,
         location: `${base}/auth/website`,
       });
       return res.end();
+    }
+    // --site: who is asking, for the proxy's authorize subrequest — the identity, never the secret.
+    if (site && url.pathname === AUTHORIZE_PATH) {
+      const who = siteSession(req);
+      if (!who) {
+        res.writeHead(401, { 'content-type': 'text/plain' });
+        return res.end('not signed in');
+      }
+      const { 'x-ra-proxy-secret': _secret, ...identity } = identityHeaders(who, '');
+      res.writeHead(200, { 'content-type': 'text/plain', ...identity });
+      return res.end('ok');
+    }
+    // --site: the race is the proxy's to reach; the website answers its own pages only.
+    if (site) {
+      res.writeHead(404, { 'content-type': 'text/plain' });
+      return res.end('Not found (the website stand-in)');
     }
     if (url.pathname !== base && !url.pathname.startsWith(`${base}/`)) {
       res.writeHead(404, { 'content-type': 'text/plain' });
@@ -193,7 +253,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const base = arg('base', '/games/race');
   const secretFile = arg('secret-file', process.env.RA_WEBSITE_PROXY_SECRET_FILE);
   const tokenFile = arg('token-file', process.env.RA_WEBSITE_SYNC_TOKEN_FILE);
-  if (!secretFile) {
+  const site = process.argv.includes('--site');
+  const host = arg('host', '127.0.0.1');
+  if (site) {
+    // The website itself: no secret (the proxy holds it), no race to forward to.
+    const token = tokenFile ? readFileSync(tokenFile, 'utf8').trim() : null;
+    await startStandin({ port, base, secret: null, token, host, site: true });
+    console.log(`website stand-in (the website itself) on ${host}:${port}`);
+  } else if (!secretFile) {
     console.error(
       'website-standin: --secret-file=<path> is required (the race reads the same file).'
     );

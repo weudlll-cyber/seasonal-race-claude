@@ -165,3 +165,36 @@ describe('the website stand-in in front of a website-mode race', () => {
     expect((await fetch(`${origin}/elsewhere`)).status).toBe(404);
   });
 });
+
+// Piece 5b: --site, the website ITSELF behind a real proxy (the installer test). It answers the
+// proxy's authorize call by its own cookie se.sid, never with the secret, and forwards nothing.
+describe('the stand-in as the website itself (--site)', () => {
+  let site;
+  let siteOrigin;
+  beforeAll(async () => {
+    site = await startStandin({ port: 0, base: BASE, secret: null, site: true });
+    siteOrigin = `http://127.0.0.1:${site.address().port}`;
+  });
+  afterAll(() => site?.close());
+
+  it('authorize: the identity for se.sid, without the secret; no session → 401', async () => {
+    const member = await fetch(`${siteOrigin}/api/games/race/authorize`, {
+      headers: { cookie: 'se.sid=member' },
+    });
+    expect(member.status).toBe(200);
+    expect(member.headers.get('x-acting-user')).toBe('Mia Member');
+    expect(member.headers.get('x-ra-proxy-secret')).toBeNull();
+    const guest = await fetch(`${siteOrigin}/api/games/race/authorize`, {
+      headers: { cookie: 'se.sid=guest' },
+    });
+    expect(guest.headers.get('x-acting-guest')).toBe('true');
+    expect((await fetch(`${siteOrigin}/api/games/race/authorize`)).status).toBe(401);
+  });
+
+  it('picking a member sets the website cookie se.sid; the race path is not forwarded', async () => {
+    const pick = await fetch(`${siteOrigin}/_standin/as/host`, { redirect: 'manual' });
+    expect(pick.headers.get('set-cookie')).toMatch(/^se\.sid=host;/);
+    expect(pick.headers.get('location')).toBe(`${BASE}/auth/website`);
+    expect((await fetch(`${siteOrigin}${BASE}/`)).status).toBe(404);
+  });
+});

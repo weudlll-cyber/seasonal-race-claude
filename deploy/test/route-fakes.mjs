@@ -29,8 +29,22 @@ function cookieValue(cookie, name) {
 }
 
 const IDENTITIES = {
-  member: { 'X-Acting-User-Id': 'w-mia', 'X-Acting-User': 'Mia Member', 'X-Acting-User-Roles': 'member', 'X-Acting-User-Can-Host': 'false', 'X-Acting-User-Email-Verified': 'true', 'X-Acting-User-Steps': '2' },
-  host: { 'X-Acting-User-Id': 'w-hugo', 'X-Acting-User': 'Hugo Host', 'X-Acting-User-Roles': 'member', 'X-Acting-User-Can-Host': 'true', 'X-Acting-User-Email-Verified': 'true', 'X-Acting-User-Steps': '2' },
+  member: {
+    'X-Acting-User-Id': 'w-mia',
+    'X-Acting-User': 'Mia Member',
+    'X-Acting-User-Roles': 'member',
+    'X-Acting-User-Can-Host': 'false',
+    'X-Acting-User-Email-Verified': 'true',
+    'X-Acting-User-Steps': '2',
+  },
+  host: {
+    'X-Acting-User-Id': 'w-hugo',
+    'X-Acting-User': 'Hugo Host',
+    'X-Acting-User-Roles': 'member',
+    'X-Acting-User-Can-Host': 'true',
+    'X-Acting-User-Email-Verified': 'true',
+    'X-Acting-User-Steps': '2',
+  },
   guest: { 'X-Acting-Guest': 'true' },
 };
 
@@ -44,7 +58,9 @@ if (role === 'site') {
       }
       if (req.url.startsWith('/api/games/race/authorize')) {
         last = { url: req.url, headers: req.headers };
-        const who = cookieValue(req.headers.cookie, '__Host-se.sid') ?? cookieValue(req.headers.cookie, 'se.sid');
+        const who =
+          cookieValue(req.headers.cookie, '__Host-se.sid') ??
+          cookieValue(req.headers.cookie, 'se.sid');
         const identity = IDENTITIES[who];
         if (!identity) {
           res.statusCode = 401;
