@@ -30,6 +30,7 @@ import express from 'express';
 import { createRegistrationStore, EVENT_NAME_MAX } from '../registrations/registrationStore.js';
 import { readInstallTracks } from './races.js';
 import { unknownFields, unknownFieldsMessage, checkString } from '../../utils/recordFields.js';
+import { siteMode } from '../website/websiteConfig.js';
 
 /** One store per process, opened lazily so importing this module opens no file. */
 let defaultStore = null;
@@ -42,6 +43,9 @@ export function getDefaultRegistrationStore() {
 // unknown field is refused, not ignored. `team` is NOT on the list: a body that names a team is
 // refused like any other unknown field, because the team is the session's.
 const CREATE_FIELDS = new Set(['trackId', 'capacity', 'eventName', 'closesAt']);
+// WEBSITE-EMBED-1 piece 4: in website mode a registration also says who may join. In standalone the
+// field stays unknown, so a body that names it is refused exactly as before.
+const WEBSITE_CREATE_FIELDS = new Set([...CREATE_FIELDS, 'websiteAccess']);
 const EXTEND_FIELDS = new Set(['closesAt']);
 
 const NOT_FOUND = { error: 'No registration with that id.' };
@@ -80,7 +84,8 @@ export function createRegistrationsRouter({ store, tracks } = {}) {
     const team = teamOf(req, res);
     if (!team) return;
     const body = req.body;
-    const unknown = unknownFields(body, CREATE_FIELDS);
+    const website = siteMode() === 'website';
+    const unknown = unknownFields(body, website ? WEBSITE_CREATE_FIELDS : CREATE_FIELDS);
     if (unknown.length) {
       return res.status(400).json({ error: unknownFieldsMessage(unknown, 'A registration') });
     }
@@ -97,6 +102,8 @@ export function createRegistrationsRouter({ store, tracks } = {}) {
         capacity: body.capacity,
         eventName: body.eventName ?? null,
         closesAt: body.closesAt,
+        // Website mode: 'members' unless the director chose 'anyone'; standalone stores nothing.
+        websiteAccess: website ? (body.websiteAccess ?? 'members') : null,
       });
       return res.status(201).json(created);
     } catch (err) {

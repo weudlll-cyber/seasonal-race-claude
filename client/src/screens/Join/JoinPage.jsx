@@ -30,6 +30,7 @@ import { fetchJoinInfo, joinRegistration } from '../../services/registrationApi.
 import { formatTimeLeft, msUntil } from '../../modules/registration/timeLeft.js';
 // NAME-LIMIT-1's one home: the field stops at the same length the server refuses beyond.
 import { PLAYER_NAME_MAX_LENGTH } from '../../../../shared/nameLimits.mjs';
+import { BASE_PATH, SITE_MODE } from '../../modules/runtimeMarker.js';
 import styles from './JoinPage.module.css';
 
 const POLL_MS = 10 * 1000;
@@ -80,13 +81,18 @@ export default function JoinPage() {
     if (info?.state === 'open' && left === 0) load();
   }, [info?.state, left, load]);
 
+  // WEBSITE-EMBED-1 piece 4: in website mode a signed-in member joins as themselves (no name typed);
+  // the server takes their website display name. Everything else about joining is unchanged.
+  const member = SITE_MODE === 'website' ? (info?.member ?? null) : null;
+  const membersOnlyGuest = SITE_MODE === 'website' && !member && info?.websiteAccess === 'members';
+
   async function handleJoin(e) {
     e.preventDefault();
-    if (!name.trim() || busy) return;
+    if ((!member && !name.trim()) || busy) return;
     setBusy(true);
     setRefusal('');
     try {
-      const { you } = await joinRegistration(code, name);
+      const { you } = await joinRegistration(code, member ? undefined : name);
       setInfo((prev) => (prev ? { ...prev, you } : prev));
       setName('');
     } catch (err) {
@@ -113,6 +119,25 @@ export default function JoinPage() {
     body = <p className={styles.notice}>Registration is closed.</p>;
   } else if (info.placesLeft <= 0) {
     body = <p className={styles.notice}>This race is full.</p>;
+  } else if (member) {
+    body = (
+      <form className={styles.form} onSubmit={handleJoin}>
+        <button className={styles.join} type="submit" disabled={busy}>
+          {busy ? 'Joining…' : `Join as ${member.displayName}`}
+        </button>
+      </form>
+    );
+  } else if (membersOnlyGuest) {
+    // Read-only for a guest: the registration is for members. Sign-in comes back to this page.
+    const returnTo = encodeURIComponent(window.location.pathname);
+    body = (
+      <div className={styles.form}>
+        <p className={styles.muted}>This race is for Seasonal Entertainment members.</p>
+        <a className={styles.join} href={`${BASE_PATH}/auth/website?returnTo=${returnTo}`}>
+          Sign in through Seasonal Entertainment
+        </a>
+      </div>
+    );
   } else {
     body = (
       <form className={styles.form} onSubmit={handleJoin}>

@@ -1165,7 +1165,9 @@ Signed in, operator+ (not in `ROUTE_POLICY`), mounted at `server/src/app.js` →
 session's (`req.authUser.team`); **another team's registration is 404, the same answer as an unknown
 id**. A user with no team gets 503. A body with a field not listed is 400 (`unknownFields`).
 
-- **`POST /api/registrations`** `{ trackId, capacity, eventName?, closesAt }` — open one, now.
+- **`POST /api/registrations`** `{ trackId, capacity, eventName?, closesAt }` — open one, now. In
+  website mode also `websiteAccess?` — `members` (the default) or `anyone`, who may join (piece 4); in
+  standalone the field is unknown and refused like any other.
   `trackId` must name an installed track (its name is stored with the registration); `capacity` a
   whole number 1–100 (the client sends the track's Players-tab limit); `eventName` at most 100
   characters or null; `closesAt` an instant at least 1 minute from now and at most 30 days away.
@@ -1201,6 +1203,15 @@ id**. A user with no team gets 503. A body with a field not listed is 400 (`unkn
   closed."), `FULL` ("This race is full."), `DUPLICATE_NAME`, `ALREADY_REGISTERED` ("You are already
   registered as <name>.", with `you`); 413 over 1 KB; 429 over 60 attempts a minute from one address
   (`joinLimiter`, `server/src/auth/rateLimit.js`). CSRF applies as to every POST.
+- **In website mode** (`RA_MODE=website`, WEBSITE-EMBED-1 piece 4) — standalone is everything above,
+  unchanged. `GET` also answers `member`: `{ displayName }` for a member signed in through the
+  website, else `null`; `websiteAccess` (`members` / `anyone`) when the registration was opened in
+  website mode; and `you` is the member's own entry, found by their account. `POST` from a signed-in
+  member takes no name: they join as their website display name, source `website`, with their
+  website id as the external id — **one entry per account**, a second is 409 `ALREADY_REGISTERED`.
+  From a guest, a `members` registration answers **403 `MEMBERS_ONLY`**; an `anyone` registration
+  (or one opened before website mode) takes `{ name }` as above. Capacity, the deadline and the
+  duplicate-name rule are unchanged.
 
 ### The integration seam — `server/src/routes/integrations.js`
 

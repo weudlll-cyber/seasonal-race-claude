@@ -33,6 +33,15 @@
 // `joinLimiter` (rateLimit.js) on POST only — GET is read every few seconds by the page's countdown
 // and is as unlimited as every other read — and a 1 KB body limit mounted before the app's 1 MB parser
 // (app.js) — a name is at most 32 characters.
+//
+// ── WEBSITE-EMBED-1 piece 4: MEMBERS JOIN AS THEMSELVES (OWNER-1, OWNER-6) ──────────────────────
+// In website mode a member signed in through the website (website/websiteSession.js) joins with
+// their website display name, as source 'website' keyed by their website id — one entry per
+// ACCOUNT, by the table's own UNIQUE (registration, external id), not per device. A guest may join
+// only a registration opened for 'anyone' (or one opened before website mode, which says nothing),
+// with today's name form; a 'members' registration answers 403 MEMBERS_ONLY to a guest's name.
+// Capacity, the deadline and the duplicate-name rule are the store's, unchanged. In standalone mode
+// none of this runs: both routes are exactly what they were.
 // ============================================================
 
 import express from 'express';
@@ -40,6 +49,8 @@ import { getDefaultRegistrationStore } from './registrations.js';
 import { resolveCookieSecure, cookieBasePath } from '../auth/cookiePolicy.js';
 import { joinLimiter } from '../auth/rateLimit.js';
 import { unknownFields, unknownFieldsMessage } from '../../utils/recordFields.js';
+import { siteMode } from '../website/websiteConfig.js';
+import { currentWebsiteMember } from '../website/websiteSession.js';
 
 /** The device cookie's name; its path makes it per registration. */
 export const JOIN_COOKIE = 'ra_join';
@@ -54,6 +65,7 @@ const REFUSAL_STATUS = {
   CLOSED: 409,
   FULL: 409,
   DUPLICATE_NAME: 409,
+  DUPLICATE_EXTERNAL_ID: 409,
   INVALID_NAME: 400,
 };
 
@@ -91,6 +103,19 @@ export function createJoinRouter({ store, limiter = joinLimiter } = {}) {
   router.get('/:code', (req, res) => {
     const info = resolveStore().publicInfo(req.params.code);
     if (!info) return res.status(404).json({ error: 'This registration link is not valid.' });
+    if (siteMode() === 'website') {
+      // Website mode: who is looking (a signed-in member, or nobody), and their own entry — the
+      // account's, or this device's for a guest who typed a name on an 'anyone' registration.
+      const member = currentWebsiteMember(req);
+      const own =
+        (member && resolveStore().ownWebsiteEntry(req.params.code, member.websiteUserId)) ||
+        resolveStore().ownEntry(req.params.code, readCookie(req, JOIN_COOKIE));
+      return res.json({
+        ...info,
+        you: own ? youAre(own) : null,
+        member: member ? { displayName: member.displayName } : null,
+      });
+    }
     const own = resolveStore().ownEntry(req.params.code, readCookie(req, JOIN_COOKIE));
     return res.json({ ...info, you: own ? youAre(own) : null });
   });
@@ -102,6 +127,17 @@ export function createJoinRouter({ store, limiter = joinLimiter } = {}) {
       return res.status(400).json({ error: unknownFieldsMessage(unknown, 'A registration') });
     }
     const { code } = req.params;
+    if (siteMode() === 'website') {
+      const member = currentWebsiteMember(req);
+      if (member) return joinAsMember(res, code, member);
+      // A guest's typed name is welcome only where the director said "Anyone with the link".
+      if (resolveStore().websiteAccessOf(code) === 'members') {
+        return res.status(403).json({
+          error: 'This race is for Seasonal Entertainment members. Sign in to join.',
+          code: 'MEMBERS_ONLY',
+        });
+      }
+    }
     const already = resolveStore().ownEntry(code, readCookie(req, JOIN_COOKIE));
     if (already) {
       return res.status(409).json({
@@ -131,6 +167,32 @@ export function createJoinRouter({ store, limiter = joinLimiter } = {}) {
       return res.status(status).json({ error: err.message, code: err.code });
     }
   });
+
+  /** A signed-in website member joins as themselves: their display name, keyed by their id. */
+  function joinAsMember(res, code, member) {
+    const already = resolveStore().ownWebsiteEntry(code, member.websiteUserId);
+    if (already) {
+      return res.status(409).json({
+        error: `You are already registered as ${already.name}.`,
+        code: 'ALREADY_REGISTERED',
+        you: youAre(already),
+      });
+    }
+    try {
+      resolveStore().addEntry(code, {
+        name: member.displayName,
+        source: 'website',
+        externalId: member.websiteUserId,
+      });
+      return res
+        .status(201)
+        .json({ you: youAre(resolveStore().ownWebsiteEntry(code, member.websiteUserId)) });
+    } catch (err) {
+      const status = REFUSAL_STATUS[err.code];
+      if (!status) throw err;
+      return res.status(status).json({ error: err.message, code: err.code });
+    }
+  }
 
   return router;
 }

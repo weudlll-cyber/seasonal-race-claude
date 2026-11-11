@@ -41,7 +41,10 @@ considered separately, and that would not be true.
         race's own account doors closed, a local stand-in proxy (`scripts/website-standin.mjs`).
       - **Piece 3b — the account-changes feed (built, server part):** the poller, the durable cursor,
         locked / unlocked / rights / deleted; masking a deleted member in past races follows piece 4.
-      - **Piece 4 — members join through the race's own join page (open).**
+      - **Piece 4 — members join through the race's own join page (built):** a member joins as
+        themselves, one entry per account (source `website`, the website id as external id); the
+        director chooses *Website members only* (default) or *Anyone with the link*; website entries
+        are marked "from the website".
 
       **verify:** the owner's look at the rehearsal — "/" unchanged, and the "Website members only /
       Anyone with the link" choice on the join flow; until then no command decides it.

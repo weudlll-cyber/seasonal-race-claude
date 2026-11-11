@@ -40,6 +40,13 @@
 // development data folder alike, with no step in `scripts/migrate.mjs` that each of them would have
 // to have run first. It is the check-then-alter `races/migrateRaceSource.js` uses; nothing is
 // back-filled (an older registration has not raced, as far as anyone recorded).
+//
+// ── WEBSITE-EMBED-1 piece 4: WHO MAY JOIN, AND ENTRIES FROM WEBSITE MEMBERS ────────────────────
+// `website_access` ('members' | 'anyone') is added the same way, check-then-alter, nullable. It is
+// set only for a registration opened in website mode; NULL — every registration opened before, or
+// in standalone — means the link works as it always did (anyone may type a name). A member joins as
+// source 'website' with their website id as the external id (OWNER-6), so the existing UNIQUE
+// (registration_id, external_id) makes it one entry per account.
 // ============================================================
 
 import Database from 'better-sqlite3';
@@ -71,8 +78,14 @@ export const CAPACITY_MAX = 100;
 /** The longest event name, the same bound a player group's name has (routes/playerGroups.js). */
 export const EVENT_NAME_MAX = 100;
 
-/** The two ways a name arrives: through the public link, or from an integrated site. */
-export const ENTRY_SOURCES = ['public', 'integration'];
+/**
+ * The ways a name arrives: through the public link, from an integrated site, or from a member of the
+ * Seasonal Entertainment website signed in through it (WEBSITE-EMBED-1 piece 4).
+ */
+export const ENTRY_SOURCES = ['public', 'integration', 'website'];
+
+/** Who may join a registration opened in website mode (piece 4); NULL elsewhere. */
+export const WEBSITE_ACCESS = ['members', 'anyone'];
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS registrations (
@@ -127,6 +140,27 @@ const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());
 /** The column "Raced" is stored in; see the header. */
 const RACED_COLUMN = 'raced_at_ms';
 
+/** The column "who may join" is stored in (piece 4); see the header. */
+const ACCESS_COLUMN = 'website_access';
+
+/**
+ * Add `website_access` to a registrations table that predates it; a table that has it is left
+ * alone. The same check-then-alter as `addRacedColumn`, below.
+ *
+ * @param {import('better-sqlite3').Database} db
+ * @returns {boolean} true when the column was added
+ */
+export function addWebsiteAccessColumn(db) {
+  const has = db
+    .prepare('PRAGMA table_info(registrations)')
+    .all()
+    .some((c) => c.name === ACCESS_COLUMN);
+  if (has) return false;
+  // Nullable, no default: NULL is "opened outside website mode" — the link works as it always did.
+  db.exec(`ALTER TABLE registrations ADD COLUMN ${ACCESS_COLUMN} TEXT`);
+  return true;
+}
+
 /**
  * Add `raced_at_ms` to a registrations table that predates it; a table that has it is left alone.
  * Exported for the test that opens a database made without the column.
@@ -165,6 +199,7 @@ export function createRegistrationStore(
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
   addRacedColumn(db);
+  addWebsiteAccessColumn(db);
 
   const isClosed = (row, at) => row.closed_early_ms != null || at >= row.closes_at_ms;
 
@@ -198,6 +233,7 @@ export function createRegistrationStore(
       closesAt: iso(row.closes_at_ms),
       closedEarlyAt: iso(row.closed_early_ms),
       racedAt: iso(row.raced_at_ms),
+      ...(row.website_access ? { websiteAccess: row.website_access } : {}),
       state: isClosed(row, at) ? 'closed' : 'open',
       taken,
       placesLeft: Math.max(0, row.capacity - taken),
@@ -227,6 +263,7 @@ export function createRegistrationStore(
       placesLeft: Math.max(0, row.capacity - taken),
       state: isClosed(row, now()) ? 'closed' : 'open',
       closesAt: iso(row.closes_at_ms),
+      ...(row.website_access ? { websiteAccess: row.website_access } : {}),
     };
   }
 
@@ -267,9 +304,19 @@ export function createRegistrationStore(
    * Open a registration. It opens at once and closes at `closesAt`.
    *
    * @param {{ team: string, createdBy: string, trackId: string, trackName: string,
-   *           capacity: number, eventName?: string|null, closesAt: string }} input
+   *           capacity: number, eventName?: string|null, closesAt: string,
+   *           websiteAccess?: 'members'|'anyone'|null }} input  `websiteAccess` only in website mode
    */
-  function create({ team, createdBy, trackId, trackName, capacity, eventName, closesAt }) {
+  function create({
+    team,
+    createdBy,
+    trackId,
+    trackName,
+    capacity,
+    eventName,
+    closesAt,
+    websiteAccess = null,
+  }) {
     if (!isWellFormedTeam(team)) {
       throw refusal('INVALID_TEAM', 'A registration needs the team of the user who opens it.');
     }
@@ -283,10 +330,14 @@ export function createRegistrationStore(
     const closesAtMs = checkDeadline(closesAt, at, at);
     const id = randomUUID();
     const name = typeof eventName === 'string' && eventName.trim() ? eventName.trim() : null;
+    if (websiteAccess !== null && !WEBSITE_ACCESS.includes(websiteAccess)) {
+      throw refusal('INVALID_REGISTRATION', 'websiteAccess must be "members" or "anyone".');
+    }
     db.prepare(
       `INSERT INTO registrations (id, code, team, team_normalized, created_by, track_id, track_name,
-         capacity, event_name, created_at_ms, opens_at_ms, closes_at_ms, closed_early_ms)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`
+         capacity, event_name, created_at_ms, opens_at_ms, closes_at_ms, closed_early_ms,
+         website_access)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`
     ).run(
       id,
       newRegistrationCode(),
@@ -299,7 +350,8 @@ export function createRegistrationStore(
       name,
       at,
       at,
-      closesAtMs
+      closesAtMs,
+      websiteAccess
     );
     return toDirectorView(rowById(id, team), { withEntries: true });
   }
@@ -410,7 +462,7 @@ export function createRegistrationStore(
    * external id is not already in it, and there is a place left.
    *
    * @param {string} code
-   * @param {{ name: unknown, source: 'public'|'integration', externalId?: unknown }} input
+   * @param {{ name: unknown, source: 'public'|'integration'|'website', externalId?: unknown }} input
    * @returns {{ entry: {id: string, name: string}, number: number, capacity: number,
    *            placesLeft: number }}  `number` is the new entry's place in the list, which is the
    *            count after the insert, since a new name is always the last to arrive
@@ -430,8 +482,10 @@ export function createRegistrationStore(
     const key = playerNameKey(trimmed);
 
     if (!ENTRY_SOURCES.includes(source)) throw new Error(`unknown entry source: ${source}`);
-    const external = source === 'integration' ? externalId : null;
-    if (source === 'integration' && (typeof external !== 'string' || !external.trim())) {
+    // An integration names its player, and a website entry its member (OWNER-6), by external id.
+    const keyed = source === 'integration' || source === 'website';
+    const external = keyed ? externalId : null;
+    if (keyed && (typeof external !== 'string' || !external.trim())) {
       throw refusal('INVALID_ENTRY', 'externalId is required.');
     }
 
@@ -494,6 +548,26 @@ export function createRegistrationStore(
     return { name: entries[index].name, number: index + 1, capacity: row.capacity };
   }
 
+  /**
+   * A website member's own entry in the registration behind `code`, found by their website id
+   * (piece 4) — the account, not the device, is what a website entry belongs to.
+   */
+  function ownWebsiteEntry(code, websiteUserId) {
+    const row = rowByCode(code);
+    if (!row || typeof websiteUserId !== 'string') return null;
+    const entries = entriesOf(row.id);
+    const index = entries.findIndex(
+      (e) => e.source === 'website' && e.external_id === websiteUserId
+    );
+    if (index < 0) return null;
+    return { name: entries[index].name, number: index + 1, capacity: row.capacity };
+  }
+
+  /** The stored "who may join" of the registration behind `code`: 'members', 'anyone' or null. */
+  function websiteAccessOf(code) {
+    return rowByCode(code)?.website_access ?? null;
+  }
+
   return {
     create,
     list,
@@ -507,6 +581,8 @@ export function createRegistrationStore(
     addEntry,
     publicInfo,
     ownEntry,
+    ownWebsiteEntry,
+    websiteAccessOf,
     // The database handle's own close, named apart from `close` (which closes a REGISTRATION).
     closeDatabase: () => db.close(),
   };

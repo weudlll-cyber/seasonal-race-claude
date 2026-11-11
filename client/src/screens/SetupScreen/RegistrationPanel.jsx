@@ -53,7 +53,7 @@ import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { fieldCapFor, isTrackOpen } from './fieldCap.js';
 import DeadlineField from './DeadlineField.jsx';
 import { useNow } from './useNow.js';
-import { appUrl } from '../../modules/runtimeMarker.js';
+import { appUrl, SITE_MODE } from '../../modules/runtimeMarker.js';
 import styles from './RegistrationPanel.module.css';
 
 const MINUTE = 60 * 1000;
@@ -225,6 +225,8 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
   const [duration, setDuration] = useState('15m');
   const [custom, setCustom] = useState('');
   const [eventName, setEventName] = useState('');
+  // WEBSITE-EMBED-1 piece 4: who may join — asked ONLY in website mode, members by default.
+  const [websiteAccess, setWebsiteAccess] = useState('members');
   const [busy, setBusy] = useState(false);
 
   const track = tracks.find((t) => t.id === trackId) ?? null;
@@ -245,7 +247,13 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
     if (!track || !capacity || !deadlineChosen || busy) return;
     setBusy(true);
     try {
-      await onOpen({ trackId: track.id, capacity, eventName: eventName.trim(), closesAt });
+      await onOpen({
+        trackId: track.id,
+        capacity,
+        eventName: eventName.trim(),
+        closesAt,
+        ...(SITE_MODE === 'website' ? { websiteAccess } : {}),
+      });
     } finally {
       setBusy(false);
     }
@@ -302,6 +310,26 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
           onChange={(e) => setEventName(e.target.value)}
         />
       </label>
+      {SITE_MODE === 'website' && (
+        <fieldset className={styles.durations}>
+          <legend>Who may join</legend>
+          {[
+            { key: 'members', label: 'Website members only' },
+            { key: 'anyone', label: 'Anyone with the link' },
+          ].map((o) => (
+            <label key={o.key} className={styles.choice}>
+              <input
+                type="radio"
+                name="registration-website-access"
+                value={o.key}
+                checked={websiteAccess === o.key}
+                onChange={() => setWebsiteAccess(o.key)}
+              />
+              {o.label}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <button
         className={styles.primary}
         type="submit"
@@ -472,7 +500,11 @@ function RegistrationView({
       <ol className={styles.names} data-testid="registration-names">
         {r.entries.map((e) => (
           <li key={e.id}>
-            <span>{e.name}</span>
+            <span>
+              {e.name}
+              {/* WEBSITE-EMBED-1 piece 4: a member who joined through the website, by their account. */}
+              {e.source === 'website' && <span className={styles.muted}> (from the website)</span>}
+            </span>
             <button
               type="button"
               className={styles.remove}

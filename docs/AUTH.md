@@ -401,6 +401,12 @@ sessions so the role is recomputed at the next sign-in, **deleted** removes thei
 registrations at once and marks the identity deleted. The cursor is kept in the same SQLite file, and
 a page's changes and its cursor are written together, so every event is safe to apply twice.
 
+**Joining a race** (piece 4, `server/src/routes/join.js`). A member signed in through the website
+joins a registration through the race's own join page as themselves — their display name, keyed by
+their website id, one entry per account. A director chooses, when opening a registration, between
+*Website members only* (the default; a guest sees it read-only with a sign-in button that comes back
+to the page) and *Anyone with the link* (a guest types a name, as today).
+
 **Closed in website mode** (`server/src/website/closedInWebsiteMode.js`): local sign-in
 (`POST /api/auth/login`), first-admin setup (`GET /api/auth/setup-needed`, `POST /api/auth/setup`),
 `POST /api/auth/change-password` and everything under `/api/users` answer `404`. The sign-in screen

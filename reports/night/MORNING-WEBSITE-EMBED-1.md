@@ -15,8 +15,8 @@ code was followed and the line is in **Where the code disagreed** below.
 | --- | --- |
 | 2 — base path | **done** — `357192cc`, pushed |
 | 3a — website sign-in | **done** — `11a4d17f` (+ `46ae5ce9`, the stamp), pushed |
-| 3b — account-changes feed | **server part done** — see below; masking past races follows piece 4 |
-| 4 — members join through the join page | open |
+| 3b — account-changes feed | **server part done** — `26c32049`, pushed; masking past races: see the end |
+| 4 — members join through the join page | **done** — see below |
 | end — verify, installer test, the owner's two addresses | open |
 
 ## Start
@@ -240,6 +240,45 @@ doubling dropped — each red, all restored. Website tests 46/46.
 
 **Masking a deleted member in past races** needs the member's website id on each racer, which only
 exists once members join as website entries — piece 4. It is the last step of the chain; see below.
+
+## Piece 4 — members join through the race's own join page (OWNER-1, OWNER-6)
+
+**What it does.** In website mode a member signed in through the website opens the join link and
+sees **"Join as <display name>"**; one press joins them as themselves — source `website`, their
+website id as the external id (OWNER-6), so the existing UNIQUE (registration, external id) makes it
+**one entry per account** (a second join, from any browser, is "You are already registered as …").
+Opening a registration in website mode asks **who may join**: *Website members only* (the default)
+or *Anyone with the link*. On a members-only registration a guest sees it read-only with *Sign in
+through Seasonal Entertainment*, which comes back to the same join page (`returnTo`); a guest's
+typed name is refused there (403 `MEMBERS_ONLY`). On *Anyone with the link* a guest gets today's name
+form. Capacity, the deadline and the duplicate-name rule are the store's, unchanged. The director's
+list marks a member's entry "(from the website)". Standalone: the field is unknown to the create route
+(refused as before), the join routes take the old code path, the form shows no choice.
+
+**Reused:** the registration store's `addEntry` (one transaction for every rule), its external-id
+uniqueness (made for the integration seam), its check-then-alter pattern for the new column
+(`addWebsiteAccessColumn`, beside `addRacedColumn`), the director view's existing `source` and
+`externalId` per entry; `currentWebsiteMember` (3a) for who is looking; the join API helper as is
+(no name → `{}`).
+
+**Tests.** `websiteJoin.integration.test.js` (7, the real app in website mode): join once and a
+second refused; one entry per account from a second browser; members-only refuses a guest's name;
+*anyone* accepts it; the director sees source `website` with the id; capacity unchanged; create takes
+`websiteAccess`, `members` by default, a wrong value 400. `JoinPage.website.test.jsx` (3),
+`RegistrationPanel.website.test.jsx` (2: the choice and its default, the "(from the website)" mark,
+the base path in the link). The standalone join and panel tests run unchanged (JoinPage 9, panel 18).
+Sabotage: the members-only check removed → red; the website external id dropped → 4 red; both
+restored.
+
+**Forks decided.**
+1. *A registration with no stored choice* — opened before website mode, or in standalone — *works as
+   it always did* (anyone with the link). The column is nullable; only website mode writes it.
+2. *The choice is on the create form only*: there is no edit form for a registration (only "Extend"),
+   so "create/edit" became create.
+3. *A member whose display name is already on the list* (a guest typed it) is refused by the
+   unchanged duplicate-name rule (409, its own sentence).
+4. *A member's own entry is found by their account*, not by a device cookie; no `ra_join` cookie is set
+   for a website entry.
 
 ## Where the code disagreed with the summary
 
