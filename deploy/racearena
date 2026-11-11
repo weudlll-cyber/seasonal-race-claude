@@ -59,13 +59,14 @@ load_website_conf() {
   # shellcheck disable=SC1091
   . "$RA_ETC/website.conf"
 }
-RACE_NETWORK=racearena_default
 
 # The compose overlay of website mode, from website.conf — rewritten before every compose call, so it
 # always matches the settings and this version. The app: the base path's health check, the secret and
-# the sync token mounted read-only, the alias the website's Caddy reaches it by, the race's own
-# subnet (the trusted proxy), the website's network when the website is a container (for the feed),
-# and — nginx — the port on 127.0.0.1 the host's nginx reaches it on.
+# the sync token mounted read-only, the race's own network with its fixed subnet (nginx mode: the
+# trusted proxy, its gateway being the peer the published port's connections come from), and the
+# website's network (the feed at site:3800; in Caddy mode also where the website's Caddy reaches the
+# race, as "racearena" — the network that is trusted there, as for Bingo). nginx mode publishes the
+# port on 127.0.0.1 only.
 write_website_overlay() {
   load_website_conf
   {
@@ -76,11 +77,10 @@ write_website_overlay() {
     printf '    volumes:\n'
     printf '      - %s:/run/racearena/proxy-secret:ro\n' "$RA_ETC/website/proxy-secret"
     printf '      - %s:/run/racearena/sync-token:ro\n' "$RA_ETC/website/sync-token"
-    printf '    networks:\n      default:\n        aliases: [racearena]\n'
-    if [[ -n "${SITE_NETWORK:-}" ]]; then printf '      site: {}\n'; fi
+    printf '    networks:\n      default: {}\n      site:\n        aliases: [racearena]\n'
     if [[ "$PROXY" == nginx ]]; then printf '    ports:\n      - "127.0.0.1:%s:4000"\n' "$LOCAL_PORT"; fi
     printf 'networks:\n  default:\n    ipam:\n      config:\n        - subnet: %s\n' "$SUBNET"
-    if [[ -n "${SITE_NETWORK:-}" ]]; then printf '  site:\n    external: true\n    name: %s\n' "$SITE_NETWORK"; fi
+    printf '  site:\n    external: true\n    name: %s\n' "$SITE_NETWORK"
   } >"$RA_ETC/compose.website.yml.tmp"
   mv -f "$RA_ETC/compose.website.yml.tmp" "$RA_ETC/compose.website.yml"
 }
@@ -93,19 +93,6 @@ refresh_sync_token() {
   install -m 400 -o "$APP_UID" -g "$APP_UID" "$SITE_TOKEN" "$RA_ETC/website/sync-token"
 }
 
-# Caddy mode: the website's Caddy joins the race's network to reach it by name (a second connect is
-# skipped). Disconnected again by uninstall.
-connect_site_proxy() {
-  load_website_conf
-  [[ "$PROXY" == caddy && -n "$PROXY_CONTAINER" ]] || return 0
-  docker network inspect -f '{{range .Containers}}{{.Name}} {{end}}' "$RACE_NETWORK" 2>/dev/null | grep -qw -- "$PROXY_CONTAINER" ||
-    docker network connect "$RACE_NETWORK" "$PROXY_CONTAINER"
-}
-disconnect_site_proxy() {
-  load_website_conf
-  [[ "$PROXY" == caddy && -n "$PROXY_CONTAINER" ]] || return 0
-  docker network disconnect "$RACE_NETWORK" "$PROXY_CONTAINER" 2>/dev/null || true
-}
 
 # The route file's state: present, owner-only, and equal to what this version would write.
 route_state() {
@@ -191,7 +178,6 @@ wait_healthy() {
     status="$(app_health_status)"
     if [[ "$status" == "healthy" ]] && website_mode; then
       # Website mode: the app's own check on /games/race/api/health; the website's proxy is in front.
-      connect_site_proxy
       say "healthy: the app answers (inside Seasonal Entertainment, behind the website's proxy)"
       return 0
     fi
@@ -578,9 +564,9 @@ cmd_route() {
   case "${1:-status}" in
     install)
       bash "$RA_HOME/deploy/website-route.sh" install --proxy "$PROXY" --race "$RACE_UPSTREAM" --auth "$AUTH_UPSTREAM" \
-        --secret-file "$RA_ETC/website/proxy-secret" --routes-dir "$ROUTES_DIR" --file "$ROUTE_FILE" --exec "$PROXY_EXEC" ;;
+        --secret-file "$RA_ETC/website/proxy-secret" --routes-dir "$ROUTES_DIR" --file "$ROUTE_FILE" --caddy-container "$PROXY_CONTAINER" ;;
     remove)
-      bash "$RA_HOME/deploy/website-route.sh" remove --proxy "$PROXY" --routes-dir "$ROUTES_DIR" --file "$ROUTE_FILE" --exec "$PROXY_EXEC" ;;
+      bash "$RA_HOME/deploy/website-route.sh" remove --proxy "$PROXY" --routes-dir "$ROUTES_DIR" --file "$ROUTE_FILE" --caddy-container "$PROXY_CONTAINER" ;;
     status) route_state ;;
     *) die "usage: racearena route [install|remove|status]" ;;
   esac
@@ -620,9 +606,8 @@ cmd_uninstall() {
   say "── 3/4 the stack, the timers, the jail"
   if website_mode; then
     # Only the race's own file in the website's routes folder, then the website's proxy reloaded; its
-    # Caddy leaves the race's network before the network goes. Nothing else of the website.
+    # Nothing else of the website: its network stays, the race only leaves it.
     cmd_route remove || say "the route file could not be removed — take it out of the website's routes folder by hand and reload its proxy"
-    disconnect_site_proxy
   fi
   compose down --volumes --remove-orphans || true
   docker image ls --format '{{.Repository}}:{{.Tag}}' racearena-app | xargs -r docker image rm -f >/dev/null || true

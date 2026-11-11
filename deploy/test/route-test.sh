@@ -9,7 +9,9 @@
 #              the website cookie never reaches the race but does reach the authorize call; client-sent
 #              identity and secret headers are cleared on every path; the secret is only on the
 #              sign-in; nothing outside /games/race/ reaches the race; and a broken route file is
-#              rolled back (the proxy keeps serving the website).
+#              rolled back to the previous file (the proxy keeps serving the website). In the website's
+#              REAL layout (piece 5c): race.conf in /etc/seasonal/routes for nginx; race.caddy in the
+#              folder the website's Caddy mounts as /etc/caddy/routes, that mount checked first.
 #
 # Usage: bash route-test.sh nginx|caddy <workDir> [generator]
 #   ONE variant per run — never both at once. [generator] defaults to deploy/website-route.sh; a
@@ -52,8 +54,10 @@ for role in site race; do
     -v "$HERE/route-fakes.mjs:/fakes.mjs:ro" "$NODE_IMAGE" node /fakes.mjs "$role" >/dev/null
 done
 
-# The website's own configuration — standing in for the real one: it includes the routes folder
-# and serves everything else itself ("website").
+# The website's own configuration — standing in for the real one, in its real layout (piece 5c): nginx
+# includes /etc/seasonal/routes/*.conf in its server block; the website's Caddy imports
+# /etc/caddy/routes/*.caddy (its deploy/site/routes mounted read-only there). Everything else it
+# serves itself ("website").
 if [[ "$VARIANT" == nginx ]]; then
   cat >"$WORK/proxy.conf" <<'EOF'
 events {}
@@ -68,7 +72,8 @@ EOF
   docker run -d --name ra-rt-proxy --network "$NET" "${CAP[@]}" -p 127.0.0.1:18480:8080 \
     -v "$WORK_W/proxy.conf:/etc/nginx/nginx.conf:ro" -v "$WORK_W/routes:/etc/seasonal/routes:ro" \
     "$NGINX_IMAGE" >/dev/null
-  ROUTE_ARGS=(--proxy nginx --race ra-rt-race:4000 --auth ra-rt-site:3800)
+  ROUTE_ARGS=(--proxy nginx --race ra-rt-race:4000 --auth ra-rt-site:3800 --exec "docker exec ra-rt-proxy")
+  FILE=race.conf
 else
   cat >"$WORK/proxy.conf" <<'EOF'
 {
@@ -76,56 +81,76 @@ else
 	auto_https off
 }
 :8080 {
-	import /etc/seasonal/routes/*.caddy
+	import /etc/caddy/routes/*.caddy
 	handle {
 		respond "website" 200
 	}
 }
 EOF
   docker run -d --name ra-rt-proxy --network "$NET" "${CAP[@]}" -p 127.0.0.1:18480:8080 \
-    -v "$WORK_W/proxy.conf:/etc/caddy/Caddyfile:ro" -v "$WORK_W/routes:/etc/seasonal/routes:ro" \
+    -v "$WORK_W/proxy.conf:/etc/caddy/Caddyfile:ro" -v "$WORK_W/routes:/etc/caddy/routes:ro" \
     "$CADDY_IMAGE" >/dev/null
-  ROUTE_ARGS=(--proxy caddy --race ra-rt-race:4000 --auth ra-rt-site:3800)
+  ROUTE_ARGS=(--proxy caddy --race ra-rt-race:4000 --auth ra-rt-site:3800 --caddy-container ra-rt-proxy)
+  FILE=race.caddy
 fi
 sleep 3
 
 FAILS=0
 pass() { printf 'PASS  %s\n' "$*"; }
 fail() { printf 'FAIL  %s\n' "$*"; FAILS=$((FAILS + 1)); }
+answer() { node -e "require('http').get('http://127.0.0.1:18480$1',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>console.log(d.trim()))})"; }
 
 echo "── $VARIANT: install the route file (check, reload)"
-if bash "$GEN" install "${ROUTE_ARGS[@]}" --secret-file "$WORK/secret" --routes-dir "$WORK/routes" --exec "docker exec ra-rt-proxy"; then
-  pass "the route file is installed and the $VARIANT check passes"
+if bash "$GEN" install "${ROUTE_ARGS[@]}" --secret-file "$WORK/secret" --routes-dir "$WORK/routes"; then
+  pass "the route file $FILE is installed and the $VARIANT check passes"
 else
-  fail "the route file is installed and the $VARIANT check passes"
+  fail "the route file $FILE is installed and the $VARIANT check passes"
 fi
 sleep 2
 
 echo "── $VARIANT: the proofs, from the visitor's side"
 node "$HERE/route-check.mjs" 18480 18482 18481 "$WORK_W/secret" || FAILS=$((FAILS + 1))
 
-echo "── $VARIANT: a broken route file is rolled back"
+echo "── $VARIANT: a broken route file is rolled back to the one that worked"
 # The generator's own install step, with a configuration the proxy's check refuses: an upstream that
 # does not exist (nginx resolves it at the check; Caddy refuses the unknown directive appended).
-if [[ "$VARIANT" == nginx ]]; then BAD=(--proxy nginx --race no-such-host.invalid:4000 --auth ra-rt-site:3800)
-else BAD=(--proxy caddy --race "ra-rt-race:4000" --auth "ra-rt-site:3800 { no_such_directive }"); fi
-if bash "$GEN" install "${BAD[@]}" --secret-file "$WORK/secret" --routes-dir "$WORK/routes" --exec "docker exec ra-rt-proxy" 2>"$WORK/bad.log"; then
+GOOD="$(sha256sum "$WORK/routes/$FILE" | cut -d' ' -f1)"
+if [[ "$VARIANT" == nginx ]]; then BAD=(--proxy nginx --race no-such-host.invalid:4000 --auth ra-rt-site:3800 --exec "docker exec ra-rt-proxy")
+else BAD=(--proxy caddy --race "ra-rt-race:4000" --auth "ra-rt-site:3800 { no_such_directive }" --caddy-container ra-rt-proxy); fi
+if bash "$GEN" install "${BAD[@]}" --secret-file "$WORK/secret" --routes-dir "$WORK/routes" 2>"$WORK/bad.log"; then
   fail "a broken route file is refused (the install exits non-zero)"
 else
   pass "a broken route file is refused (the install exits non-zero)"
 fi
-if [[ -z "$(ls -A "$WORK/routes")" ]]; then pass "the race's file is removed again"; else fail "the race's file is removed again ($(ls "$WORK/routes"))"; fi
-if [[ "$(node -e "require('http').get('http://127.0.0.1:18480/',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>console.log(d.trim()))})")" == website ]]; then
-  pass "the proxy still serves the website after the rollback"
+if [[ "$(sha256sum "$WORK/routes/$FILE" | cut -d' ' -f1)" == "$GOOD" && "$(ls "$WORK/routes")" == "$FILE" ]]; then
+  pass "the previous route file is back, byte for byte, and nothing else is left"
 else
-  fail "the proxy still serves the website after the rollback"
+  fail "the previous route file is back, byte for byte, and nothing else is left ($(ls "$WORK/routes" | tr '\n' ' '))"
+fi
+if [[ "$(answer /)" == website && "$(answer /games/race/x)" == *'"path":"/games/race/x"'* ]]; then
+  pass "after the rollback the website is served and the race still reached"
+else
+  fail "after the rollback the website is served and the race still reached"
 fi
 if ! grep -q "$(cat "$WORK/secret")" "$WORK/bad.log"; then pass "the refusal does not print the secret"; else fail "the refusal does not print the secret"; fi
 
+if [[ "$VARIANT" == caddy ]]; then
+  echo "── caddy: a Caddy without the routes folder mounted is refused before anything is written"
+  # The fake website's container stands in for a website Caddy from before /etc/caddy/routes.
+  mkdir -p "$WORK/other"
+  if bash "$GEN" install --proxy caddy --race ra-rt-race:4000 --auth ra-rt-site:3800 --caddy-container ra-rt-site \
+    --secret-file "$WORK/secret" --routes-dir "$WORK/other" 2>"$WORK/mount.log"; then
+    fail "the missing /etc/caddy/routes mount is refused"
+  elif grep -q "/etc/caddy/routes" "$WORK/mount.log" && [[ -z "$(ls -A "$WORK/other")" ]]; then
+    pass "the missing /etc/caddy/routes mount is refused, nothing written"
+  else
+    fail "the missing /etc/caddy/routes mount is refused, nothing written"
+  fi
+fi
+
 echo "── $VARIANT: remove"
-bash "$GEN" install "${ROUTE_ARGS[@]}" --secret-file "$WORK/secret" --routes-dir "$WORK/routes" --exec "docker exec ra-rt-proxy" >/dev/null
-bash "$GEN" remove --proxy "$VARIANT" --routes-dir "$WORK/routes" --exec "docker exec ra-rt-proxy" >/dev/null
-if [[ -z "$(ls -A "$WORK/routes")" ]] && [[ "$(node -e "require('http').get('http://127.0.0.1:18480/games/race/x',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>console.log(d.trim()))})")" == website ]]; then
+bash "$GEN" remove "${ROUTE_ARGS[@]}" --routes-dir "$WORK/routes" >/dev/null
+if [[ -z "$(ls -A "$WORK/routes")" && "$(answer /games/race/x)" == website ]]; then
   pass "remove takes the file out and the race is no longer reached"
 else
   fail "remove takes the file out and the race is no longer reached"

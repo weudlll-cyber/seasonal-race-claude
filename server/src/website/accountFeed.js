@@ -27,12 +27,16 @@
 // interval (RA_WEBSITE_FEED_INTERVAL_MS, default 60 s, 15–120 s). On an error it backs off: the
 // wait doubles per failure in a row, up to ten minutes, and the first success resets it.
 //
-// ── THE ANSWER'S SHAPE, READ TOLERANTLY (on the sheet) ─────────────────────────────────────────
-// The summary names the events and the limits but not the field names, so the reader accepts the
-// obvious spellings: `events` (or `changes`) — each `{ type | event, userId | user_id | id }` —
-// and the next cursor in `nextCursor` (or `cursor`), with `hasMore` (or a full page of 500) for
-// "ask again now". An answer without a cursor is an error: applying it without being able to
-// remember it would repeat it forever.
+// ── THE ANSWER'S SHAPE, EXACTLY (piece 5c, 2026-11-11) ─────────────────────────────────────────
+// What the website sends (website master eb1bbe9: server/src/accounts/accountChanges.js
+// accountChangesSince, server/src/games/embeddedRoutes.js), and nothing else is accepted:
+//   {"changes":[{"id":42,"kind":"locked"},{"id":17,"kind":"deleted"}],"next":"118"}
+// — `changes` at most 500 (no hasMore: a page of 500 means "ask again with next"), `kind` one of
+// deleted | locked | unlocked | rights, `id` a JSON NUMBER, `next` a digit string that stays the
+// same while nothing is new. The first request asks since=0. The member is keyed by String(id),
+// the same string the sign-in route records from X-Acting-User-Id ("42"). Anything else is an
+// ERROR — the poller backs off and the cursor stays where it was — never a silently skipped event.
+// (Until piece 5c the reader guessed field names; it agreed with the stand-in and not the website.)
 // ============================================================
 
 import { readFileSync } from 'node:fs';
@@ -107,29 +111,29 @@ export function loadFeedConfig(
   return { url: url.origin + url.pathname.replace(/\/+$/, ''), token, intervalMs };
 }
 
-/** One answer, read tolerantly (see the header). Throws on an answer it cannot use. */
+/** The website's digit cursor (embeddedRoutes.js accepts only this as ). */
+const CURSOR = /^\d{1,15}$/;
+
+/** One answer, exactly as the website sends it (see the header). Throws on anything else. */
 export function readFeedPage(body) {
-  const list = Array.isArray(body?.events)
-    ? body.events
-    : Array.isArray(body?.changes)
-      ? body.changes
-      : null;
-  if (!list) throw new Error('the feed answered without an events list');
-  const cursor = body.nextCursor ?? body.cursor;
-  if (cursor === undefined || cursor === null || String(cursor) === '') {
-    throw new Error('the feed answered without a cursor');
+  const list = body?.changes;
+  if (!Array.isArray(list)) throw new Error('the feed answered without a "changes" list');
+  if (list.length > PAGE_MAX) {
+    throw new Error(`the feed answered ${list.length} changes (at most ${PAGE_MAX})`);
   }
-  const events = [];
-  for (const e of list) {
-    const type = String(e?.type ?? e?.event ?? '').toLowerCase();
-    const userId = e?.userId ?? e?.user_id ?? e?.id;
-    // An event this race does not know, or one naming nobody, is skipped — never a reason to stop
-    // following the feed (the website may add kinds a later race understands).
-    if (EVENT_TYPES.has(type) && typeof userId === 'string' && userId)
-      events.push({ type, userId });
+  if (typeof body.next !== 'string' || !CURSOR.test(body.next)) {
+    throw new Error('the feed answered without a digit cursor "next"');
   }
-  const hasMore = body.hasMore === true || (body.hasMore === undefined && list.length >= PAGE_MAX);
-  return { events, cursor: String(cursor), hasMore };
+  const events = list.map((c, i) => {
+    if (!EVENT_TYPES.has(c?.kind)) {
+      throw new Error(`change ${i}: unknown kind ${JSON.stringify(c?.kind)}`);
+    }
+    // A JSON number, as the website's account ids are; mapped to the sign-in route's String(id).
+    if (!Number.isSafeInteger(c.id) || c.id < 1)
+      throw new Error(`change ${i}: the id is not a number`);
+    return { type: c.kind, userId: String(c.id) };
+  });
+  return { events, cursor: body.next, hasMore: list.length === PAGE_MAX };
 }
 
 /**
@@ -187,7 +191,8 @@ export function createFeedPoller({
 
   async function pollOnce() {
     const since = identities.getFeedCursor();
-    const url = `${config.url}${FEED_PATH}${since === null ? '' : `?since=${encodeURIComponent(since)}`}`;
+    // First contact: since=0 (the website reads an absent cursor the same way).
+    const url = `${config.url}${FEED_PATH}?since=${encodeURIComponent(since ?? '0')}`;
     lastRequestAt = now();
     const res = await fetchImpl(url, {
       headers: { 'X-Games-Sync-Token': config.token, accept: 'application/json' },

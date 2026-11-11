@@ -104,6 +104,12 @@ const SITE_COOKIE = (who) =>
       last?.url?.startsWith('/api/games/race/authorize'),
     `authorize saw cookie: ${last?.headers?.cookie}`
   );
+  // Piece 5c: the website refuses a check without the visitor's method (fail closed).
+  proof(
+    'the authorize subrequest carries X-Original-Method: GET',
+    last?.headers?.['x-original-method'] === 'GET',
+    `authorize saw method: ${last?.headers?.['x-original-method']}`
+  );
 }
 
 // ── 3. client-sent identity and secret are cleared on every path, the sign-in included ───────────
@@ -161,9 +167,12 @@ const SITE_COOKIE = (who) =>
     ...FORGED,
     Cookie: 'ra.sid=race-session',
   });
+  // The website answers 204 + X-Acting-Guest for someone it does not know (never 401).
   proof(
-    "no website session: the website's 401, and the race is not asked",
-    nobody.res.status === 401 && nobody.reached === 0,
+    'no website session: the race is told "a guest", and none of the client’s identity',
+    nobody.reached === 1 &&
+      nobody.got?.headers['x-acting-guest'] === 'true' &&
+      nobody.got?.headers['x-acting-user-id'] === undefined,
     `status ${nobody.res.status}, reached ${nobody.reached}`
   );
 }

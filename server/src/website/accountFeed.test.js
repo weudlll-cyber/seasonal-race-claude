@@ -5,7 +5,8 @@
 // Created:     2026-11-11
 // Description: The account-changes feed against a FAKE feed and REAL stores (one temporary
 //              registrations.sqlite holding both the registrations and the identities, as in an
-//              install): the settings and their refusals; the tolerant reader; paging past 500;
+//              install): the settings and their refusals; the reader of the website's exact answer
+//              (piece 5c: F1, and anything else an error); paging past 500;
 //              a repeated batch changing nothing; an error, then backoff, then recovery; and each
 //              event's effect — locked, unlocked, rights, deleted.
 // ============================================================
@@ -74,32 +75,51 @@ describe('loadFeedConfig', () => {
   });
 });
 
-describe('readFeedPage', () => {
-  it('reads the obvious spellings, skips what it does not know, and wants a cursor', () => {
-    const page = readFeedPage({
+// ★ PIECE 5c (2026-11-11): the website's OWN answer, exactly — website master eb1bbe9,
+// server/src/accounts/accountChanges.js accountChangesSince and games/embeddedRoutes.js: a list
+// `changes` of { id (a JSON number), kind }, at most 500, and `next`, a digit string.
+const F1 = {
+  changes: [
+    { id: 42, kind: 'locked' },
+    { id: 17, kind: 'deleted' },
+  ],
+  next: '118',
+};
+describe("readFeedPage — the website's own answer (F1)", () => {
+  it('★ the website’s example: ids as String(id), the next cursor, caught up', () => {
+    expect(readFeedPage(F1)).toEqual({
       events: [
-        { type: 'locked', userId: 'a' },
-        { event: 'DELETED', user_id: 'b' },
-        { type: 'renamed', userId: 'c' },
-        { type: 'rights' },
+        { type: 'locked', userId: '42' },
+        { type: 'deleted', userId: '17' },
       ],
-      nextCursor: 42,
-    });
-    expect(page).toEqual({
-      events: [
-        { type: 'locked', userId: 'a' },
-        { type: 'deleted', userId: 'b' },
-      ],
-      cursor: '42',
+      cursor: '118',
       hasMore: false,
     });
-    expect(() => readFeedPage({ events: [] })).toThrow(/cursor/);
-    expect(() => readFeedPage({ nope: true, cursor: 'x' })).toThrow(/events/);
   });
-  it('a full page means "ask again now" unless the feed says otherwise', () => {
-    const full = Array.from({ length: PAGE_MAX }, (_, i) => ({ type: 'rights', userId: `u${i}` }));
-    expect(readFeedPage({ events: full, cursor: 'c' }).hasMore).toBe(true);
-    expect(readFeedPage({ events: full, cursor: 'c', hasMore: false }).hasMore).toBe(false);
+  it('★ a page of 500 means "ask again with next"; fewer means caught up', () => {
+    const page = (n) => ({
+      changes: Array.from({ length: n }, (_, i) => ({ id: i + 1, kind: 'rights' })),
+      next: '900',
+    });
+    expect(readFeedPage(page(PAGE_MAX)).hasMore).toBe(true);
+    expect(readFeedPage(page(PAGE_MAX - 1)).hasMore).toBe(false);
+    expect(readFeedPage({ changes: [], next: '118' })).toEqual({
+      events: [],
+      cursor: '118',
+      hasMore: false,
+    });
+  });
+  it('★ any other shape is an ERROR, never silence', () => {
+    const bad = [
+      { events: [{ type: 'locked', userId: '42' }], nextCursor: '1' }, // the old guesses
+      { changes: [{ id: '42', kind: 'locked' }], next: '1' }, // id as a string
+      { changes: [{ id: 42, kind: 'renamed' }], next: '1' }, // an unknown kind
+      { changes: [{ kind: 'locked' }], next: '1' }, // no id
+      { changes: [], next: 118 }, // next not a string
+      { changes: [], next: 'abc' }, // next not digits
+      { changes: [] }, // no next
+    ];
+    for (const body of bad) expect(() => readFeedPage(body), JSON.stringify(body)).toThrow();
   });
 });
 
@@ -228,46 +248,46 @@ describe('each event’s effect', () => {
 
 describe('the poller against a fake feed', () => {
   it('★ pages past 500: a full page is followed at once (one second apart), the cursor advances', async () => {
-    const full = Array.from({ length: PAGE_MAX }, (_, i) => ({ type: 'rights', userId: `u${i}` }));
+    const full = Array.from({ length: PAGE_MAX }, (_, i) => ({ id: i + 1, kind: 'rights' }));
     const feed = fakeFeed([
-      { events: full, nextCursor: 'p1', hasMore: true },
-      { events: [{ type: 'locked', userId: 'u7' }], nextCursor: 'p2', hasMore: false },
+      { changes: full, next: '500' },
+      { changes: [{ id: 7, kind: 'locked' }], next: '501' },
     ]);
     const p = poller(feed.fetchImpl);
     const first = await p.pollOnce();
-    expect(feed.asked[0].url).toBe(`http://site:3800${FEED_PATH}`);
+    expect(feed.asked[0].url).toBe(`http://site:3800${FEED_PATH}?since=0`);
     expect(feed.asked[0].token).toBe(TOKEN);
-    expect(identities.getFeedCursor()).toBe('p1');
+    expect(identities.getFeedCursor()).toBe('500');
     const wait = p.nextDelay(first);
     expect(wait).toBeGreaterThanOrEqual(0);
     expect(wait).toBeLessThanOrEqual(1000); // under 60 requests a minute however far behind
     clock += wait;
     const second = await p.pollOnce();
-    expect(feed.asked[1].url).toBe(`http://site:3800${FEED_PATH}?since=p1`);
-    expect(identities.getFeedCursor()).toBe('p2');
-    expect(identities.get('u7').locked).toBe(true);
+    expect(feed.asked[1].url).toBe(`http://site:3800${FEED_PATH}?since=500`);
+    expect(identities.getFeedCursor()).toBe('501');
+    expect(identities.get('7').locked).toBe(true);
     expect(p.nextDelay(second)).toBe(60_000);
   });
 
   it('★ a repeated batch changes nothing the second time', async () => {
-    registrationWith('d2');
+    registrationWith('2');
     const batch = {
-      events: [
-        { type: 'deleted', userId: 'd2' },
-        { type: 'locked', userId: 'x' },
+      changes: [
+        { id: 2, kind: 'deleted' },
+        { id: 3, kind: 'locked' },
       ],
-      cursor: 'c1',
+      next: '11',
     };
     const feed = fakeFeed([batch, { ...batch }]);
     const p = poller(feed.fetchImpl);
     await p.pollOnce();
-    const after1 = { d2: identities.get('d2'), x: identities.get('x') };
+    const after1 = { d2: identities.get('2') };
     clock += 5000;
     await p.pollOnce();
-    expect(identities.get('d2').deleted).toBe(true);
-    expect(identities.get('x').locked).toBe(true);
-    expect(identities.deletedIds()).toEqual(['d2']);
-    expect(identities.get('d2').displayName).toBe(after1.d2.displayName);
+    expect(identities.get('2').deleted).toBe(true);
+    expect(identities.get('3').locked).toBe(true);
+    expect(identities.deletedIds()).toEqual(['2']);
+    expect(identities.get('2').displayName).toBe(after1.d2.displayName);
   });
 
   it('★ an error backs off — doubling, capped at ten minutes — and a success resets it', async () => {
@@ -279,7 +299,7 @@ describe('the poller against a fake feed', () => {
       config: { url: 'http://site:3800', token: TOKEN, intervalMs: 60_000 },
       identities,
       registrations,
-      fetchImpl: fakeFeed([null, 500, null, 503, null, { events: [], cursor: 'back' }]).fetchImpl,
+      fetchImpl: fakeFeed([null, 500, null, 503, null, { changes: [], next: '40' }]).fetchImpl,
       setTimer: (fn, ms) => {
         delays.push(ms);
         queue.push(fn);
@@ -295,7 +315,28 @@ describe('the poller against a fake feed', () => {
     // start at once; then 2x, 4x, 8x the interval, then capped at ten minutes; then the interval again
     expect(delays).toEqual([0, 120_000, 240_000, 480_000, BACKOFF_MAX_MS, BACKOFF_MAX_MS, 60_000]);
     expect(p.failures).toBe(0);
-    expect(identities.getFeedCursor()).toBe('back');
+    expect(identities.getFeedCursor()).toBe('40');
+  });
+});
+
+describe('★ the poller against the F1 answer (piece 5c)', () => {
+  it('first contact asks since=0; the example applies; ids match the sign-in route’s String(id)', async () => {
+    // The sign-in route records the member by the header X-Acting-User-Id: "42" (a string).
+    identities.recordSignIn({ websiteUserId: '42', displayName: 'Mia', role: 'player' });
+    const feed = fakeFeed([F1]);
+    await poller(feed.fetchImpl).pollOnce();
+    expect(feed.asked[0].url).toBe(`http://site:3800${FEED_PATH}?since=0`);
+    expect(identities.getFeedCursor()).toBe('118');
+    expect(identities.get('42').locked).toBe(true);
+    expect(identities.deletedIds()).toEqual(['17']);
+  });
+  it('★ a malformed answer is an error: nothing applied, the cursor unchanged', async () => {
+    identities.setFeedCursor('7');
+    const feed = fakeFeed([{ changes: [{ id: '42', kind: 'locked' }], next: '9' }]);
+    const p = poller(feed.fetchImpl);
+    await expect(p.pollOnce()).rejects.toThrow();
+    expect(identities.getFeedCursor()).toBe('7');
+    expect(identities.get('42')).toBeNull();
   });
 });
 

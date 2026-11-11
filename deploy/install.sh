@@ -14,12 +14,13 @@
 #             --mode standalone|website   which install (default: "inside Seasonal Entertainment"
 #                                         is offered when this server carries the website's
 #                                         markers; otherwise standalone, with no question)
-#             --proxy nginx|caddy         website mode: the website's proxy, when it cannot be told
-#             --site-origin <url>         website mode: the website's public address (REQUIRED there)
-#             --feed-url <url>            website mode: where the race reaches the website's feed,
-#                                         when no container answers as "site"
+#             --site-origin <url>         website mode: overrides https://<SITE_DOMAIN> from the
+#                                         website's record (/etc/seasonal/install.conf)
 #             --team <name>               website mode: the team (default "Seasonal Entertainment")
-#             --subnet <cidr>             website mode: the race's network (default 172.30.250.0/24)
+#             --port <n>                  website mode, nginx: the app's port on 127.0.0.1 (default 3940)
+#             --subnet <cidr>             website mode: the race's network (default 172.30.251.0/24)
+#             --site-network <name>       website mode: the website's network to join, when its
+#                                         container "site" is on several
 #             --help
 #
 # WHAT IT DOES, in this order (each step is recorded in /etc/racearena/install.state, so a re-run
@@ -40,8 +41,10 @@
 #
 # WEBSITE MODE (WEBSITE-EMBED-1 piece 5b, 2026-11-11) installs RaceArena INSIDE Seasonal
 # Entertainment on the website's own server, under /games/race and the website's accounts. It asks no
-# domain, no certificate e-mail and no first admin — only the team — and then: picks a free local
-# port, checks the race's subnet, generates the proxy secret (0400, never printed), gives the race a
+# domain, no certificate e-mail and no first admin — only the team. It reads the website's record
+# (/etc/seasonal/install.conf: RACE=yes required, MODE cross-checked, SITE_DOMAIN, INSTALL_DIR —
+# piece 5c) and then: takes the race's fixed port and subnet (3940, 172.30.251.0/24; refused when
+# taken), generates the proxy secret (0400, never printed), gives the race a
 # copy of the website's sync token (refreshed at every start and update), writes the settings, starts
 # the app WITHOUT the race's own Caddy and without 80/443, and puts the race's route file in the
 # website's proxy (deploy/website-route.sh). No firewall or fail2ban change: the server is the
@@ -67,12 +70,15 @@ APP_UID=1000
 
 DRY_RUN=0
 REF=""
-MODE="" PROXY="" SITE_ORIGIN="" FEED_URL="" TEAM="" SUBNET=""
+MODE="" SITE_ORIGIN="" TEAM="" SUBNET="" PORT="" SITE_NETWORK=""
 # The website's markers (the website facts of 2026-11-11, docs/VPS-INSTALL.md "Inside Seasonal
 # Entertainment"): its install is recognised by them, and the race only ever writes in routes/.
 SEASONAL=/etc/seasonal
 DEFAULT_TEAM="Seasonal Entertainment"
-DEFAULT_SUBNET=172.30.250.0/24
+# The race's own port and subnet beside the other games (Bingo 3900 and 172.30.249.0/24, Mini Games
+# 3920 and 172.30.250.0/24; piece 5c, the website facts of 2026-11-11).
+DEFAULT_PORT=3940
+DEFAULT_SUBNET=172.30.251.0/24
 BASE_PATH=/games/race
 
 say() { printf '%s\n' "$*"; }
@@ -120,10 +126,10 @@ parse_args() {
       --ref) REF="${2:-}"; [[ -n "$REF" ]] || die "--ref needs a tag, branch or commit"; shift 2 ;;
       --dry-run) DRY_RUN=1; shift ;;
       --mode) MODE="${2:-}"; [[ "$MODE" == standalone || "$MODE" == website ]] || die "--mode is standalone or website"; shift 2 ;;
-      --proxy) PROXY="${2:-}"; [[ "$PROXY" == nginx || "$PROXY" == caddy ]] || die "--proxy is nginx or caddy"; shift 2 ;;
       --site-origin) SITE_ORIGIN="${2:-}"; [[ "$SITE_ORIGIN" =~ ^https?://[^/[:space:]]+$ ]] || die "--site-origin is an address like https://seasonal.example.com (no path)"; shift 2 ;;
-      --feed-url) FEED_URL="${2:-}"; [[ "$FEED_URL" =~ ^https?://[^[:space:]]+$ ]] || die "--feed-url is an address like http://site:3800"; shift 2 ;;
       --team) TEAM="${2:-}"; [[ -n "$TEAM" ]] || die "--team needs a name"; shift 2 ;;
+      --port) PORT="${2:-}"; [[ "$PORT" =~ ^[0-9]{2,5}$ ]] || die "--port is a port number"; shift 2 ;;
+      --site-network) SITE_NETWORK="${2:-}"; [[ -n "$SITE_NETWORK" ]] || die "--site-network needs a Docker network's name"; shift 2 ;;
       --subnet) SUBNET="${2:-}"; [[ "$SUBNET" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]] || die "--subnet is a network like 172.30.250.0/24"; shift 2 ;;
       --help | -h) usage; exit 0 ;;
       *) die "unknown option: $1 (see --help)" ;;
@@ -442,7 +448,14 @@ summary() {
     sudo racearena harden-ssh --user <your non-root sudo user>"
 }
 
-# ══ WEBSITE MODE — inside Seasonal Entertainment (WEBSITE-EMBED-1 piece 5b) ═════════════════════════
+# ══ WEBSITE MODE — inside Seasonal Entertainment (WEBSITE-EMBED-1 pieces 5b and 5c) ═════════════════
+#
+# Piece 5c (2026-11-11) follows the website's own facts, checked that day against website master
+# eb1bbe9 and the way Seasonal Bingo Royale installs into it (its ops/lib/website.sh and
+# websiteApply.sh, read-only): the website's installer records itself in /etc/seasonal/install.conf
+# (root only, no secrets; MODE, SITE_DOMAIN, INSTALL_DIR, RACE), its app is the container "site" of
+# the compose project "seasonal-site", and each game takes its own fixed port and subnet (Bingo
+# 3900 and 172.30.249.0/24, Mini Games 3920 and 172.30.250.0/24, the race 3940 and 172.30.251.0/24).
 
 website_markers_present() {
   [[ -f "$SEASONAL/site-local-port" && -f "$SEASONAL/games-sync-token" && -d "$SEASONAL/routes" ]]
@@ -473,20 +486,43 @@ choose_mode() {
   fi
 }
 
+# ── what the website's installer recorded: /etc/seasonal/install.conf ───────────────────────────
+# Root only and without secrets, but NEVER sourced and never printed: only the four keys are read,
+# each from its own KEY=VALUE line (the website writes them with kv_set, its deploy/install/lib/
+# common.sh; the last line of a key wins).
+site_record() { # site_record <KEY> → its value, or nothing
+  [[ -r "$SEASONAL/install.conf" ]] || return 0
+  sed -n "s/^$1=//p" "$SEASONAL/install.conf" | tail -n 1
+}
+SITE_MODE="" SITE_DIR=""
+website_record() {
+  if ((DRY_RUN)) && [[ ! -r "$SEASONAL/install.conf" ]]; then
+    SITE_MODE=nginx SITE_ORIGIN="${SITE_ORIGIN:-https://seasonal.example.com}"
+    say "[dry-run] would read MODE, SITE_DOMAIN, INSTALL_DIR and RACE from $SEASONAL/install.conf"
+    return 0
+  fi
+  [[ -r "$SEASONAL/install.conf" ]] || die "the website's installer has not recorded itself here ($SEASONAL/install.conf is missing): install or update the website first"
+  [[ "$(site_record RACE)" == yes ]] || die "the website is not prepared for the race (RACE is not yes in $SEASONAL/install.conf).
+  Run the website's installer again with --race and answer yes, then this installer again. Nothing was changed."
+  SITE_MODE="$(site_record MODE)"
+  [[ "$SITE_MODE" == nginx || "$SITE_MODE" == caddy ]] || die "the website's record names no mode nginx or caddy ($SEASONAL/install.conf)"
+  SITE_DIR="$(site_record INSTALL_DIR)"
+  local domain
+  domain="$(site_record SITE_DOMAIN)"
+  # --site-origin is an override only; otherwise the website's own domain, over https.
+  if [[ -z "$SITE_ORIGIN" ]]; then
+    [[ "$domain" =~ ^[A-Za-z0-9.-]+$ ]] || die "the website's record carries no SITE_DOMAIN ($SEASONAL/install.conf); name it: --site-origin https://<the website's domain>"
+    SITE_ORIGIN="https://$domain"
+  fi
+}
+
 # ── w2 · the one question: the team ───────────────────────────────────────────────────────────────
 website_questions() {
   step "2 · questions (inside Seasonal Entertainment: only the team)"
   if [[ -f "$CONF" ]]; then
-    # shellcheck disable=SC1090
-    . "$CONF"
-    say "known from an earlier run: team $TEAM, website $SITE_ORIGIN"
+    TEAM="${TEAM:-$(sed -n 's/^TEAM=//p' "$CONF" | tail -n 1)}"
+    [[ -n "$TEAM" ]] && say "known from an earlier run: team $TEAM"
   fi
-  [[ -n "$SITE_ORIGIN" ]] || {
-    if ((DRY_RUN)); then SITE_ORIGIN=https://seasonal.example.com; say "[dry-run] --site-origin is required; using $SITE_ORIGIN"; else
-      die "website mode needs the website's public address: --site-origin https://<the website's domain>
-  (it cannot be read from this server, and the installer does not guess it)"
-    fi
-  }
   if [[ -z "$TEAM" ]]; then
     if ((DRY_RUN)); then TEAM="$DEFAULT_TEAM"; else
       read -r -p "the team the website's hosts run races in [$DEFAULT_TEAM]: " TEAM
@@ -496,7 +532,7 @@ website_questions() {
   [[ "$TEAM" =~ ^[^[:cntrl:]]{1,64}$ ]] || die "the team is 1 to 64 characters"
   run mkdir -p "$RA_ETC"
   run chmod 700 "$RA_ETC"
-  printf 'MODE=website\nTEAM=%q\nSITE_ORIGIN=%q\n' "$TEAM" "$SITE_ORIGIN" | write_file "$CONF" 600
+  printf 'MODE=website\nTEAM=%s\n' "$TEAM" | write_file "$CONF" 600
 }
 
 # ── w4 · Docker, only when it is missing: the server is the website's — no firewall, no fail2ban ──
@@ -516,109 +552,110 @@ website_docker() {
   install_docker "$id" "$codename" "$arch"
 }
 
-# ── w3 · what the website is like here: its proxy, where the race reaches it ─────────────────────
-# Read from this server, never guessed: what cannot be told is a flag the installer asks for.
-PROXY_CONTAINER="" PROXY_EXEC="" ROUTE_FILE="" RACE_UPSTREAM="" AUTH_UPSTREAM="" SITE_NETWORK="" LOCAL_PORT="" SITE_PORT=""
+# ── w3 · the website on this server, as its installer and its containers say ───────────────────
+WEBSITE_PROJECT=seasonal-site
+PROXY="" PROXY_CONTAINER="" ROUTES_DIR="" ROUTE_FILE="" RACE_UPSTREAM="" AUTH_UPSTREAM=""
+SITE_NETWORK="" TRUSTED="" SITE_PORT=""
 
-# The routes folder's files of OTHER games: their extension says which proxy reads the folder.
-other_route_exts() {
-  local f
-  for f in "$SEASONAL/routes"/*; do
-    [[ -f "$f" ]] || continue
-    case "$(basename "$f")" in racearena.*) continue ;; esac
-    printf '%s\n' "${f##*.}"
-  done | sort -u
+# A running container of the website's compose project, by its service name (site or caddy).
+website_container() {
+  docker ps --filter "label=com.docker.compose.project=$WEBSITE_PROJECT" \
+    --filter "label=com.docker.compose.service=$1" --format '{{.Names}}' | head -n 1
 }
+# nginx holds 80 or 443 on the host.
+host_nginx() { ss -ltnpH '( sport = :80 or sport = :443 )' 2>/dev/null | grep -q '"nginx"'; }
 
-# The website's Caddy: a running container of a caddy image that mounts the routes folder.
-find_caddy_container() {
-  local id
-  for id in $(docker ps -q 2>/dev/null); do
-    docker inspect -f '{{.Config.Image}} {{range .Mounts}}{{.Source}} {{end}}{{.Name}}' "$id" 2>/dev/null |
-      awk -v r="$SEASONAL/routes" '$1 ~ /caddy/ { for (i = 2; i < NF; i++) if ($i == r) { sub(/^\//, "", $NF); print $NF } }'
-  done
-}
-
-# The website itself, as a container: the one answering as "site" on one of its networks.
-find_site_network() {
-  local id
-  for id in $(docker ps -q 2>/dev/null); do
-    docker inspect -f '{{range $n, $v := .NetworkSettings.Networks}}{{$n}} {{range $v.Aliases}}{{.}} {{end}}{{$v.DNSNames}}|{{end}}' "$id" 2>/dev/null |
-      tr '|' '\n' | tr -d '[]' | awk '{ for (i = 2; i <= NF; i++) if ($i == "site") { print $1; exit } }'
-  done | sort -u
+# The website's network the race joins (for the feed; in Caddy mode the website's Caddy also
+# reaches the race over it): seasonal-site_default when the container is on it, else its only
+# network, else the one named with --site-network.
+choose_site_network() {
+  local container="$1" networks
+  networks="$(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{$n}} {{end}}' "$container")"
+  if [[ -n "$SITE_NETWORK" ]]; then
+    [[ " $networks " == *" $SITE_NETWORK "* ]] || die "the website's container $container is not on the network $SITE_NETWORK (it is on: $networks)"
+  elif [[ " $networks " == *" ${WEBSITE_PROJECT}_default "* ]]; then
+    SITE_NETWORK="${WEBSITE_PROJECT}_default"
+  elif [[ "$(wc -w <<<"$networks")" -eq 1 ]]; then
+    SITE_NETWORK="${networks// /}"
+  else
+    die "the website's container $container is on several networks ($networks): name the one the race joins with --site-network <name>"
+  fi
 }
 
 website_detect() {
   step "3 · the website on this server"
   if ((DRY_RUN)) && ! command -v docker >/dev/null 2>&1; then
-    PROXY="${PROXY:-nginx}" FEED_URL="${FEED_URL:-http://site:3800}" SITE_PORT=3800 LOCAL_PORT=3900
-    say "[dry-run] would read the routes folder, the running containers and nginx to tell the proxy; using $PROXY"
+    PROXY="$SITE_MODE" SITE_NETWORK="${SITE_NETWORK:-${WEBSITE_PROJECT}_default}" SITE_PORT=3800
+    say "[dry-run] would cross-check the website's $PROXY and find its container \"site\" once Docker is installed"
+    website_routes
     return 0
   fi
   SITE_PORT="$(tr -dc '0-9' <"$SEASONAL/site-local-port")"
   [[ -n "$SITE_PORT" ]] || die "$SEASONAL/site-local-port does not hold a port"
-  local exts nginx_on=0 caddy_ctrs
-  exts="$(other_route_exts)"
-  caddy_ctrs="$(find_caddy_container)"
-  command -v nginx >/dev/null 2>&1 && systemctl is-active --quiet nginx 2>/dev/null && nginx_on=1
-  if [[ -z "$PROXY" ]]; then
-    if [[ "$exts" == conf ]]; then PROXY=nginx
-    elif [[ "$exts" == caddy ]]; then PROXY=caddy
-    elif ((nginx_on)) && [[ -z "$caddy_ctrs" ]]; then PROXY=nginx
-    elif ((nginx_on == 0)) && [[ -n "$caddy_ctrs" ]]; then PROXY=caddy
-    else die "cannot tell which proxy serves the website here (nginx running: $nginx_on; Caddy containers on the routes folder: ${caddy_ctrs:-none}; other route files: ${exts:-none}).
-  Name it: --proxy nginx   or   --proxy caddy"
-    fi
-  fi
-  ROUTE_FILE="racearena.$PROXY"
-  [[ "$PROXY" == nginx ]] && ROUTE_FILE=racearena.conf
-  [[ "$exts" == conf || "$exts" == caddy ]] && ROUTE_FILE="racearena.$exts"
-  SITE_NETWORK="$(find_site_network | head -n 1)"
+  # The record names the mode; what runs here must say the same, or the record is out of date.
+  local caddy site seen=""
+  caddy="$(website_container caddy)"
+  if [[ -n "$caddy" ]]; then seen=caddy; elif host_nginx; then seen=nginx; fi
+  [[ "$seen" == "$SITE_MODE" ]] || die "the website's installer recorded $SITE_MODE mode ($SEASONAL/install.conf), but this server looks like ${seen:-neither} (its Caddy of $WEBSITE_PROJECT, or nginx on 80/443): check which proxy holds ports 80/443"
+  PROXY="$SITE_MODE"
+  site="$(website_container site)"
+  [[ -n "$site" ]] || die "the website's container \"site\" (compose project $WEBSITE_PROJECT) is not running: the race reaches the website's account feed through it"
+  choose_site_network "$site"
   if [[ "$PROXY" == caddy ]]; then
-    [[ "$(wc -w <<<"$caddy_ctrs")" == 1 ]] || die "Caddy mode needs exactly ONE running Caddy container mounting $SEASONAL/routes (found: ${caddy_ctrs:-none})"
-    PROXY_CONTAINER="$caddy_ctrs"
-    PROXY_EXEC="docker exec $PROXY_CONTAINER"
-    RACE_UPSTREAM=racearena:4000
-    AUTH_UPSTREAM=site:3800
+    PROXY_CONTAINER="$caddy"
+    # The website's Caddy reaches the race on the website's network: every subnet of it is the
+    # trusted proxy here, as for Bingo.
+    TRUSTED="$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}} {{end}}' "$SITE_NETWORK" | xargs | tr ' ' ',')"
+    [[ -n "$TRUSTED" ]] || die "the network $SITE_NETWORK has no subnet to trust"
+  fi
+  website_routes
+  say "website: $PROXY mode, $SITE_ORIGIN · its container $site on $SITE_NETWORK · route file $ROUTES_DIR/$ROUTE_FILE · the race trusts $TRUSTED"
+}
+
+# Where the route file goes and how the proxy reaches the race and the website (F5).
+website_routes() {
+  if [[ "$PROXY" == nginx ]]; then
+    ROUTES_DIR="$SEASONAL/routes" ROUTE_FILE=race.conf
+    RACE_UPSTREAM="127.0.0.1:$PORT" AUTH_UPSTREAM="127.0.0.1:$SITE_PORT"
   else
-    LOCAL_PORT="$(pick_local_port)"
-    RACE_UPSTREAM="127.0.0.1:$LOCAL_PORT"
-    AUTH_UPSTREAM="127.0.0.1:$SITE_PORT"
+    [[ -n "$SITE_DIR" ]] || die "the website's record carries no INSTALL_DIR ($SEASONAL/install.conf): the race's Caddy route file goes into its deploy/site/routes"
+    ROUTES_DIR="$SITE_DIR/deploy/site/routes" ROUTE_FILE=race.caddy
+    RACE_UPSTREAM=racearena:4000 AUTH_UPSTREAM=site:3800
   fi
-  if [[ -z "$FEED_URL" ]]; then
-    [[ -n "$SITE_NETWORK" ]] || die "the race reaches the website's account feed from inside its container, and no container answers as \"site\" here.
-  Name where it is: --feed-url http://<address the race's container can reach>:<port>"
-    FEED_URL=http://site:3800
-  fi
-  say "proxy: $PROXY${PROXY_CONTAINER:+ (container $PROXY_CONTAINER)} · route file: $SEASONAL/routes/$ROUTE_FILE · website port: $SITE_PORT · feed: $FEED_URL${SITE_NETWORK:+ (network $SITE_NETWORK)}"
 }
 
-# nginx mode: a free port on 127.0.0.1 for the app; the one of an earlier run is kept.
-pick_local_port() {
-  local p
+# ── w3b · the race's own port and subnet: fixed, flags to override, refused when taken ──────────
+# A re-run keeps the values the first install recorded (website.conf), unless a flag names others.
+website_port_and_subnet() {
+  local prev_port="" prev_subnet=""
   if [[ -f "$RA_ETC/website.conf" ]]; then
-    # shellcheck disable=SC1091
-    p="$(. "$RA_ETC/website.conf" && echo "${LOCAL_PORT:-}")"
-    [[ -n "$p" ]] && { echo "$p"; return; }
+    prev_port="$(sed -n 's/^LOCAL_PORT=//p' "$RA_ETC/website.conf" | tail -n 1)"
+    prev_subnet="$(sed -n 's/^SUBNET=//p' "$RA_ETC/website.conf" | tail -n 1)"
   fi
-  for p in $(seq 3900 3999); do
-    [[ "$p" == "$SITE_PORT" ]] && continue
-    ss -ltnH "sport = :$p" 2>/dev/null | grep -q . || { echo "$p"; return; }
-  done
-  die "no free port in 3900–3999 on this server"
-}
-
-# The race's own network must not collide with another (Bingo's is 172.30.249.0/24).
-website_subnet() {
-  SUBNET="${SUBNET:-$DEFAULT_SUBNET}"
-  if ((DRY_RUN)) && ! command -v docker >/dev/null 2>&1; then say "[dry-run] would refuse if $SUBNET is in use"; return 0; fi
+  PORT="${PORT:-${prev_port:-$DEFAULT_PORT}}"
+  SUBNET="${SUBNET:-${prev_subnet:-$DEFAULT_SUBNET}}"
+  if ((DRY_RUN)) && ! command -v docker >/dev/null 2>&1; then
+    say "[dry-run] would refuse if port $PORT or the network $SUBNET is in use"
+    return 0
+  fi
+  # The port: only nginx mode publishes it (127.0.0.1); the race's own container may hold it.
+  if [[ "$SITE_MODE" == nginx ]] && ss -ltnH "sport = :$PORT" 2>/dev/null | grep -q . &&
+    ! docker ps --filter label=com.docker.compose.project=racearena --format '{{.Ports}}' | grep -q ":$PORT->"; then
+    die "port $PORT is in use on this server (Bingo uses 3900, Mini Games 3920). Choose another: --port <n>"
+  fi
   local net used
   for net in $(docker network ls -q); do
     used="$(docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}' "$net")"
     [[ "${used%% *}" == racearena_default ]] && continue
-    grep -qw -- "$SUBNET" <<<"${used#* }" && die "the race's network $SUBNET is already used by the Docker network '${used%% *}'. Choose another: --subnet <cidr>"
+    grep -qw -- "$SUBNET" <<<"${used#* }" && die "the race's network $SUBNET is already used by the Docker network '${used%% *}' (Bingo uses 172.30.249.0/24, Mini Games 172.30.250.0/24). Choose another: --subnet <cidr>"
   done
-  say "the race's network: $SUBNET (free)"
+  say "the race's port $PORT and network $SUBNET: free"
+}
+
+# nginx mode: the race's own network alone is trusted — the website's network carries the feed only
+# and is never trusted there. (Caddy mode: the website's network, set by website_detect.)
+website_trust() {
+  if [[ "$PROXY" == nginx ]]; then TRUSTED="$SUBNET"; fi
 }
 
 # ── w5 · layout, checkout, the secret, the settings ──────────────────────────────────────────────
@@ -635,24 +672,25 @@ website_lay_out() {
     secret_hex 64 | write_file "$RA_ETC/website/proxy-secret" 400
     run chown "$APP_UID:$APP_UID" "$RA_ETC/website/proxy-secret"
   fi
-  if [[ -f "$RA_ETC/racearena.env" ]]; then
-    say "settings exist: $RA_ETC/racearena.env (kept — its session secret signs everybody's sign-in)"
-  else
-    {
-      printf 'RA_PUBLIC_ORIGIN=%s\n' "$SITE_ORIGIN"
-      printf 'RA_SESSION_SECRET=%s\n' "$(secret_hex 64)"
-      printf 'RA_MODE=website\nRA_BASE_PATH=%s\nRA_WEBSITE_TEAM=%s\n' "$BASE_PATH" "$TEAM"
-      printf 'RA_WEBSITE_PROXY_SECRET_FILE=/run/racearena/proxy-secret\nRA_WEBSITE_SYNC_TOKEN_FILE=/run/racearena/sync-token\n'
-      printf 'RA_WEBSITE_TRUSTED_PROXIES=%s\nRA_WEBSITE_FEED_URL=%s\n' "$SUBNET" "$FEED_URL"
-    } | write_file "$RA_ETC/racearena.env" 600
-  fi
+  # The settings are written on every run from what the website and its record say now (the
+  # session secret alone is kept: regenerating it would sign everybody out).
+  local session
+  session="$( [[ -f "$RA_ETC/racearena.env" ]] && sed -n 's/^RA_SESSION_SECRET=//p' "$RA_ETC/racearena.env" | tail -n 1 )"
+  [[ -n "$session" ]] || session="$(secret_hex 64)"
+  {
+    printf 'RA_PUBLIC_ORIGIN=%s\n' "$SITE_ORIGIN"
+    printf 'RA_SESSION_SECRET=%s\n' "$session"
+    printf 'RA_MODE=website\nRA_BASE_PATH=%s\nRA_WEBSITE_TEAM=%s\n' "$BASE_PATH" "$TEAM"
+    printf 'RA_WEBSITE_PROXY_SECRET_FILE=/run/racearena/proxy-secret\nRA_WEBSITE_SYNC_TOKEN_FILE=/run/racearena/sync-token\n'
+    printf 'RA_WEBSITE_TRUSTED_PROXIES=%s\nRA_WEBSITE_FEED_URL=http://site:3800\n' "$TRUSTED"
+  } | write_file "$RA_ETC/racearena.env" 600
   printf 'RA_DATA_HOST=%s\nRA_BACKUP_HOST=%s\nRA_ENV_FILE=%s\n' "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/racearena.env" |
     write_file "$RA_ETC/compose.env" 644
   # What `racearena` needs to run this mode (no secret in it). The mode itself is its own file, so
   # an update — which never rewrites either — keeps it.
-  printf 'PROXY=%q\nROUTES_DIR=%q\nROUTE_FILE=%q\nPROXY_CONTAINER=%q\nPROXY_EXEC=%q\nRACE_UPSTREAM=%q\nAUTH_UPSTREAM=%q\nLOCAL_PORT=%q\nSUBNET=%q\nSITE_NETWORK=%q\nSITE_TOKEN=%q\n' \
-    "$PROXY" "$SEASONAL/routes" "$ROUTE_FILE" "$PROXY_CONTAINER" "$PROXY_EXEC" "$RACE_UPSTREAM" "$AUTH_UPSTREAM" \
-    "$LOCAL_PORT" "$SUBNET" "$SITE_NETWORK" "$SEASONAL/games-sync-token" | write_file "$RA_ETC/website.conf" 600
+  printf 'PROXY=%q\nROUTES_DIR=%q\nROUTE_FILE=%q\nPROXY_CONTAINER=%q\nRACE_UPSTREAM=%q\nAUTH_UPSTREAM=%q\nLOCAL_PORT=%q\nSUBNET=%q\nSITE_NETWORK=%q\nSITE_TOKEN=%q\n' \
+    "$PROXY" "$ROUTES_DIR" "$ROUTE_FILE" "$PROXY_CONTAINER" "$RACE_UPSTREAM" "$AUTH_UPSTREAM" \
+    "$PORT" "$SUBNET" "$SITE_NETWORK" "$SEASONAL/games-sync-token" | write_file "$RA_ETC/website.conf" 600
   printf 'website\n' | write_file "$RA_ETC/mode" 600
   run install -m 0755 "$RA_HOME/deploy/racearena" /usr/local/bin/racearena
 }
@@ -673,7 +711,7 @@ website_summary() {
 
   Address:   $SITE_ORIGIN$BASE_PATH/   — sign in through the website; hosts run races, members join.
   Team:      $TEAM
-  Route:     $SEASONAL/routes/$ROUTE_FILE in the website's $PROXY (the race writes only this file)
+  Route:     $ROUTES_DIR/$ROUTE_FILE in the website's $PROXY (the race writes only this file)
   Data:      $RA_DATA
   Backups:   $RA_BACKUPS — one every day, the last 14 days kept. Copy them OFF this server too.
 
@@ -686,10 +724,16 @@ website_summary() {
 }
 
 website_main() {
+  # The website's record FIRST: RACE other than yes stops before anything on this server changes.
+  step "1b · the website's record (/install.conf)"
+  website_record
   website_questions
   website_docker
   website_detect
-  website_subnet
+  website_port_and_subnet
+  website_trust
+  # nginx mode's upstream needs the port, which is only known now.
+  website_routes
   website_lay_out
   website_start
   install_timers

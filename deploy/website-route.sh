@@ -10,31 +10,38 @@
 #
 #   bash website-route.sh render  --proxy nginx|caddy --race <host:port> --auth <host:port> --secret-file <f>
 #   bash website-route.sh install --proxy nginx|caddy --race <host:port> --auth <host:port> --secret-file <f>
-#                                 --routes-dir <dir> [--file <name>] [--exec "<prefix>"] [--config <f>]
-#   bash website-route.sh remove  --proxy nginx|caddy --routes-dir <dir> [--file <name>] [--exec …] [--config …]
+#                                 --routes-dir <dir> [--file <name>] [--caddy-container <c> | --exec "<prefix>"]
+#   bash website-route.sh remove  --proxy nginx|caddy --routes-dir <dir> [--file <name>] [--caddy-container <c> | --exec …]
 #
-#   --race    where the proxy reaches the race (nginx: 127.0.0.1:<published port>; Caddy: the race's
-#             container by its network alias, racearena:4000)
+#   --race    where the proxy reaches the race (nginx: 127.0.0.1:<published port, 3940>; Caddy: the
+#             race's container by its alias on the website's network, racearena:4000)
 #   --auth    where the proxy reaches the website for the sign-in check (nginx: 127.0.0.1:<site-local-
 #             port>; Caddy: site:3800)
-#   --exec    the prefix the proxy's own commands run with — "" for nginx on the host, "docker exec
-#             <the website's Caddy container>" for Caddy. The check and the reload run WHERE THE
-#             PROXY RUNS, never a second copy of it.
+#   --routes-dir, --file  nginx: /etc/seasonal/routes and race.conf (the website's nginx includes
+#             /etc/seasonal/routes/*.conf); Caddy: <INSTALL_DIR>/deploy/site/routes and race.caddy
+#             (mounted read-only into the website's Caddy as /etc/caddy/routes and imported as
+#             /etc/caddy/routes/*.caddy) — the defaults for --file
+#   --caddy-container  the website's Caddy: its mount of /etc/caddy/routes is checked before
+#             anything is written, and the check and the reload run in it (docker exec)
+#   --exec    the prefix for the proxy's own commands otherwise — "" for nginx on the host. The check
+#             and the reload run WHERE THE PROXY RUNS, never a second copy of it.
 #
 # WHAT THE FILE DOES, for the base path /games/race — the website facts of 2026-11-11 (checked that
-# day against website master 1292d1b and Bingo master; the morning sheet has them):
+# day against website master eb1bbe9 and Bingo master; piece 5c; the morning sheet has them):
 #   · EVERY path under /games/race/ reaches the race, the FULL path forwarded (nginx: proxy_pass with
 #     no URI part; Caddy: `handle`, not `handle_path`). Nothing outside it reaches the race.
 #   · On every path: the website's own session cookie (__Host-se.sid, se.sid) is STRIPPED from what is
 #     forwarded, and any X-Acting-* or X-Ra-Proxy-Secret header the CLIENT sent is cleared.
-#   · Only on /games/race/auth/website: the proxy asks the website GET /api/games/race/authorize —
-#     that subrequest KEEPS the website cookie, it is how the website knows who is asking — and
-#     forwards the identity headers the website answered with, plus the race's own proxy secret.
-#     A 401 from the website is the answer the visitor gets; the race is not asked.
+#   · Only on /games/race/auth/website: the proxy asks the website GET /api/games/race/authorize with
+#     the visitor's cookie (the website's session), Origin and X-Original-Method — without the method
+#     the website refuses — and forwards the identity headers the website answered with (it always
+#     answers 204: a member's X-Acting-User-*, anyone else X-Acting-Guest), plus the race's own
+#     proxy secret.
 #
 # ★ IT NEVER EDITS A WEBSITE-OWNED FILE. It writes, and removes, exactly one file of its own in the
-#   website's routes folder (/etc/seasonal/routes), which the website's configuration includes.
-#   The file carries the proxy secret (the proxy cannot read a file at run time), so it is written
+#   website's routes folder, which the website's configuration includes; a refused new file is
+#   rolled back to the previous one (or removed when there was none). The file carries the proxy
+#   secret (the proxy cannot read a file at run time — Bingo's pattern too), so it is written
 #   0600; the secret is read from its own 0600 file and never printed.
 # ============================================================
 set -euo pipefail
@@ -74,19 +81,27 @@ EOF
   printf '    proxy_set_header X-Ra-Proxy-Secret "%s";\n' "$secret"
   printf '    proxy_pass http://%s;\n}\n\n' "$race"
   cat <<EOF
-# The website's answer to "who is this?". Internal: no visitor can call it. The visitor's request
-# headers — the website cookie with them — go to the website as they came.
+# The website's answer to "who is this?". Internal: no visitor can call it. The visitor's cookie (the
+# website's session with it), Origin and request method go to the website — it refuses a check
+# without the method (fail closed; its server/src/games/embeddedRoutes.js), piece 5c.
 location = /_racearena_authorize {
     internal;
     proxy_pass http://$auth$AUTHORIZE;
     proxy_pass_request_body off;
     proxy_set_header Content-Length "";
     proxy_set_header Host \$host;
+    proxy_set_header Cookie \$http_cookie;
+    proxy_set_header Origin \$http_origin;
+    proxy_set_header X-Original-Method \$request_method;
     proxy_set_header X-Original-URI \$request_uri;
 }
 
-# Everything else of the race: the full path, no identity, no secret, no website cookie.
-location $BASE/ {
+# The base path without its slash is the race's start page.
+location = $BASE { return 308 $BASE/; }
+
+# Everything else of the race: the full path, no identity, no secret, no website cookie. ^~ so a
+# regular-expression location of the website (static files, say) never takes the race's paths.
+location ^~ $BASE/ {
     set \$ra_cookie \$http_cookie;
 EOF
   render_nginx_cookie_strip
@@ -141,6 +156,8 @@ EOF
 		@ra_signin path $SIGNIN
 		forward_auth @ra_signin $auth {
 			uri $AUTHORIZE
+			# The method as the website reads it: without it the website refuses (piece 5c).
+			header_up X-Original-Method {method}
 			copy_headers ${IDENTITY_HEADERS[*]}
 		}
 		request_header @ra_signin X-Ra-Proxy-Secret "$secret"
@@ -156,11 +173,12 @@ EOF
 }
 
 # ── the arguments ─────────────────────────────────────────────────────────────────────────────────
-PROXY="" RACE="" AUTH="" SECRET_FILE="" ROUTES_DIR="" FILE="" EXEC="" CONFIG=""
+PROXY="" RACE="" AUTH="" SECRET_FILE="" ROUTES_DIR="" FILE="" EXEC="" CONFIG="" CADDY_CONTAINER=""
 parse() {
   while (($#)); do
     case "$1" in
       --proxy) PROXY="${2:-}"; shift 2 ;;
+      --caddy-container) CADDY_CONTAINER="${2:-}"; shift 2 ;;
       --race) RACE="${2:-}"; shift 2 ;;
       --auth) AUTH="${2:-}"; shift 2 ;;
       --secret-file) SECRET_FILE="${2:-}"; shift 2 ;;
@@ -172,8 +190,21 @@ parse() {
     esac
   done
   [[ "$PROXY" == nginx || "$PROXY" == caddy ]] || die "--proxy must be nginx or caddy"
-  [[ -n "$FILE" ]] || { if [[ "$PROXY" == nginx ]]; then FILE=racearena.conf; else FILE=racearena.caddy; fi; }
+  # The names the website's layout gives the race (piece 5c): /etc/seasonal/routes/race.conf for
+  # nginx, <INSTALL_DIR>/deploy/site/routes/race.caddy for the website's Caddy.
+  [[ -n "$FILE" ]] || { if [[ "$PROXY" == nginx ]]; then FILE=race.conf; else FILE=race.caddy; fi; }
   [[ -n "$CONFIG" ]] || CONFIG=/etc/caddy/Caddyfile
+  # Caddy: the check and the reload run in the website's Caddy container.
+  [[ -z "$CADDY_CONTAINER" ]] || EXEC="docker exec $CADDY_CONTAINER"
+}
+
+# Caddy: the website's Caddy must have its routes folder mounted where its Caddyfile imports it
+# (/etc/caddy/routes), or a file written there would never be read (Bingo's websiteApply.sh does the
+# same check).
+caddy_mount_check() {
+  [[ "$PROXY" == caddy && -n "$CADDY_CONTAINER" ]] || return 0
+  docker inspect -f '{{range .Mounts}}{{.Destination}} {{end}}' "$CADDY_CONTAINER" | grep -qw /etc/caddy/routes ||
+    die "the website's Caddy ($CADDY_CONTAINER) has no /etc/caddy/routes mounted: run the website's installer with --update first. Nothing was written."
 }
 
 render() {
@@ -195,18 +226,23 @@ proxy_reload() {
 }
 
 install_route() {
-  [[ -d "$ROUTES_DIR" ]] || die "no routes folder at $ROUTES_DIR — the website marks its install with it"
-  local target="$ROUTES_DIR/$FILE" log
+  [[ -d "$ROUTES_DIR" ]] || die "no routes folder at $ROUTES_DIR — the website's installer makes it"
+  caddy_mount_check
+  local target="$ROUTES_DIR/$FILE" log saved=""
+  # The previous file is kept beside it under a name neither proxy reads, so a refused new one can
+  # be undone to what worked (a re-run, an update), not just removed.
+  if [[ -f "$target" ]]; then saved="$target.race-previous"; cp -p -- "$target" "$saved"; fi
   ( umask 077; render >"$target.tmp" )
   mv -f -- "$target.tmp" "$target"
   chmod 600 -- "$target"
   if ! log="$(proxy_check 2>&1)"; then
-    # ★ ROLLBACK: the race's file out again, the proxy reloaded on the website's own configuration.
-    rm -f -- "$target"
+    # ★ ROLLBACK: the previous file back (or the new one removed), the proxy reloaded on it.
+    if [[ -n "$saved" ]]; then mv -f -- "$saved" "$target"; else rm -f -- "$target"; fi
     proxy_reload >/dev/null 2>&1 || true
-    die "the $PROXY check refused the route file, so it was removed again and the proxy reloaded without it:
+    die "the $PROXY check refused the route file, so it was rolled back${saved:+ to the previous one} and the proxy reloaded:
 $(printf '%s\n' "$log" | grep -v -i 'secret' | tail -n 5)"
   fi
+  [[ -z "$saved" ]] || rm -f -- "$saved"
   proxy_reload >/dev/null || die "the route file passed the $PROXY check but the reload failed"
   printf 'website-route: %s written, %s check passed, %s reloaded\n' "$target" "$PROXY" "$PROXY"
 }

@@ -50,22 +50,25 @@ const arg = (name, fallback) => {
   return hit ? hit.slice(name.length + 3) : fallback;
 };
 
-/** The fake members. Fixed ids, so a second sign-in is the same member. */
+/**
+ * The fake members. Fixed ids, so a second sign-in is the same member — numbers as the website's
+ * account ids are (piece 5c): the sign-in header carries String(id), the feed the JSON number.
+ */
 export const FAKE_MEMBERS = {
   member: {
-    id: 'standin-member-1',
+    id: '9001',
     name: 'Mia Member',
     roles: 'member',
     canHost: false,
   },
   host: {
-    id: 'standin-host-1',
+    id: '9002',
     name: 'Hugo Host',
     roles: 'member',
     canHost: true,
   },
   admin: {
-    id: 'standin-admin-1',
+    id: '9003',
     name: 'Ada Admin',
     roles: 'member,admin',
     canHost: true,
@@ -170,15 +173,21 @@ export function startStandin({
         res.writeHead(403, { 'content-type': 'text/plain' });
         return res.end('Forbidden');
       }
-      const since = Math.max(0, Number.parseInt(url.searchParams.get('since') ?? '0', 10) || 0);
+      // Exactly the website's answer (piece 5c; website server/src/games/embeddedRoutes.js and
+      // accounts/accountChanges.js): only ^\d{1,15}$ as since (else 400); { changes: [{ id
+      // (a JSON number), kind }], next (a digit string, unchanged while nothing is new) }.
+      const raw = url.searchParams.get('since') ?? '0';
+      if (!/^\d{1,15}$/.test(raw)) {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'invalid_cursor' }));
+      }
+      const since = Number(raw);
       const slice = events.slice(since, since + FEED_PAGE);
-      const next = since + slice.length;
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(
         JSON.stringify({
-          events: slice,
-          nextCursor: String(next),
-          hasMore: next < events.length,
+          changes: slice.map((e) => ({ id: Number(e.userId), kind: e.type })),
+          next: String(since + slice.length),
         })
       );
     }
@@ -199,15 +208,18 @@ export function startStandin({
       return res.end();
     }
     // --site: who is asking, for the proxy's authorize subrequest — the identity, never the secret.
+    // As the website answers (piece 5c; its server/src/games/embeddedRoutes.js): without the
+    // proxy's X-Original-Method it refuses (403, fail closed); otherwise always 204 — a member's
+    // headers, anyone else X-Acting-Guest alone.
     if (site && url.pathname === AUTHORIZE_PATH) {
-      const who = siteSession(req);
-      if (!who) {
-        res.writeHead(401, { 'content-type': 'text/plain' });
-        return res.end('not signed in');
+      if (!req.headers['x-original-method']) {
+        res.writeHead(403, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'method_unknown' }));
       }
+      const who = siteSession(req) ?? 'guest';
       const { 'x-ra-proxy-secret': _secret, ...identity } = identityHeaders(who, '');
-      res.writeHead(200, { 'content-type': 'text/plain', ...identity });
-      return res.end('ok');
+      res.writeHead(204, identity);
+      return res.end();
     }
     // --site: the race is the proxy's to reach; the website answers its own pages only.
     if (site) {

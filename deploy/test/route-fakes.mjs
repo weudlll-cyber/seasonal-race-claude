@@ -5,9 +5,11 @@
 // Description: The two stand-ins the route test (deploy/test/route-test.sh) puts behind a REAL proxy,
 //              in one file, chosen by the first argument:
 //
-//   node route-fakes.mjs site   a fake website on :3800. GET /api/games/race/authorize answers by the
-//                               website cookie's value (__Host-se.sid or se.sid): member, host and
-//                               guest → 200 with the identity headers; anything else → 401. It
+//   node route-fakes.mjs site   a fake website on :3800. GET /api/games/race/authorize answers as the
+//                               website does (piece 5c; its server/src/games/embeddedRoutes.js):
+//                               without X-Original-Method → 403 (fail closed); otherwise 204 — by the
+//                               website cookie's value (__Host-se.sid or se.sid) a member's or a
+//                               host's identity headers, anyone else X-Acting-Guest alone. It
 //                               records the headers of the last authorize request (GET /__last).
 //   node route-fakes.mjs race   a fake race on :4000 that records every request it receives — path
 //                               and headers — and answers it with that record. GET /__log (on its
@@ -61,13 +63,15 @@ if (role === 'site') {
         const who =
           cookieValue(req.headers.cookie, '__Host-se.sid') ??
           cookieValue(req.headers.cookie, 'se.sid');
-        const identity = IDENTITIES[who];
-        if (!identity) {
-          res.statusCode = 401;
-          return res.end('not signed in');
+        // Fail closed without the proxy's method, as the website does.
+        if (!req.headers['x-original-method']) {
+          res.statusCode = 403;
+          return res.end('method_unknown');
         }
+        const identity = IDENTITIES[who] ?? IDENTITIES.guest;
         for (const [k, v] of Object.entries(identity)) res.setHeader(k, v);
-        return res.end('ok');
+        res.statusCode = 204;
+        return res.end();
       }
       res.end('website');
     })

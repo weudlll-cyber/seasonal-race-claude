@@ -149,7 +149,7 @@ describe('the website stand-in in front of a website-mode race', () => {
       log: () => {},
     });
     const page = await poller.pollOnce();
-    expect(page.events).toEqual([{ type: 'locked', userId: 'standin-host-1' }]);
+    expect(page.events).toEqual([{ type: 'locked', userId: '9002' }]);
     // His director session ends on the next request, and he cannot sign in again.
     expect((await b.go(`${BASE}/api/auth/me`)).status).toBe(401);
     const again = await b.go('/_standin/as/host');
@@ -177,18 +177,29 @@ describe('the stand-in as the website itself (--site)', () => {
   });
   afterAll(() => site?.close());
 
-  it('authorize: the identity for se.sid, without the secret; no session → 401', async () => {
-    const member = await fetch(`${siteOrigin}/api/games/race/authorize`, {
+  // As the website answers (piece 5c): 204 always — a member's headers, anyone else a guest —
+  // and 403 when the proxy did not say which method the visitor used.
+  const authorize = (headers) =>
+    fetch(`${siteOrigin}/api/games/race/authorize`, {
+      headers: { 'x-original-method': 'GET', ...headers },
+    });
+  it('authorize: 204 with the identity for se.sid, never the secret; anyone else a guest', async () => {
+    const member = await authorize({ cookie: 'se.sid=member' });
+    expect(member.status).toBe(204);
+    expect(member.headers.get('x-acting-user')).toBe('Mia Member');
+    expect(member.headers.get('x-acting-user-id')).toBe('9001');
+    expect(member.headers.get('x-ra-proxy-secret')).toBeNull();
+    const nobody = await authorize({});
+    expect(nobody.status).toBe(204);
+    expect(nobody.headers.get('x-acting-guest')).toBe('true');
+    expect(nobody.headers.get('x-acting-user-id')).toBeNull();
+  });
+  it('authorize without the proxy’s X-Original-Method is refused (403, fail closed)', async () => {
+    const r = await fetch(`${siteOrigin}/api/games/race/authorize`, {
       headers: { cookie: 'se.sid=member' },
     });
-    expect(member.status).toBe(200);
-    expect(member.headers.get('x-acting-user')).toBe('Mia Member');
-    expect(member.headers.get('x-ra-proxy-secret')).toBeNull();
-    const guest = await fetch(`${siteOrigin}/api/games/race/authorize`, {
-      headers: { cookie: 'se.sid=guest' },
-    });
-    expect(guest.headers.get('x-acting-guest')).toBe('true');
-    expect((await fetch(`${siteOrigin}/api/games/race/authorize`)).status).toBe(401);
+    expect(r.status).toBe(403);
+    expect(r.headers.get('x-acting-user')).toBeNull();
   });
 
   it('picking a member sets the website cookie se.sid; the race path is not forwarded', async () => {
@@ -196,5 +207,30 @@ describe('the stand-in as the website itself (--site)', () => {
     expect(pick.headers.get('set-cookie')).toMatch(/^se\.sid=host;/);
     expect(pick.headers.get('location')).toBe(`${BASE}/auth/website`);
     expect((await fetch(`${siteOrigin}${BASE}/`)).status).toBe(404);
+  });
+});
+
+// Piece 5c: the stand-in's feed answers EXACTLY what the website sends (F1), so its tests can no
+// longer agree with a format the website does not send.
+describe("the stand-in's feed is the website's answer (F1)", () => {
+  it('★ { changes: [{ id: <number>, kind }], next: "<digits>" }; a non-digit since is 400', async () => {
+    const token = randomBytes(16).toString('hex');
+    const s = await startStandin({ port: 0, base: BASE, secret: null, token, site: true });
+    const at = `http://127.0.0.1:${s.address().port}`;
+    try {
+      await fetch(`${at}/_standin/event/locked/member`, { redirect: 'manual' });
+      const feed = (since) =>
+        fetch(`${at}/api/games/race/account-changes?since=${since}`, {
+          headers: { 'X-Games-Sync-Token': token },
+        });
+      expect(await (await feed('0')).json()).toEqual({
+        changes: [{ id: 9001, kind: 'locked' }],
+        next: '1',
+      });
+      expect(await (await feed('1')).json()).toEqual({ changes: [], next: '1' });
+      expect((await feed('abc')).status).toBe(400);
+    } finally {
+      s.close();
+    }
   });
 });
