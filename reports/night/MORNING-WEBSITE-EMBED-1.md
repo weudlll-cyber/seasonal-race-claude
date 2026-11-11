@@ -19,6 +19,7 @@ code was followed and the line is in **Where the code disagreed** below.
 | 4 — members join through the join page | **done** — `644c7447`, pushed |
 | end — verify, installer test, the owner's two addresses | **done** — see below |
 | 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — `52628908`, pushed |
+| 5a — the route file inside the website's proxy (third chain) | **done** — see below |
 | 6 — "Deleted player" in past races (2026-11-11, second chain) | **done** — see below; the race screen of a repeat keeps the stored names — decided 2026-11-11 (fork 1) |
 
 ## Start
@@ -472,6 +473,51 @@ the hull stays 232) and, in `client-suite`, `DevScreen.website.test.jsx` timing 
 (the test imports the whole Dev Screen afresh; 2.8 s alone). Fixed in the commit after piece 6: the
 counts regenerated (`gen-ceremony-costs.mjs --counts`; `--check-counts` green), and the test given
 the 60 s the Dev Screen's other heavy tests got on 2026-10-18 (2/2 alone). Nothing else re-run.
+
+## Piece 5a — the race's route file inside the website's proxy (third chain, 2026-11-11)
+
+**No copy of Bingo was on this machine** (searched the usual folders for `websiteRoute.sh`; the two Seasonal
+folders found are the bots, not the website or Bingo). Built from the website facts of the brief alone; nothing of
+Bingo or the website was read, edited or cloned.
+
+**What it does.** `deploy/website-route.sh` — ONE generator for both variants — renders the race's file for
+/games/race and installs it in the website's routes folder: written 0600 (it carries the proxy secret, which the
+proxy cannot read at run time; read from its own 0600 file, never printed), checked with the proxy's own check where
+the proxy runs (`nginx -t` on the host / `caddy validate` in the website's Caddy container, via `--exec`), then
+reloaded. A refused check removes the file, reloads again and exits non-zero with the reason (without the secret).
+`remove` takes the file out and reloads. It never writes anything but its own file.
+- *nginx:* `location = /games/race/auth/website` with `auth_request` to an internal location that proxies
+  `/api/games/race/authorize` with the visitor's headers as they came (the website cookie kept), `auth_request_set`
+  for the seven identity headers, the secret added; `location /games/race/` for everything else; `proxy_pass`
+  with no URI part (the full path). The website cookie is stripped with `if`+`set` on a copy of the Cookie header
+  (`map` is not allowed in an included server-level file). Every location sets its own forwarding headers, because a
+  location with any `proxy_set_header` inherits none from the server block.
+- *Caddy:* `handle /games/race/*` (not `handle_path`) with a `route` block, so the order is as written:
+  client identity and secret removed, `forward_auth` on the sign-in path only (`copy_headers` of the seven), the
+  secret on the sign-in path only, `reverse_proxy` with the website cookie cut out of `Cookie` by `header_up`.
+  Without `route`, Caddy's default order runs `request_header` AFTER `forward_auth` and would delete the identity.
+
+**Tests — real proxies** (`deploy/test/route-test.sh`, `route-check.mjs`, `route-fakes.mjs`; nginx 1.27.5-alpine and
+Caddy 2.11.7, both pinned by digest; one variant per run, never both; every container `--cpus 1 --memory 256m`; 14
+cores on this machine). A fake website (authorize: member / host / guest / 401) and a fake race that records what it
+receives, behind the real proxy with a website-like main configuration that includes the routes folder.
+**nginx 16/16, Caddy 16/16:** the race never receives the website cookie (plain path and sign-in; the race's own
+`ra.sid` and `ra_join` kept); the full path is forwarded; the authorize call receives the website cookie; client-sent
+X-Acting-* and secret cleared on a plain path, and on the sign-in as member and as guest (the website's identity only);
+can-host from the website; no website session → the website's 401 and the race not asked; the secret only on the
+sign-in (absent on four other paths, including `/games/race/auth/website/x` and `…/auth/websitex`); nothing outside
+/games/race/ reaches the race (`/`, `/games/race`, `/games/racer/x`, `/games/`, `/api/games/race/authorize`,
+`/gamesrace/`, `/x/games/race/`); a broken file refused, removed, the website still served, the secret not printed;
+remove works.
+**Sabotage, one per proof, per variant (changed copies of the generator; the repository file untouched) — 12 of 12 red:**
+P1 no cookie strip → 1 red; P2 the authorize call without the cookie → 6 red; P3 client identity not cleared → 1 red;
+P4 the secret on every path → 2 red; P5 the route widened to /games/ → 1 red; P6 no rollback → 1 red. Every ra-rt-*
+container and the network removed after each run.
+
+**Forks decided.** (1) File names `racearena.conf` / `racearena.caddy` — the website's include pattern is not in the
+facts; the installer (5b) takes the extension of the files already in the routes folder when there are any.
+(2) The secret sits in the route file (0600): neither proxy can read a separate file per request.
+(3) A website cookie sent twice is stripped up to twice per name (a browser sends a name once).
 
 ## Where the code disagreed with the summary
 

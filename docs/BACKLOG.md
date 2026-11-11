@@ -47,6 +47,9 @@ considered separately, and that would not be true.
         are marked "from the website".
       - **Piece 5 — the Dev Screen in website mode (built):** *Your password* and *Race directors*
         are not shown there (the owner's decision of 2026-11-11); standalone shows both.
+      - **Piece 5a — the race's route file in the website's proxy (built, third chain):**
+        `deploy/website-route.sh`, one generator for nginx and Caddy; proven behind both real proxies
+        (`deploy/test/route-test.sh`).
       - **Piece 6 — "Deleted player" in past races (built):** the owner's decision of 2026-11-11
         (OWNER-3) — a side table beside the race (`race_website_racers`), the stored race
         byte-identical; the result screen and the race history show "Deleted player". **Decided by the
