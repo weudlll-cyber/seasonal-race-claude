@@ -161,6 +161,12 @@ is.
   editor launcher it carries (GHSA-587h-7wmj-h5pm) and four lesser ones. Developer machines only:
   the launcher is used by the development server, never by an installed RaceArena.
   *(on `master`, 2026-10-22)*
+- Two server libraries updated within their ranges, each closing a high-severity denial-of-service
+  advisory: body-parser 2.4.0 (a compressed request with trailing bytes, GHSA-27r3-jxmh-p828) and
+  multer 2.5.0 (an upload left pending by its file filter, GHSA-q7qp-rjg7-q26m); ip-address and qs
+  moved with them, closing two moderate ones. The code-checking tool's validation library zod is
+  updated to 4.6.7 (GHSA-mrhx-c7xc-m3w5); developer machines only, never part of an installed
+  RaceArena. *(on `master`, 2026-11-11)*
 
 ## [1.0.0] — not yet tagged
 
