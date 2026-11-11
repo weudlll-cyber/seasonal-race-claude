@@ -461,6 +461,16 @@ references re-read and updated in this commit. **Noticed, left:** client/src/ser
 describes only the POST of a race (it holds eight calls now); several BACKLOG entries cite line
 numbers in races.js and raceStore.js that have drifted (dated records, left as written).
 
+## End of the second chain (pieces 5 and 6)
+
+**Verify, the diff of pieces 5 and 6 against `9b09c36e` (ONE run):** 22 passed, 2 failed, 14 skipped,
+895 s. Neither failure was a fault of the code: `ceremony-counts` (SHIP-CEREMONY.md's generated counts —
+the new `client/src/modules/deletedRacers.js` is one more module outside the hull, 89 → 90 and 32 → 33;
+the hull stays 232) and, in `client-suite`, `DevScreen.website.test.jsx` timing out at vitest's 5 s
+(the test imports the whole Dev Screen afresh; 2.8 s alone). Fixed in the commit after piece 6: the
+counts regenerated (`gen-ceremony-costs.mjs --counts`; `--check-counts` green), and the test given
+the 60 s the Dev Screen's other heavy tests got on 2026-10-18 (2/2 alone). Nothing else re-run.
+
 ## Where the code disagreed with the summary
 
 - The account-changes feed's field names are not in the summary (piece 3b, fork 2): read tolerantly

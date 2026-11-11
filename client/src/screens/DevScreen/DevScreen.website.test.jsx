@@ -41,6 +41,11 @@ async function renderAccounts(marker) {
   );
 }
 
+// Each test imports the whole Dev Screen afresh (the mode is read at import): 2.8 s alone, past
+// vitest's 5 s under a loaded machine (verify, 2026-11-11). The 60 s the Dev Screen's other heavy
+// tests got on 2026-10-18 (fix/devscreen-test-timeouts), for the same reason.
+const IMPORT_BUDGET_MS = 60_000;
+
 const WEBSITE = { apiBaseUrl: '/games/race', basePath: '/games/race', mode: 'website' };
 
 afterEach(() => {
@@ -48,19 +53,27 @@ afterEach(() => {
 });
 
 describe('DevScreen in website mode', () => {
-  it('hides "Your password" and "Race directors"; the rest of the chapter stays', async () => {
-    await renderAccounts(WEBSITE);
-    expect(screen.queryByTestId('section-changepassword')).toBeNull();
-    expect(screen.queryByTestId('section-usermanagement')).toBeNull();
-    expect(screen.queryByText('Your password')).toBeNull();
-    expect(screen.queryByText('Race directors')).toBeNull();
-    expect(screen.getByTestId('section-system')).toBeTruthy();
-    expect(screen.getByTestId('section-legal')).toBeTruthy();
-  });
+  it(
+    'hides "Your password" and "Race directors"; the rest of the chapter stays',
+    async () => {
+      await renderAccounts(WEBSITE);
+      expect(screen.queryByTestId('section-changepassword')).toBeNull();
+      expect(screen.queryByTestId('section-usermanagement')).toBeNull();
+      expect(screen.queryByText('Your password')).toBeNull();
+      expect(screen.queryByText('Race directors')).toBeNull();
+      expect(screen.getByTestId('section-system')).toBeTruthy();
+      expect(screen.getByTestId('section-legal')).toBeTruthy();
+    },
+    IMPORT_BUDGET_MS
+  );
 
-  it('★ standalone (no marker) shows both, as before', async () => {
-    await renderAccounts(null);
-    expect(screen.getByTestId('section-changepassword')).toBeTruthy();
-    expect(screen.getByTestId('section-usermanagement')).toBeTruthy();
-  });
+  it(
+    '★ standalone (no marker) shows both, as before',
+    async () => {
+      await renderAccounts(null);
+      expect(screen.getByTestId('section-changepassword')).toBeTruthy();
+      expect(screen.getByTestId('section-usermanagement')).toBeTruthy();
+    },
+    IMPORT_BUDGET_MS
+  );
 });
