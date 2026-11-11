@@ -68,8 +68,8 @@ export function normalizeUsername(raw) {
  * admin setup, an admin creating a user or resetting a password, a user changing their own, and
  * the recovery CLI. It is NEVER checked at sign-in, so a shorter password set before the rule keeps
  * working until it is changed. THE SAME NUMBER LIVES IN ONE OTHER PLACE: the VPS installer's
- * first-admin prompt, `deploy/install.sh` on the branch `feat/vps-install` (not in this tree) — a
- * shell script cannot import it, so change both together. The client checks no length of its own.
+ * first-admin prompt, `deploy/install.sh` — a shell
+ * script cannot import it, so change both together. The client checks no length of its own.
  */
 export const PASSWORD_MIN_LENGTH = 10;
 

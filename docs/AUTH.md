@@ -159,7 +159,7 @@ the response is `{ username, role }`.
 (AUDIT-1 A5M-15, decided 2026-10-12) — at setup, when an admin creates a user or resets a password,
 when you change your own, and in the recovery CLI; the refusal names the rule. One constant,
 `PASSWORD_MIN_LENGTH` in `server/src/auth/usersStore.js`; the VPS installer asks for the same 10 in
-`deploy/install.sh` (branch `feat/vps-install`). **Sign-in never checks it**, so a shorter password
+`deploy/install.sh`. **Sign-in never checks it**, so a shorter password
 set before the rule keeps working until it is changed. Usernames are normalised before comparison. The
 store is a JSON file written atomically and `chmod`ed to owner-only (`0o600`).
 

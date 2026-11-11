@@ -15,7 +15,7 @@ the code is right and this page is a bug.
 | --- | --- | --- | --- |
 | **Node** | the server run directly with `node`, from a release download, under your own process manager | [DEPLOYMENT.md](DEPLOYMENT.md), *Install, update and roll back* | on `master` |
 | **Docker** | the shipped `docker-compose.yml` in a checkout of the repository | [DEPLOYMENT.md](DEPLOYMENT.md), *Docker* | on `master`; the compose file is a development setup, and DEPLOYMENT.md says so |
-| **VPS install** | one command on a rented Ubuntu or Debian server, then the `racearena` helper | `docs/VPS-INSTALL.md` **on branch `feat/vps-install` only** | ★ **NOT MERGED.** Every `racearena` command below is marked *VPS install (branch feat/vps-install, not yet merged)* and does not exist on a `master` install |
+| **VPS install** | one command on a rented Ubuntu or Debian server, then the `racearena` helper | [VPS-INSTALL.md](VPS-INSTALL.md) | on `master` since 2026-11-11; every `racearena` command below is marked *VPS install* and exists only on that install |
 
 Commands for the Node path assume the layout and the variable names DEPLOYMENT.md uses: the release
 directory `$RA_HOME/racearena-<version>`, the settings file `$RA_ENV_FILE`, and the settings loaded
@@ -50,7 +50,7 @@ install. What is in it:
 | --- | --- | --- | --- |
 | Node | `RA_DATA_DIR` (DEPLOYMENT.md's example: `/var/lib/racearena/data`) | `RA_BACKUP_DIR` | the settings file, `chmod 600` |
 | Docker | `server/data` beside `docker-compose.yml` (a bind mount, not a Docker volume) | wherever you point the backup command | `docker-compose.override.yml`, written by `npm run configure` |
-| VPS install (branch feat/vps-install, not yet merged) | `/var/lib/racearena` | `/var/backups/racearena` | `/etc/racearena/racearena.env` (root only) |
+| VPS install | `/var/lib/racearena` | `/var/backups/racearena` | `/etc/racearena/racearena.env` (root only) |
 
 ★ **On the Node path, set `RA_DATA_DIR`.** Without it the data lives inside the release directory and
 the next version starts empty (DEPLOYMENT.md, *The layout*).
@@ -71,7 +71,7 @@ the accounts.
 | --- | --- |
 | Node | `npm run status`, from the release directory with the settings loaded |
 | Docker | `curl -s http://127.0.0.1:4000/api/health` for the API alone; `docker compose ps` shows the container's own health check |
-| VPS install (branch feat/vps-install, not yet merged) | `racearena status` |
+| VPS install | `racearena status` |
 
 `npm run status` checks four things and exits non-zero when one fails, so a scheduler can alert on
 it: the API answers, there is free disk at the data folder, the data folder is writable, and the
@@ -109,9 +109,9 @@ figure; per request the route reads the account store and names the build, and l
 (`server/src/health.js` → its header comment). The Docker image's own health check asks it every 30 seconds
 (`server/Dockerfile:230`).
 
-**On the VPS install (branch feat/vps-install, not yet merged)** a timer runs the status check every
-10 minutes (`deploy/systemd/racearena-status.timer:7` on that branch) and alerts by e-mail or in the
-system journal (`racearena alert`, `deploy/racearena:534-550` on that branch). **It does not replace
+**On the VPS install** a timer runs the status check every
+10 minutes (`deploy/systemd/racearena-status.timer:7`) and alerts by e-mail or in the
+system journal (`racearena alert`, `deploy/racearena:562-578`). **It does not replace
 an outside check:** it runs on the same machine, so when that machine is down, out of memory or cut
 off from the network, nothing is left to send the alert. Use both.
 
@@ -121,7 +121,7 @@ off from the network, nothing is left to send the alert. Use both.
 | --- | --- |
 | Node | wherever your process manager puts the process's output (for example `journalctl -u <your unit>` for a systemd unit) |
 | Docker | `docker compose logs server` (add `-f` to follow); the shipped compose file rotates the log at 10 MB, five files |
-| VPS install (branch feat/vps-install, not yet merged) | `racearena logs app`, `racearena logs caddy`, `-f` to follow; each rotates at 10 MB, five files |
+| VPS install | `racearena logs app`, `racearena logs caddy`, `-f` to follow; each rotates at 10 MB, five files |
 
 **What the server writes:** start-up lines that say what this install cannot do yet (no setup token,
 sign-in travelling unencrypted, no client build to serve) and how to fix it; warnings that name a user
@@ -135,7 +135,7 @@ password, a token, a secret, a request body or an IP address** (audit section A1
 | --- | --- | --- |
 | Node | `npm run backup` (writes into `RA_BACKUP_DIR`) | a cron line, DEPLOYMENT.md, *Backups, and the status check* |
 | Docker | once: `npm ci --prefix server`; then `RA_DATA_DIR=server/data RA_BACKUP_DIR=<your backup folder> node scripts/backup.mjs` | your own scheduler; nothing is shipped for it |
-| VPS install (branch feat/vps-install, not yet merged) | `racearena backup` | already scheduled: daily, archives older than 14 days are deleted |
+| VPS install | `racearena backup` | already scheduled: daily, archives older than 14 days are deleted |
 
 Each backup is one `racearena-backup-<UTC time>.tar` with a `.tar.sha256` checksum file beside it.
 **It works while the server runs**, copies the two databases safely, refuses rather than write half an
@@ -161,7 +161,7 @@ scp '<user>@<server>:/var/backups/racearena/racearena-backup-*' <local folder>/
 
 Then, in the folder that holds both files: `sha256sum -c racearena-backup-<UTC time>.tar.sha256`
 prints `OK` when the copy is intact. Neither path ships an automatic off-server copy; on the VPS
-install it is an open item on the branch, not a feature.
+install it is an open item ([BACKLOG.md](BACKLOG.md) PART ONE), not a feature.
 
 ### Restore
 
@@ -172,7 +172,7 @@ deleted.
 | --- | --- |
 | Node | stop the server; `mv "$RA_DATA_DIR" "$RA_DATA_DIR.before-restore-$(date +%Y%m%d%H%M%S)"`; `node scripts/backup.mjs --restore <archive> --into "$RA_DATA_DIR"`; start the server; sign in; `npm run status` |
 | Docker | `docker compose stop`; move `server/data` aside; `node scripts/backup.mjs --restore <archive> --into server/data`; `docker compose start`. *Run on 2026-10-04 (DEPLOYMENT.md). Since 2026-10-08 restored files are readable by their owner only; on a Linux host whose account is not the container's user (uid 1000) the container may then be unable to read them — not tested* |
-| VPS install (branch feat/vps-install, not yet merged) | `racearena restore <archive name>` — checks the checksum, stops the app, moves the data aside, restores, starts and checks health |
+| VPS install | `racearena restore <archive name>` — checks the checksum, stops the app, moves the data aside, restores, starts and checks health |
 
 ★ **Do not restore over existing data with `--force`** unless you mean to: it leaves files that are
 not in the archive in place (DEPLOYMENT.md, *Roll back a bad update*).
@@ -277,7 +277,7 @@ The registrations live in `registrations.sqlite` in the data folder; every backu
 | --- | --- | --- |
 | Node | DEPLOYMENT.md, *Update to a newer version*: unpack and build the new version beside the old one, stop, back up, run `node scripts/migrate.mjs` from the NEW version, start the new one, check | DEPLOYMENT.md, *Roll back a bad update*: stop, set the data aside, restore the backup taken before the update into an empty folder, start the OLD version |
 | Docker | DEPLOYMENT.md, *Update and roll back with Docker*: back up (§2); `docker compose stop` **before** changing the checkout; `git checkout` the new version; `npm ci --prefix server`; `RA_DATA_DIR=server/data node scripts/migrate.mjs`; `docker compose build`; `docker compose up -d`; check. *Run as a whole on 2026-10-18 with throwaway data* | the same section: stop; `git checkout` the previous version; set `server/data` aside; restore the backup taken before the update into an empty `server/data` (§2); `docker compose build`; `docker compose up -d`; check. *Run as a whole on 2026-10-18 with throwaway data* |
-| VPS install (branch feat/vps-install, not yet merged) | `racearena update [tag]` — a backup first, then build, migrations, start and a health check; if the app is not healthy within two minutes it goes back by itself | `racearena rollback` — back to the version before the last update and the backup taken just before it; the newer data is moved aside, not deleted |
+| VPS install | `racearena update [tag]` — a backup first, then build, migrations, start and a health check; if the app is not healthy within two minutes it goes back by itself | `racearena rollback` — back to the version before the last update and the backup taken just before it; the newer data is moved aside, not deleted |
 
 ★ **Keep the backup taken just before an update until you are sure.** It is the way back.
 
@@ -296,7 +296,7 @@ with `git ls-remote --tags origin`, which lists no tag of that shape.
 | GitHub, on the repository: **Watch → Custom → Releases** | an e-mail or GitHub notification when a release is **published on GitHub's Releases page**. A tag pushed without a published release does not notify |
 | [CHANGELOG.md](../CHANGELOG.md) | what each version changes for an operator or a race director, newest first; *Unreleased* is what the next version will carry |
 | the admin status box: **Dev Screen → Accounts and system**, at the top, admins only | its line *Newer release* (below) |
-| `racearena version` — VPS install (branch feat/vps-install, not yet merged) | the version running (`git describe --tags`, with the commit), the one before the last update, the address, and where the data and the backups are (`deploy/racearena:307-316` on that branch). It does not ask whether a newer one exists |
+| `racearena version` — VPS install | the version running (`git describe --tags`, with the commit), the one before the last update, the address, and where the data and the backups are (`deploy/racearena:335-344`). It does not ask whether a newer one exists |
 
 **The admin status box's *Newer release* line** comes from the server, which asks GitHub for the
 repository's tags **at most once a day** and keeps that answer — a failure included — for 24 hours
@@ -317,11 +317,11 @@ Every line but `unknown` ends with when the check was made. The box reads **tags
 not a release is published on GitHub's page. The route behind the box is admin-only
 (`server/src/auth/guards.js` → `ROUTE_POLICY`) and reads only (`server/src/routes/adminStatus.js` → `GET /status`).
 
-**`racearena update` without a tag** — VPS install (branch feat/vps-install, not yet merged) — takes
-the newest release tag from the repository (`deploy/racearena:98-101` on that branch: tags matching
+**`racearena update` without a tag** — VPS install — takes
+the newest release tag from the repository (`deploy/racearena:126-129`: tags matching
 `^v[0-9]+\.[0-9]+(\.[0-9]+)?$`, the highest by version order) and **refuses when there is none**:
 `no release tag (v<major>.<minor>[.<patch>]) exists yet — name one: racearena update <ref>`
-(`deploy/racearena:232-236` on that branch). Today that refusal is what it prints.
+(`deploy/racearena:263`). Today that refusal is what it prints.
 
 ---
 
@@ -340,7 +340,7 @@ one-time setup token.
 | --- | --- |
 | Node | start the server once with `RA_BOOTSTRAP_TOKEN` exported, send the setup request, restart without the token (DEPLOYMENT.md, install steps 5 to 7) |
 | Docker | `npm run configure` writes a token into `docker-compose.override.yml`; open the app's page *Create the first admin* (`/setup-admin`), which asks for it — or send the setup request of DEPLOYMENT.md's *Docker* section; then remove the token from the override file and `docker compose up -d` again |
-| VPS install (branch feat/vps-install, not yet merged) | the installer asks for the admin's name and password and removes the token afterwards |
+| VPS install | the installer asks for the admin's name and password and removes the token afterwards |
 
 ★ **A setup request answered `403 setup not available`** means the token is wrong **or no token is
 configured at all**; the answer is the same on purpose, and the server log says which (AUTH.md §1).
@@ -376,7 +376,7 @@ first-admin setup, and works only when there are no users at all.
 | --- | --- |
 | Node | stop the server; from the release directory with the settings loaded, run the command above; start the server |
 | Docker | `docker compose stop`; once, `npm ci --prefix server` on the host; `RA_DATA_DIR=server/data node scripts/recover-admin.mjs promote <username>`; `docker compose start`. **Not tested on this path:** if the host account cannot write the files the container created, the tool fails with a permission error |
-| VPS install (branch feat/vps-install, not yet merged) | **no route is written down.** `recover-admin.mjs` is not among the tools the branch's app image carries, and the host has no Node. Until the branch adds one, keep a second admin account |
+| VPS install | **no route is written down.** `recover-admin.mjs` is not among the tools the app image carries, and the host has no Node. Until one is added, keep a second admin account |
 
 ### Several organisers on one install
 
@@ -425,7 +425,7 @@ The server speaks plain HTTP. **On a public address, HTTPS comes from a proxy in
 | --- | --- |
 | Node | a reverse proxy such as Caddy, with `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in and `RA_TRUST_PROXY=1` so the server believes the one proxy's forwarded address — DEPLOYMENT.md, *Behind a reverse proxy*, a tested example |
 | Docker | the same proxy; the shipped compose file publishes port 4000 on **every** interface, so close it in your own override file with `ports: !override` and `- "127.0.0.1:4000:4000"` (DEPLOYMENT.md, *Docker*) |
-| VPS install (branch feat/vps-install, not yet merged) | automatic: Caddy obtains and renews the certificate; only ports 22, 80 and 443 are open |
+| VPS install | automatic: Caddy obtains and renews the certificate; only ports 22, 80 and 443 are open |
 
 `RA_PUBLIC_ORIGIN` must be the `https://` address exactly as visitors type it. The server warns at
 start when sign-in would travel unencrypted.
@@ -442,14 +442,14 @@ a quiet moment. Keep the file that holds it readable by its owner only.
 | path | state |
 | --- | --- |
 | Node, Docker | outside this project; nothing in the repository configures SSH |
-| VPS install (branch feat/vps-install, not yet merged) | the installer **does not change** the SSH configuration; it prints the guided step at the end. Put your public key in `~/.ssh/authorized_keys` of a non-root user who can use sudo, then: `sudo racearena harden-ssh --user <that user>` — it checks the user and prints the plan and a one-time code. In a **second** terminal, signed in as that user **with your key**, run `sudo racearena harden-ssh --confirm <code>`: it switches off password and root sign-in only if that session really used a key, and refuses otherwise. Keep both sessions open until a third sign-in with the key works. `--dry-run` shows the plan without a code |
+| VPS install | the installer **does not change** the SSH configuration; it prints the guided step at the end. Put your public key in `~/.ssh/authorized_keys` of a non-root user who can use sudo, then: `sudo racearena harden-ssh --user <that user>` — it checks the user and prints the plan and a one-time code. In a **second** terminal, signed in as that user **with your key**, run `sudo racearena harden-ssh --confirm <code>`: it switches off password and root sign-in only if that session really used a key, and refuses otherwise. Keep both sessions open until a third sign-in with the key works. `--dry-run` shows the plan without a code |
 
 ### fail2ban
 
 | path | state |
 | --- | --- |
 | Node, Docker | outside this project |
-| VPS install (branch feat/vps-install, not yet merged) | installed and on: five failed SSH sign-ins within ten minutes ban the address for one hour. `racearena status` shows how many addresses are banned |
+| VPS install | installed and on: five failed SSH sign-ins within ten minutes ban the address for one hour. `racearena status` shows how many addresses are banned |
 
 The app itself also limits failed sign-ins per IP address and failed password changes per user
 (AUTH.md §6).
@@ -487,15 +487,14 @@ Read the first lines it prints; each start-up refusal names its cause.
 | the port is already taken (another server, an old one still running) | refuses to start: `RaceArena cannot start: listen EADDRINUSE …`, exit 1 | stop the other process, or choose another `PORT` |
 | no client build present | **starts**, logs where it looked, and serves only the API | build the client (Node path, install step 3) |
 
-On the Docker path: `docker compose logs server`. On the VPS install (branch feat/vps-install, not yet
-merged): `racearena logs app`.
+On the Docker path: `docker compose logs server`. On the VPS install:
+`racearena logs app`.
 
 ### The disk is full
 
 **Measured:** reading keeps working; **every write fails, including sign-in** (it writes a session);
 nothing already stored is damaged; once space is freed the same write succeeds. The health route keeps
-answering `ok`, so watch the `disk` line of `npm run status` (or `racearena status` on the VPS install,
-branch feat/vps-install, not yet merged).
+answering `ok`, so watch the `disk` line of `npm run status` (or `racearena status` on the VPS install).
 
 Free space first: old backup archives are the usual candidates on the Node and Docker paths, because
 nothing deletes them. Copy them off the server before deleting them.
@@ -519,6 +518,8 @@ that**: the race database then uses write-ahead logging, and a save goes through
 reads (measured: about 20 ms). It is off by default because it keeps two more files beside
 `races.sqlite` while the server runs (`-wal`, `-shm`); do not put the data folder in a synced folder
 (OneDrive, Dropbox) with it on. Backups and restores work in both modes ([ENVIRONMENT.md](ENVIRONMENT.md)).
+The single-server (VPS) install turns it on, together with `RA_TRUST_PROXY=1` for its one proxy,
+Caddy (`deploy/docker-compose.prod.yml`).
 
 ### If the venue's internet drops
 
@@ -555,4 +556,4 @@ blocked ([OFFLINE-1.md](../reports/release/OFFLINE-1.md), *After the fix*):
 | --- | --- |
 | Node | stop the process and remove it from your process manager and cron; delete the release directories (`/opt/racearena/racearena-*` in DEPLOYMENT.md's example), the data folder (`RA_DATA_DIR`), the backups (`RA_BACKUP_DIR`) and the settings file. Those four places are everything the install wrote (DEPLOYMENT.md, *The layout*) |
 | Docker | `docker compose down --rmi local` in the repository folder, then delete the folder — it holds the data (`server/data`) and `docker-compose.override.yml` with the secrets — and your backup folder |
-| VPS install (branch feat/vps-install, not yet merged) | `sudo racearena uninstall`: it takes a final backup (and removes nothing if that fails), asks you to type the domain, then removes the containers, the app images, Caddy's certificates, the timers, the fail2ban jail, `/opt/racearena`, `/etc/racearena` and the command itself. **The data (`/var/lib/racearena`) and the backups (`/var/backups/racearena`) are kept.** `--purge-data` deletes those too, after asking a second time. Docker, ufw and unattended-upgrades stay installed, since other software may rely on them. Tested end to end on a local Docker, with and without `--purge-data` |
+| VPS install | `sudo racearena uninstall`: it takes a final backup (and removes nothing if that fails), asks you to type the domain, then removes the containers, the app images, Caddy's certificates, the timers, the fail2ban jail, `/opt/racearena`, `/etc/racearena` and the command itself. **The data (`/var/lib/racearena`) and the backups (`/var/backups/racearena`) are kept.** `--purge-data` deletes those too, after asking a second time. Docker, ufw and unattended-upgrades stay installed, since other software may rely on them. Tested end to end on a local Docker, with and without `--purge-data` |

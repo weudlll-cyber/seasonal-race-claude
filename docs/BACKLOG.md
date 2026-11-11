@@ -806,6 +806,78 @@ are in PART TWO with what closed them; these are the ones still standing.
       [DEPLOYMENT.md](DEPLOYMENT.md), which carries a tested Caddy example (PROXY-PROBE-1). B4 is closed
       on that decision. **The domain, the proxy and HTTPS are still open, and so is this row.**
 
+      **2026-10-07/08 (VPS-INSTALL-1) — THE INSTALL IS BUILT, AND NOT YET RUN ON THE VPS.** ★ **Merged to `master` on 2026-11-11** (the owner's merge approval that day); built on `feat/vps-install`.
+      **Decided 2026-10-07:** the game goes online on the owner's own VPS (Contabo); he installs it
+      himself, with one command from GitHub; Docker is used inside it.
+      **What it is** ([docs/VPS-INSTALL.md](VPS-INSTALL.md),
+      [reports/release/VPS-INSTALL-1.md](../reports/release/VPS-INSTALL-1.md)):
+      - `deploy/install.sh` (the one command);
+      - `deploy/racearena` (status, logs, backup, restore, update with automatic rollback,
+        rollback, version);
+      - `deploy/docker-compose.prod.yml`, with Caddy in front and only 80/443 published.
+
+      **It answers the four items of [DEPLOY-NOTES.md](DEPLOY-NOTES.md):195-200 for a single
+      server:**
+      - a compose file WITH the proxy (Caddy, pinned by digest);
+      - secrets generated at install, not copied;
+      - the data in `/var/lib/racearena` on the host;
+      - the image built on the server from the checked-out version.
+
+      **Still open:**
+      - the domain itself;
+      - the first run on the VPS with the owner, which tests what a local Docker cannot (system
+        detection, Docker install, ufw, unattended-upgrades, the DNS check, the real certificate,
+        the systemd timers, alert e-mails);
+      - the written pre-exposure bar (auth item 2 above; item 1, the CSP, is on since 2026-10-12).
+
+      **Observed 2026-10-18 (the end-to-end test, seven runs to 2026-10-19, local Docker on
+      Windows):** in 2 of 14 starts on an EMPTY data directory, right after the image was built, the app did not
+      pass its health check within the compose `start_period` and retries, compose marked it
+      unhealthy and did not start Caddy, and `racearena start` failed after 120 s; the next command
+      that runs `compose up` (here a restore) started Caddy and everything answered. The other 12
+      starts were healthy within seconds. Today's behaviour is kept. On the first VPS run, if
+      `racearena start` reports this, running it (or the install command) again runs `compose up`
+      again, which is what started Caddy in the test — expected to repair it, not yet seen there.
+      **★ FIXED 2026-10-22 — the cause was the start, not the app's speed.** When the app overruns
+      the compose health window, `compose up` gives up on Caddy, and nothing in `racearena` started
+      it again; the app turned healthy seconds later, but with no Caddy https never answered and the
+      start failed after the whole bound. What makes a first start slow is first-boot work before the
+      server listens — the 52 MB of seed files copied into the empty data directory — on a busy
+      host. `wait_healthy` (`deploy/racearena`) now starts the stack again once the app is healthy
+      and Caddy is not running, and says every 15 s what it is waiting for; the 120 s bound and the
+      update's automatic rollback are unchanged. The installer test gained a start on a version
+      whose server listens only after 70 s: compose gives up on Caddy, `racearena` starts it, https
+      answers — 79 of 79. [reports/release/VPS-INSTALL-1.md](../reports/release/VPS-INSTALL-1.md).
+- [ ] ★ **COPY THE BACKUPS OFF THE SERVER (VPS-INSTALL-1, 2026-10-07).** The install makes a backup
+      every day into `/var/backups/racearena` on the SAME disk as the data, keeping 14 days. A copy
+      on the same disk does not survive losing the disk. Nothing copies them elsewhere yet. The
+      install's closing text and [VPS-INSTALL.md](VPS-INSTALL.md) say so. Where they go — another
+      machine, storage he rents — is the owner's choice.
+      ★ **2026-10-18 — THE EMERGENCY DRILL PASSES on a local Docker** (`deploy/test/e2e-local.sh`,
+      its last section): a backup taken on one install and copied off it, that install removed with
+      `--purge-data`, a NEW install made (its own session secret, its own first admin), the carried
+      archive put into the new `/var/backups/racearena` and `racearena restore <archive>` run — the
+      old install's admin signs in, its race reads back, and the new install's own admin is gone
+      (the backup's accounts replace it). The whole test: 71 of 71 on the third run; the first two
+      runs failed only on a slow first start (the GOING ONLINE row above), the drill's restore checks
+      passing in the second. Run again after master `fbcbe1e7` was merged in: 71 of 71 on the first
+      run; and on 2026-10-19 after the major upgrades (master `d80dc945`), again after better-sqlite3 13
+      was reverted (master `faf2387f`), and after React 19 (master `e371938b`): 71 of 71 on the first
+      run each time. On 2026-10-22, after player registration (master `6470e2e6`), with three new
+      checks — a registration through Caddy, and back after the restore: 74 of 74 on the first run.
+      What it cannot show is the copy itself to another machine.
+      **verify:** a backup archive exists somewhere other than the server, newer than 2 days.
+- [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
+      deliberately does not change the SSH configuration: a mistake there locks the owner out of his
+      own server. ★ **Since 2026-10-09 (AUDIT-1 piece E) it is GUIDED, not manual:**
+      `sudo racearena harden-ssh --user <him>` plans it, and a confirmation run from a SECOND session
+      — which sshd's journal must show signed in with a key — switches off passwords and root sign-in
+      (refusals and the dry run tested in Debian 12, `deploy/test/hardening-check.sh`). fail2ban guards
+      SSH from the install on. What remains is running it, with him, on the VPS.
+
+      **verify:** on the VPS, `sshd -T | grep -E 'passwordauthentication|permitrootlogin'` prints
+      `passwordauthentication no` and `permitrootlogin no`.
+
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
 several organizers on one server. **On 2026-10-01 the owner also decided that the tenancy boundary
@@ -2471,8 +2543,8 @@ proposal arriving again in six months looking new.
         `better-sqlite3-session-store` is GPL-3.0-only; the "-only" pins the shipped image's combined
         work to version 3.)*
       - **A12 · retention** — decided 2026-10-12: left as is; stored races are kept for ever as
-        decided 2026-10-08, and backup archives are the operator's to prune (the VPS install on the
-        unmerged `feat/vps-install` keeps 14 days). *(As it stood: player names are stored forever in `races.sqlite`, immutable rows
+        decided 2026-10-08, and backup archives are the operator's to prune (the VPS install, merged to `master` on 2026-11-11,
+        keeps 14 days). *(As it stood: player names are stored forever in `races.sqlite`, immutable rows
         with no delete route, and backup archives are never pruned.)*
       - **A9-01 · one 1,007 KB JavaScript chunk** — decided 2026-10-12: left as is; code splitting
         changes how the app loads, and the size is a build warning, not a failure. *(As it stood: 295 KB

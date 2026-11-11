@@ -2,6 +2,11 @@
 
 **Owns:** deploying RaceArena to a public same-origin host, and the environment variables that requires. Local development is [SETUP.md](SETUP.md)'s.
 
+★ **On a single VPS, the recommended path is the one command in [VPS-INSTALL.md](VPS-INSTALL.md)**
+(VPS-INSTALL-1, 2026-10-07): it installs Docker, Caddy with a real certificate, the firewall, daily
+backups and a status check, and leaves a `racearena` command for status, backups, restores and
+updates. What follows here is for every other arrangement, and the reference for each setting.
+
 **How authentication BEHAVES — the first-admin channel, sessions, what is protected, and what the auth code does when a variable is absent — is [AUTH.md](AUTH.md)'s.**
 
 **The complete variable list, including the ones this page does not need, is [ENVIRONMENT.md](ENVIRONMENT.md)'s.** What follows is the subset a public deployment requires.

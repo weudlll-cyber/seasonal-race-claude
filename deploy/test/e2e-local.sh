@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+# ============================================================
+# File:        e2e-local.sh
+# Path:        deploy/test/e2e-local.sh
+# Project:     RaceArena — VPS-INSTALL-1 (2026-10-07)
+# Description: The production stack end to end on a local Docker, started EXACTLY as install.sh
+#              starts it — the same three settings files written the same way, then the same
+#              `racearena` commands (start, first-admin, verify-signin, backup, restore, update,
+#              uninstall) — with two differences a machine without a public name needs: Caddy signs
+#              for itself (`tls internal`, as PROXY-PROBE-1 did) and the name is `racearena.test`.
+#              Last, the EMERGENCY DRILL (2026-10-18): a backup is carried off the install before
+#              `uninstall --purge-data` removes it, a NEW install is made (its own secret, its own
+#              first admin), and `racearena restore` of the carried archive must bring back the old
+#              install's admin and race; the drill's install is then purged too.
+#
+# Usage: bash e2e-local.sh <e2eRoot> <repoClone> <refA> <refB> <refC> <refD>
+#   <repoClone>  a git repository holding the three refs; it becomes the checkout's `origin`
+#   <refA>       the version installed first
+#   <refB>       a newer one whose update must run a migration (a test migration, `e2e-test-1`)
+#   <refC>       a version whose app can never become healthy — its update must roll back by itself
+#   <refD>       <refB> with a server that starts listening only after 70 s: past the compose health
+#                window, inside racearena's bound — a start on it must still bring Caddy up
+# Run from Git Bash with Docker; it publishes 80 and 443 on this machine, so both must be free.
+# Everything it creates is under <e2eRoot> or carries the compose project name `racearena`; the
+# stack's containers, volumes and app images are removed by its own uninstall steps; the pulled
+# Caddy and Debian base images stay in Docker's image store.
+# ============================================================
+set -uo pipefail
+
+E2E="$1" CLONE="$2" REF_A="$3" REF_B="$4" REF_C="$5" REF_D="$6"
+# Windows form (pwd -W) under Git Bash: node is a Windows program and, with path conversion off
+# (MSYS_NO_PATHCONV below), would read /c/tmp/… as C:c	mp….
+HERE="$(cd "$(dirname "$0")" && { pwd -W 2>/dev/null || pwd; })"
+DOMAIN=racearena.test
+ADMIN=e2e-admin
+# A test-only password, held in memory and piped; never written to disk.
+ADMIN_PW="$(node -e "console.log(require('crypto').randomBytes(12).toString('base64url'))")"
+
+export RA_HOME="$E2E/home" RA_ETC="$E2E/etc" RA_DATA="$E2E/data" RA_BACKUPS="$E2E/backups"
+export MSYS_NO_PATHCONV=1
+mkdir -p "$E2E"
+RESULTS="$E2E/results.txt"
+: >"$RESULTS"
+
+pass() { printf 'PASS  %s\n' "$*" | tee -a "$RESULTS"; }
+fail() { printf 'FAIL  %s\n' "$*" | tee -a "$RESULTS"; }
+check() { local name="$1"; shift; if "$@"; then pass "$name"; else fail "$name"; fi; }
+ca_file() { docker exec racearena-caddy-1 cat /data/caddy/pki/authorities/local/root.crt >"$E2E/caddy-root.crt" 2>/dev/null; echo "$E2E/caddy-root.crt"; }
+visitor() { node "$HERE/e2e-check.mjs" "$DOMAIN" "$(ca_file)" "$@"; }
+
+# ── the layout install.sh step 5 makes, written the way it writes it ─────────────────────────────
+# lay_out_install [token] — a checkout of <refA>, the settings file with a NEW session secret (and,
+# with "token", the one-time setup token an empty install needs), the Caddyfile, compose.env, and
+# the helper. Used three times: the first install, the fresh copy before --purge-data (on the kept
+# data, so no token), and the emergency drill's new install (empty data, so a token).
+lay_out_install() {
+  mkdir -p "$RA_ETC/state" "$RA_DATA" "$RA_BACKUPS" "$E2E/bin"
+  git clone --quiet "$CLONE" "$RA_HOME"
+  git -C "$RA_HOME" checkout --quiet --detach "$REF_A"
+  {
+    printf 'RA_PUBLIC_ORIGIN=https://%s\n' "$DOMAIN"
+    printf 'RA_SESSION_SECRET=%s\n' "$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+    if [[ "${1:-}" == token ]]; then
+      printf 'RA_BOOTSTRAP_TOKEN=%s\n' "$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'))")"
+    fi
+  } >"$RA_ETC/racearena.env"
+  sed -e "s|{{DOMAIN}}|$DOMAIN|" -e "s|{{EMAIL}}|e2e@$DOMAIN|" -e 's|{{TLS_LINE}}|tls internal|' \
+    "$RA_HOME/deploy/Caddyfile.template" >"$RA_ETC/Caddyfile"
+  printf 'RA_DATA_HOST=%s\nRA_BACKUP_HOST=%s\nRA_ENV_FILE=%s\nRA_CADDYFILE=%s\n' \
+    "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/racearena.env" "$RA_ETC/Caddyfile" >"$RA_ETC/compose.env"
+  # install.sh installs racearena to /usr/local/bin, a COPY: the checkout changes under it during an
+  # update, and bash reads a script while it runs it. The test runs a copy for the same reason.
+  cp "$RA_HOME/deploy/racearena" "$E2E/bin/racearena"
+}
+lay_out_install token
+RACEARENA=(bash "$E2E/bin/racearena")
+
+echo "── install.sh step 6: start, first admin, sign-in over https"
+check "racearena start: both services up and healthy" "${RACEARENA[@]}" start
+check "first admin created through racearena first-admin" bash -c "printf '%s\n' '$ADMIN_PW' | ${RACEARENA[*]} first-admin --user $ADMIN"
+check "the one-time token is removed from the settings file" bash -c "! grep -q '^RA_BOOTSTRAP_TOKEN=' '$RA_ETC/racearena.env'"
+check "setup is refused once the admin exists" visitor setup-refused
+check "racearena verify-signin works through https" bash -c "printf '%s\n' '$ADMIN_PW' | ${RACEARENA[*]} verify-signin --user $ADMIN"
+check "the test-aids switch is OFF on the fresh install" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' test-aids-off $ADMIN"
+check "a visitor's sign-in sets a Secure cookie" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' cookie $ADMIN"
+
+echo "── only 80 and 443 are published"
+docker ps --filter label=com.docker.compose.project=racearena --format '{{.Names}}: {{.Ports}}' | tee -a "$RESULTS"
+check "the app publishes no host port" bash -c "[ -z \"\$(docker port racearena-app-1)\" ]"
+check "caddy publishes exactly 80 and 443" bash -c "[ \"\$(docker port racearena-caddy-1 | sed 's/ ->.*//' | sort -u | tr '\n' ' ')\" = '443/tcp 80/tcp ' ]"
+
+echo "── a race stored and read back"
+KEY="$(printf '%s\n' "$ADMIN_PW" | visitor store-race "$ADMIN")"
+check "a race is stored over https ($KEY)" test -n "$KEY"
+check "the race reads back" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
+
+echo "── a player registration through the proxy (REGISTRATION-1)"
+REG="$(printf '%s\n' "$ADMIN_PW" | visitor open-registration "$ADMIN")"
+check "a registration is opened and a player joins anonymously over https ($REG)" test -n "$REG"
+check "the public join route and the /join page reach the app through Caddy" visitor read-registration "$REG"
+
+echo "── backup → delete the data → restore"
+check "racearena backup" "${RACEARENA[@]}" backup
+ARCHIVE="$(cat "$RA_ETC/state/last-backup")"
+docker stop racearena-app-1 >/dev/null
+find "$RA_DATA" -mindepth 1 -delete
+check "the data directory is empty (deleted)" bash -c "[ -z \"\$(ls -A '$RA_DATA')\" ]"
+check "racearena restore $ARCHIVE" "${RACEARENA[@]}" restore "$ARCHIVE"
+check "the race is back after the restore" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
+check "the admin is back after the restore" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $ADMIN"
+check "the registration and its player are back after the restore (registrations.sqlite)" visitor read-registration "$REG"
+
+echo "── racearena update A → B runs B's migration"
+check "the ledger does not hold e2e-test-1 before the update" bash -c "! grep -q e2e-test-1 '$RA_DATA/migrations.json' 2>/dev/null"
+check "racearena update $REF_B" "${RACEARENA[@]}" update "$REF_B"
+check "the ledger holds e2e-test-1 after the update" grep -q e2e-test-1 "$RA_DATA/migrations.json"
+check "the migration's own marker file exists" test -f "$RA_DATA/e2e-test-1.marker"
+check "the race survives the update" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
+
+echo "── racearena update B → C (an app that never becomes healthy) rolls back by itself"
+B_SHA="$(git -C "$RA_HOME" rev-parse HEAD)"
+"${RACEARENA[@]}" update "$REF_C" >"$E2E/update-c.log" 2>&1
+UPD_RC=$?
+tail -n 6 "$E2E/update-c.log" | tee -a "$RESULTS"
+check "the failed update exits non-zero" test "$UPD_RC" -ne 0
+check "it says it rolled back" grep -q "ROLLED BACK" "$E2E/update-c.log"
+check "the checkout is back on B" test "$(git -C "$RA_HOME" rev-parse HEAD)" = "$B_SHA"
+check "the app is healthy again on B" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
+
+echo "── restarts"
+docker restart racearena-app-1 racearena-caddy-1 >/dev/null
+sleep 40
+check "after docker restart, the app is healthy" bash -c "[ \"\$(docker inspect -f '{{.State.Health.Status}}' racearena-app-1)\" = healthy ]"
+check "after docker restart, https answers" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $ADMIN"
+docker kill -s KILL racearena-app-1 >/dev/null
+sleep 45
+docker inspect -f 'after a SIGKILL of the app: status={{.State.Status}} restarts={{.RestartCount}} health={{if .State.Health}}{{.State.Health.Status}}{{end}}' racearena-app-1 | tee -a "$RESULTS"
+
+echo "── a slow start: the app healthy only after the compose window, Caddy still started (VPS-INSTALL-1)"
+# Both containers gone, as on a first start; then a version whose server listens only after 70 s.
+# Compose marks it unhealthy and gives up on Caddy; racearena must start Caddy once the app is healthy.
+docker rm -f racearena-app-1 racearena-caddy-1 >/dev/null
+# A SHA, not the name: in the install's own clone a throwaway branch exists only as origin/<name>.
+D_SHA="$(git -C "$CLONE" rev-parse "$REF_D")"
+check "the checkout is on D" git -C "$RA_HOME" checkout --quiet --detach "$D_SHA"
+"${RACEARENA[@]}" start >"$E2E/start-d.log" 2>&1
+START_D_RC=$?
+tail -n 4 "$E2E/start-d.log" | tee -a "$RESULTS"
+check "racearena start succeeds on an app that answers only after 70 s" test "$START_D_RC" -eq 0
+check "it started Caddy itself once the app was healthy" grep -q "starting Caddy" "$E2E/start-d.log"
+check "https answers after the slow start" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $ADMIN"
+docker rm -f racearena-app-1 racearena-caddy-1 >/dev/null
+git -C "$RA_HOME" checkout --quiet --detach "$B_SHA"
+check "back on B: racearena start" "${RACEARENA[@]}" start
+
+echo "── log rotation"
+for c in racearena-app-1 racearena-caddy-1; do
+  docker inspect -f "$c: {{.HostConfig.LogConfig.Type}} {{json .HostConfig.LogConfig.Config}}" "$c" | tee -a "$RESULTS"
+  check "$c rotates its log at 10m × 5" bash -c "docker inspect -f '{{json .HostConfig.LogConfig}}' $c | grep -q '\"max-file\":\"5\"' && docker inspect -f '{{json .HostConfig.LogConfig}}' $c | grep -q '\"max-size\":\"10m\"'"
+done
+
+echo "── the Linux-only hardening, in a throwaway Debian 12 (fail2ban jail, harden-ssh refusals, install.sh --dry-run)"
+docker run --rm -v "$HERE/..:/deploy:ro" \
+  debian@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 \
+  bash /deploy/test/hardening-check.sh 2>/dev/null | grep -E '^(PASS|FAIL) ' | tee -a "$RESULTS"
+
+echo "── racearena uninstall keeps the data"
+export RA_BIN="$E2E/bin/racearena"
+BACKUPS_BEFORE="$(find "$RA_BACKUPS" -name 'racearena-backup-*.tar' | wc -l)"
+check "a wrong domain is refused and removes nothing" bash -c "! printf 'not-the-domain\n' | ${RACEARENA[*]} uninstall && [ -d '$RA_HOME' ] && [ -n \"\$(docker ps -q --filter label=com.docker.compose.project=racearena)\" ]"
+check "racearena uninstall (the domain typed)" bash -c "printf '%s\n' '$DOMAIN' | ${RACEARENA[*]} uninstall"
+check "it took a final backup first" test "$(find "$RA_BACKUPS" -name 'racearena-backup-*.tar' | wc -l)" -gt "$BACKUPS_BEFORE"
+check "no container of the stack is left" bash -c "[ -z \"\$(docker ps -aq --filter label=com.docker.compose.project=racearena)\" ]"
+check "the checkout and the settings are gone" bash -c "[ ! -e '$RA_HOME' ] && [ ! -e '$RA_ETC' ]"
+check "the helper removed itself" test ! -e "$RA_BIN"
+check "the data is KEPT" test -f "$RA_DATA/users.json"
+check "the backups are KEPT" test -n "$(find "$RA_BACKUPS" -name 'racearena-backup-*.tar')"
+
+echo "── racearena uninstall --purge-data, on a fresh copy of the stack"
+lay_out_install
+check "the stack starts again on the kept data" "${RACEARENA[@]}" start
+# The emergency drill below needs a backup of THIS install that outlives it: take one and copy the
+# archive and its checksum OFF (to $E2E/carried), as the operator guide says to do with every backup.
+check "racearena backup, then the archive is copied off the install" "${RACEARENA[@]}" backup
+CARRIED="$(cat "$RA_ETC/state/last-backup")"
+mkdir -p "$E2E/carried"
+cp "$RA_BACKUPS/$CARRIED" "$RA_BACKUPS/$CARRIED.sha256" "$E2E/carried/"
+check "--purge-data refuses without the second confirmation" bash -c "! printf '%s\nno\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data && [ -f '$RA_DATA/users.json' ]"
+check "racearena uninstall --purge-data (both confirmations)" bash -c "printf '%s\ndelete all data\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data"
+check "the data is gone" test ! -e "$RA_DATA"
+check "the backups are gone" test ! -e "$RA_BACKUPS"
+check "no container of the stack is left" bash -c "[ -z \"\$(docker ps -aq --filter label=com.docker.compose.project=racearena)\" ]"
+
+echo "── the emergency drill: a NEW install, then the backup carried from the old one restored into it"
+# What losing the server looks like: nothing of the old install is left (above), a fresh install is
+# made with its own secret and its own first admin, the carried archive is put into its backups
+# directory, and `racearena restore` brings back the old install's accounts and races.
+NEW_ADMIN=e2e-new-admin
+NEW_PW="$(node -e "console.log(require('crypto').randomBytes(12).toString('base64url'))")"
+lay_out_install token
+check "the new install starts on an empty data directory" "${RACEARENA[@]}" start
+check "the new install's own first admin is created" bash -c "printf '%s\n' '$NEW_PW' | ${RACEARENA[*]} first-admin --user $NEW_ADMIN"
+cp "$E2E/carried/$CARRIED" "$E2E/carried/$CARRIED.sha256" "$RA_BACKUPS/"
+check "racearena restore $CARRIED (made on the old install)" "${RACEARENA[@]}" restore "$CARRIED"
+check "the old install's admin signs in on the new install" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $ADMIN"
+check "the old install's race reads back on the new install" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' read-race $ADMIN $KEY"
+check "the new install's own admin is replaced by the backup's accounts" bash -c "! printf '%s\n' '$NEW_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' signin $NEW_ADMIN"
+check "the drill's install is removed with --purge-data" bash -c "printf '%s\ndelete all data\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data"
+check "no container of the stack is left after the drill" bash -c "[ -z \"\$(docker ps -aq --filter label=com.docker.compose.project=racearena)\" ]"
+
+echo
+echo "summary: $(grep -c '^PASS' "$RESULTS") passed, $(grep -c '^FAIL' "$RESULTS") failed — $RESULTS"

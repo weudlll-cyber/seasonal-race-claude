@@ -1,0 +1,8 @@
+# VPS-INSTALL-1 (2026-10-07) — started by racearena-status.service when the check fails:
+# `racearena alert` e-mails (SMTP set up at install) or writes to the journal (tag racearena-alert).
+[Unit]
+Description=RaceArena alert after a failed status check
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/racearena alert
