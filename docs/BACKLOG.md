@@ -49,10 +49,11 @@ considered separately, and that would not be true.
         are not shown there (the owner's decision of 2026-11-11); standalone shows both.
       - **Piece 6 — "Deleted player" in past races (built):** the owner's decision of 2026-11-11
         (OWNER-3) — a side table beside the race (`race_website_racers`), the stored race
-        byte-identical; the result screen and the race history show "Deleted player". **Open:** the
-        race screen of a repeat still draws the stored names (drawn at several sites in the engine hull;
-        the sheet says why), Export CSV keeps the stored names, and a repeat from another device's
-        server row carries no mapping.
+        byte-identical; the result screen and the race history show "Deleted player". **Decided by the
+        owner, 2026-11-11:** a re-run race ("Run again") keeps drawing the stored names on the race
+        screen (name tags, start board, standings, winner card) — the result and the race history mask
+        them; not to be built. Also as built: Export CSV keeps the stored names, and a repeat from
+        another device's server row carries no mapping.
 
       **verify:** the owner's look at the rehearsal — "/" unchanged, and the "Website members only /
       Anyone with the link" choice on the join flow; until then no command decides it.

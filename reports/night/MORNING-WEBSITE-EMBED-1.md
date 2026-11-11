@@ -19,7 +19,7 @@ code was followed and the line is in **Where the code disagreed** below.
 | 4 — members join through the join page | **done** — `644c7447`, pushed |
 | end — verify, installer test, the owner's two addresses | **done** — see below |
 | 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — `52628908`, pushed |
-| 6 — "Deleted player" in past races (2026-11-11, second chain) | **done** — see below; the race screen of a repeat still draws stored names (fork 1) |
+| 6 — "Deleted player" in past races (2026-11-11, second chain) | **done** — see below; the race screen of a repeat keeps the stored names — decided 2026-11-11 (fork 1) |
 
 ## Start
 
@@ -442,7 +442,9 @@ The standalone panel test caught that the entries were handed over in every mode
    hull, and the name tags' layout is measured from the text, so a longer "Deleted player" would move the picture.
    Kept as today, so the stored race and the hull are untouched. **What IS masked for a repeat:** the repeat carries the
    race's `websiteRacers` (same roster, same indexes), so its result screen, its history row and its stored mapping
-   show "Deleted player" like the race it repeats. Open for the owner's word.
+   show "Deleted player" like the race it repeats. **Decided by the owner, 2026-11-11: a re-run race ("Run again")
+   keeps drawing the stored names on the race screen — name tags, start board, standings, winner card; the result
+   and the race history mask them. Not to be built.**
 2. **The client asks every 15 s while a result or the history is open** (website mode, only for races on screen;
    the result screen only when its race had website members). The owner's look needs the result to change while it is
    open; the feed's fastest interval is 15 s.
@@ -481,6 +483,6 @@ the 60 s the Dev Screen's other heavy tests got on 2026-10-18 (2/2 alone). Nothi
 - ~~Whether the Dev Screen should hide *Change password* and *User management* in website mode~~ —
   decided 2026-11-11 (hide), built as piece 5.
 - ~~Masking a deleted member's name in PAST races~~ — decided 2026-11-11 (a side table), built as piece 6.
-- Piece 6, fork 1: whether the race screen of a REPEAT should draw "Deleted player" too (it draws the
-  stored names today; changing it touches the engine hull and moves the name-tag layout).
+- ~~Piece 6, fork 1: whether the race screen of a REPEAT should draw "Deleted player" too~~ — decided
+  2026-11-11: it keeps the stored names; not to be built.
 - The look at the end: "/" unchanged, and the "Website members only / Anyone with the link" choice.
