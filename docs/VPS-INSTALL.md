@@ -90,6 +90,57 @@ same disk is lost together with the disk.
 **Running the server day to day** — health, backups, updates, accounts, security, what to do when
 something goes wrong — is in the [operator guide](OPERATOR-GUIDE.md).
 
+## Inside Seasonal Entertainment (website mode)
+
+*(WEBSITE-EMBED-1 pieces 5a and 5b, 2026-11-11, on branch `feat/website-embedding`; not merged until the
+rehearsal on the real website.)* The same command installs RaceArena **inside** the Seasonal
+Entertainment website, on the website's own server: under `/games/race`, behind the website's proxy,
+with the website's accounts (sign-in: [AUTH.md](AUTH.md) §10; settings:
+[ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*).
+
+**Which install.** When the server carries the website's markers — `/etc/seasonal/site-local-port`,
+`/etc/seasonal/games-sync-token` and the folder `/etc/seasonal/routes/` — the installer asks first
+whether to install inside it (Enter = yes). Without them there is no question and everything above is
+exactly as it was. `--mode standalone|website` decides without asking. The mode is kept in
+`/etc/racearena/mode`; `racearena update` keeps it.
+
+**What it asks:** only **the team** the website's hosts run races in (Enter = *Seasonal
+Entertainment*). No domain, no certificate e-mail, no first admin. **`--site-origin
+https://<the website's domain>` is required:** the website's public address cannot be read from the
+server, and the installer does not guess it.
+
+**What it finds out by itself** (`deploy/install.sh` → `website_detect`), and the flag for when it
+cannot:
+
+| | how | flag |
+| --- | --- | --- |
+| the website's proxy | the extension of the other games' files in `/etc/seasonal/routes/` (`.conf` nginx, `.caddy` Caddy); else nginx running on the server and no Caddy container, or the reverse | `--proxy nginx\|caddy` |
+| the website's Caddy (Caddy mode) | the one running Caddy container that mounts `/etc/seasonal/routes` | — (exactly one, or it stops) |
+| the website's port | `/etc/seasonal/site-local-port` | — |
+| the website's account feed | the container answering as `site` on one of its networks → `http://site:3800`; the race's app joins that network | `--feed-url <url>` |
+| the race's network | `172.30.250.0/24` unless another Docker network uses it (Bingo's is `172.30.249.0/24`) — then it stops | `--subnet <cidr>` |
+
+**What it does:**
+
+| | |
+| --- | --- |
+| Docker | installed the same way as above **only if it is missing**. No firewall rule and no fail2ban: the server is the website's |
+| lays out | the same folders as above, and `/etc/racearena/website/proxy-secret` — generated once, readable by the app's account only (0400), **never printed** |
+| the sync token | the website's `games-sync-token` (root-only) is copied for the app's account (0400) and taken again at every `racearena start` and `update`, so a renewed token reaches the race |
+| starts | **the app only** — no Caddy of the race, nothing on 80 or 443. nginx mode: published on `127.0.0.1:<a free port 3900–3999>`; Caddy mode: not published, the website's Caddy joins the race's network and reaches it as `racearena:4000`. The race's network (its subnet) is the only trusted proxy |
+| the route | `racearena route install` writes `/etc/seasonal/routes/racearena.conf` (or `.caddy`) with `deploy/website-route.sh`, **0600** (it carries the proxy secret), checks it with the proxy's own check — `nginx -t`, or `caddy validate` in the website's container — and reloads the proxy. A refused check takes the file out again, reloads, and stops with the reason. **No file of the website is ever edited** |
+| schedules | the same daily backup and status check as above; **backups stay the race's own** |
+
+What the route file does on every request, and how it is proven behind both real proxies:
+[reports/night/MORNING-WEBSITE-EMBED-1.md](../reports/night/MORNING-WEBSITE-EMBED-1.md), *Piece 5a*.
+
+**The `racearena` command in website mode:** `status` names the mode and the route file's state
+(present, owner-only, and what this version writes) instead of https; `route [install|remove|status]`
+manages the route file; `uninstall` takes out **only** the race's route file (then reloads the
+website's proxy), the race's containers and network — the website's Caddy leaves the race's network
+first — and the race's settings; **the data and the backups are kept**, as above. `logs caddy` and
+`harden-ssh` are the standalone install's.
+
 ## If it stops
 
 - **"does not point at this server yet"** — set the A record as the message says, wait, and run the
@@ -115,3 +166,8 @@ something goes wrong — is in the [operator guide](OPERATOR-GUIDE.md).
   back. On a real loss, that is the way back: install afresh, copy the archive in, restore.
 - **Tested only on the real server, at the first install:** the system check, the Docker install, ufw,
   unattended-upgrades, the DNS check, the real certificate, the systemd timers and the alert e-mails.
+- **Website mode (2026-11-11):** the route file behind real nginx and Caddy (`deploy/test/route-test.sh`),
+  and the whole install in a throwaway Ubuntu 24.04 machine with systemd and its own Docker, with FAKE
+  website markers and the stand-in (`scripts/website-standin.mjs --site`) as the website, one proxy at
+  a time (`deploy/test/e2e-website.sh`). **Not yet on the real website**: that rehearsal is the
+  owner's call, when the website is ready.

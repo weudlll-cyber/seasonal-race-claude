@@ -19,7 +19,8 @@ code was followed and the line is in **Where the code disagreed** below.
 | 4 — members join through the join page | **done** — `644c7447`, pushed |
 | end — verify, installer test, the owner's two addresses | **done** — see below |
 | 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — `52628908`, pushed |
-| 5a — the route file inside the website's proxy (third chain) | **done** — see below |
+| 5a — the route file inside the website's proxy (third chain) | **done** — `3d658d7f`, pushed |
+| 5b — the installer's website mode (third chain) | **done** — see below |
 | 6 — "Deleted player" in past races (2026-11-11, second chain) | **done** — see below; the race screen of a repeat keeps the stored names — decided 2026-11-11 (fork 1) |
 
 ## Start
@@ -518,6 +519,95 @@ container and the network removed after each run.
 facts; the installer (5b) takes the extension of the files already in the routes folder when there are any.
 (2) The secret sits in the route file (0600): neither proxy can read a separate file per request.
 (3) A website cookie sent twice is stripped up to twice per name (a browser sends a name once).
+
+## Piece 5b — the installer's second mode, "inside Seasonal Entertainment" (third chain, 2026-11-11)
+
+**What it does.** `deploy/install.sh`, the same one command:
+- **Which install:** with the website's markers on the server (`/etc/seasonal/site-local-port`,
+  `games-sync-token`, `routes/`) it asks first "Install RaceArena inside it, under /games/race? [Y/n]";
+  `--mode standalone|website` decides without asking. **Without the markers there is no question**, and the
+  standalone run asks and does exactly what it did before (its functions are unchanged; Docker's install and the
+  checkout step were MOVED out of `install_os` and `lay_out` unchanged so website mode can call them).
+- **Website mode asks only the team** (Enter = "Seasonal Entertainment", OWNER-2) — no domain, no certificate e-mail,
+  no first admin — then: detects the website (below), checks the race's subnet, installs Docker only if it is
+  missing (no ufw, no fail2ban: the server is the website's), generates the proxy secret (0400, the app's uid,
+  never printed), writes the settings (`RA_MODE=website`, `RA_BASE_PATH=/games/race`, `RA_PUBLIC_ORIGIN`,
+  `RA_WEBSITE_TEAM`, the two secret-file paths, `RA_WEBSITE_TRUSTED_PROXIES` = the race's subnet,
+  `RA_WEBSITE_FEED_URL`), stores the mode (`/etc/racearena/mode`) and `website.conf` (no secret), starts the
+  app WITHOUT the race's Caddy and without 80/443, runs `racearena route install` (piece 5a), and installs the
+  same backup and status timers. Backups stay the race's own.
+- **`racearena`**: in website mode every compose call adds a generated overlay (`/etc/racearena/compose.website.yml`,
+  rewritten from website.conf each time): the base path's health check, the secret and the sync-token copy mounted
+  read-only, the network alias `racearena`, the race's own subnet, the website's network for the feed, and — nginx —
+  `127.0.0.1:<port>:4000`. `start`/`update` refresh the sync-token copy (0400, the app's uid) from the website's
+  root-only token; `up` starts the app only; health is the app's own check (no https through a Caddy of its own);
+  Caddy mode connects the website's Caddy to the race's network. `status` names the mode and the route file's
+  state (present, mode, equal to what this version writes). `route install|remove|status`. `uninstall` takes out
+  only the race's route file (reloading the website's proxy), disconnects the website's Caddy, then the race's
+  containers and network, timers and settings; data and backups kept, as today.
+
+**How the proxy, the origin and the site's port are detected — fork, because no copy of Bingo's `website.sh` was on
+this machine** (`install.sh` → `website_detect`; never guessed; what cannot be told stops with the flag to give):
+- *proxy variant:* the extension of the OTHER games' files in `/etc/seasonal/routes/` (`.conf` → nginx,
+  `.caddy` → Caddy); else nginx active on the host and no Caddy container mounting the routes folder, or the
+  reverse; anything else → refuse, `--proxy nginx|caddy`. Caddy mode needs exactly one running Caddy container
+  mounting `/etc/seasonal/routes` (its `--exec` for the check and reload).
+- *the website's public origin:* **not detectable** from the facts (no marker carries it) → `--site-origin <url>`
+  is REQUIRED in website mode; the install refuses without it.
+- *the website's port:* `/etc/seasonal/site-local-port` (nginx: the authorize subrequest goes to
+  `127.0.0.1:<that port>`; Caddy: `site:3800` from the facts).
+- *how the race reaches the feed from inside its container:* the container answering as `site` on one of its
+  networks → the race's app joins that network and uses `http://site:3800`; when there is none (a website not
+  run as a container) → refuse, `--feed-url <url>`. A website on the host's loopback cannot be reached from a
+  container by any address the installer could pick without guessing.
+- *the race's subnet:* `172.30.250.0/24`, refused when any other Docker network uses it; `--subnet`.
+- *nginx mode's local port:* the first free one in 3900–3999 (`ss`), kept across re-runs. Caddy mode publishes
+  none (the website's Caddy reaches the container by name).
+- *route file name:* `racearena.conf` / `racearena.caddy`, or the other games' extension.
+
+**The stand-in as the site** (`scripts/website-standin.mjs --site`): the website ITSELF behind a real proxy —
+authorize by its own `se.sid` cookie (member / host / admin / guest; none → 401), identity headers without the
+secret, the feed, picking a member sets `se.sid`, and nothing forwarded to the race. +2 tests in
+`standin.integration.test.js` (8/8).
+
+**Tests.**
+- *Website mode*, `deploy/test/e2e-website.sh` + `e2e-website-inner.sh`: a throwaway Ubuntu 24.04 machine
+  (privileged container, systemd as init, its own Docker; `--cpus 6 --memory 6g`), fake markers, the stand-in as
+  the website container `site`, the website's proxy over https (the race's session cookie is Secure and is set only
+  on a request the proxy says came over https), the REAL `install.sh` cloning a bare copy of the repository
+  (`RA_INSTALL_REPO_URL`, test-only), ref B = A + one docs line (throwaway, never pushed). One variant per run.
+  **Caddy 30/30, nginx 29/29**, each start to finish: install and its layout (mode, route file 0600, secret and
+  token copy 0400 uid 1000, no Caddy of the race, nothing on 80/443, nginx: 127.0.0.1 only / Caddy: no port and
+  the website's Caddy on the race's network, trusted proxy = the subnet, no secret in the output); **a host signs in
+  through the proxy (operator of the team) and a member signs in (the join page says "Join as Mia Member")**;
+  backup; status (mode, route file current); update to B keeps the mode, the route file and the sign-in, and starts
+  no Caddy of the race; uninstall: **every file of the fake website byte-identical** (sha256 of /etc/seasonal,
+  the website's own config folder and /etc/nginx, before the install and after the uninstall), no container of the
+  race left, the website still served, the race's path gone, data and backups kept.
+- *How the website-mode test went, honestly:* it took seven nginx starts. Two lost to my own harness (a Git Bash path,
+  then containerd's store on the container's overlay), one to plain http in the fake website, one to the member
+  check asking `/me` (a member has no director account — piece 3a; the check now uses the join page), one to a
+  literal `\n` my edit wrote into the certificate line, one to the image's nginx coming up despite being disabled
+  (it held 443 in the Caddy variant), and one to the driver reusing a kept machine. **Not one was a defect in
+  install.sh or racearena.** After the owner's question the harness became fail-fast (the first FAIL stops it and
+  the machine can be kept for a look; `RA_E2E_ALL=1` runs everything) and the runs were watched line by line.
+
+**Forks decided.** (1) the detection above; (2) `--site-origin` required (no marker); (3) `--feed-url` when the
+website is not a container; (4) the race's app joins the website's network for the feed (a race-side compose
+declaration; the website's network is not changed); (5) no ufw and no fail2ban in website mode (the website's
+server); (6) the uninstall confirmation is the website's domain (from `RA_PUBLIC_ORIGIN`), as standalone types its
+own; (7) `logs caddy` and `harden-ssh` stay standalone's; (8) the website-mode test is its own script beside
+`e2e-local.sh`, so the standalone harness and its 79 checks are untouched; (9) `RA_INSTALL_REPO_URL` is a test
+seam for the clone; on a server nothing sets it.
+
+**Hygiene.** Lines before → after: install.sh 414 → 718, racearena 611 → 744, website-standin.mjs 207 → 274,
+standin.integration.test.js 167 → 200, VPS-INSTALL.md 117 → 173, OPERATOR-GUIDE.md 566 → 572, DEPLOYMENT.md
+692 → 695; new: e2e-website.sh 65, e2e-website-inner.sh 177 (and 5a's four files). Moved, not changed:
+`install_docker` (out of `install_os`) and `clone_or_keep_checkout` (out of `lay_out`). Reused: `run`,
+`write_file`, `secret_hex`, `install_timers`, `resolve_default_ref`/`checkout_ref`, racearena's `compose`,
+`tool`, `wait_healthy`, `up_detached`, `cmd_backup`, `cmd_update`, the project's status and backup tools,
+piece 5a's generator, the stand-in. Nothing removed. **Noticed, left:** `racearena`'s `caddy_local_ca` and the
+https half of `ra-admin.mjs` are standalone-only and unused in website mode (correct, not dead).
 
 ## Where the code disagreed with the summary
 

@@ -13,7 +13,8 @@
 #   <repoClone>  a git repository holding both refs (copied bare into the machine; the install clones it)
 #   <refA>       the version installed      <refB>  a newer one, for "update keeps the mode"
 # The machine is capped (--cpus 6, --memory 6g: this computer keeps several cores free). Everything it
-# makes is named ra-e2e-web* and removed at the end — the container, its Docker volume, the image —
+# makes is named ra-e2e-web* and removed at the end — the container, its two Docker volumes (the
+# inner Docker's and containerd's stores: neither may sit on the container's own overlay) —
 # unless RA_E2E_KEEP=1. No port of this computer is published.
 # ============================================================
 set -uo pipefail
@@ -26,12 +27,13 @@ NAME=ra-e2e-web
 mkdir -p "$WORK"
 WORK_W="$(cd "$WORK" && { pwd -W 2>/dev/null || pwd; })"
 
-cleanup() {
-  [[ "${RA_E2E_KEEP:-0}" == 1 ]] && return
+remove_machine() {
   docker rm -f "$NAME" >/dev/null 2>&1
-  docker volume rm "$NAME-docker" >/dev/null 2>&1
+  docker volume rm "$NAME-docker" "$NAME-containerd" >/dev/null 2>&1
 }
-cleanup
+# A machine left by an earlier run is ALWAYS removed first; RA_E2E_KEEP=1 keeps only THIS run's at the end.
+remove_machine
+cleanup() { [[ "${RA_E2E_KEEP:-0}" == 1 ]] || remove_machine; }
 trap cleanup EXIT
 
 # The machine's image: systemd, its own Docker (Ubuntu's packages), nginx (enabled only by the nginx
@@ -46,15 +48,15 @@ RUN apt-get update -q && apt-get install -y -q --no-install-recommends systemd s
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
 EOF
-docker build -q -t "$NAME:img" "$WORK" >/dev/null || { echo "FAIL  the test machine's image builds"; exit 1; }
+docker build -q -t "$NAME:img" "$WORK_W" >/dev/null || { echo "FAIL  the test machine's image builds"; exit 1; }
 
 # The repository, bare, for the install to clone (never a link into the working copy).
 rm -rf "$WORK/repo.git"
-git clone --quiet --bare --no-local "$CLONE" "$WORK/repo.git"
+git clone --quiet --bare --no-local "$(cd "$CLONE" && { pwd -W 2>/dev/null || pwd; })" "$WORK_W/repo.git"
 
 docker run -d --name "$NAME" --privileged --cgroupns=host --cpus 6 --memory 6g \
   --tmpfs /run --tmpfs /run/lock -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-  -v "$NAME-docker:/var/lib/docker" -v "$WORK_W/repo.git:/src/repo.git:ro" -v "$HERE/..:/e2e:ro" \
+  -v "$NAME-docker:/var/lib/docker" -v "$NAME-containerd:/var/lib/containerd" -v "$WORK_W/repo.git:/src/repo.git:ro" -v "$HERE/..:/e2e:ro" \
   "$NAME:img" >/dev/null
 sleep 8
 docker exec "$NAME" bash /e2e/test/e2e-website-inner.sh "$VARIANT" "$REF_A" "$REF_B" | tee "$WORK/out-$VARIANT.txt"
