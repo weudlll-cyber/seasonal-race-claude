@@ -171,7 +171,11 @@ in again (`openSessionDatabase`, `server/src/auth/session.js`). Only damage does
 permission error still stops the start.
 
 **The cookie:** `httpOnly`, `sameSite: 'lax'`, `path: '/'`, `secure` per §2, and **`maxAge` 30 days**.
-Its name is `__Host-ra.sid` when Secure is guaranteed, otherwise `ra.sid`.
+Its name is `__Host-ra.sid` when Secure is guaranteed, otherwise `ra.sid`. **Under a base path**
+(`RA_BASE_PATH`, e.g. `/games/race`, WEBSITE-EMBED-1) the path is the base path, so the cookie never
+travels to the rest of the site the game is embedded in, and its name is `__Secure-ra.sid` when Secure
+is guaranteed (a `__Host-` cookie must have `Path=/`), otherwise `ra.sid`; `RA_COOKIE_NAME_MODE=host`
+is refused there (`resolveCookieName`, `sessionCookiePath` in `server/src/auth/session.js`).
 
 **How it ends:** `POST /api/auth/logout` destroys the server-side session and clears the cookie —
 including the legacy name, so a rename cannot strand an old cookie. Logging out without a session

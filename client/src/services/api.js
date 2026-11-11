@@ -49,8 +49,9 @@
 // the fallback is today's behaviour and nothing is guessed.
 // ============================================================
 
-/** Where the server puts the values it wants this bundle to read. One name, used in two files. */
-export const RUNTIME_CONFIG_GLOBAL = '__RA_RUNTIME_CONFIG__';
+// Where the server puts the values it wants this bundle to read: the marker's name has ONE client
+// home, modules/runtimeMarker.js (WEBSITE-EMBED-1), which the race engine's image copy carries too.
+import { RUNTIME_CONFIG_GLOBAL } from '../modules/runtimeMarker.js';
 
 /**
  * The address the SERVER told this bundle to use, or `undefined`.

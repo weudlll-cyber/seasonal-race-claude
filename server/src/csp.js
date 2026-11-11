@@ -10,8 +10,9 @@
 //
 //   script-src   'self' and ONE hash. The only inline script is the runtime-config line this server
 //                injects into index.html (runtimeConfig.js). Its text is fixed for the life of the
-//                process — it depends only on RA_PUBLIC_ORIGIN, read once — so a HASH covers it
-//                exactly; a per-request nonce would buy nothing and cost a re-render per request.
+//                process — it depends only on RA_PUBLIC_ORIGIN and RA_BASE_PATH (WEBSITE-EMBED-1),
+//                both read once — so a HASH covers it exactly; a per-request nonce would buy nothing
+//                and cost a re-render per request.
 //                No 'unsafe-inline', no 'unsafe-eval': the bundle uses neither.
 //   style-src    'self' only. React's `style={{…}}` sets styles through the CSSOM
 //                (`element.style.x = …`), which CSP does not govern; nothing in the client or the
@@ -30,7 +31,7 @@
 // 5173 and the 4173 preview are served by Vite and scripts/serve-production.mjs, which send no CSP.
 // ============================================================
 
-import { resolvePublicOrigin, runtimeConfigScriptHash } from './runtimeConfig.js';
+import { resolvePublicOrigin, resolveBasePath, runtimeConfigScriptHash } from './runtimeConfig.js';
 
 /**
  * The directives, for helmet's `contentSecurityPolicy.directives`.
@@ -40,7 +41,8 @@ export function cspDirectives(env = process.env) {
   const origin = resolvePublicOrigin(env);
   return {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", runtimeConfigScriptHash(origin)],
+    // WEBSITE-EMBED-1: the hash covers the script as rendered, base path included (runtimeConfig.js).
+    scriptSrc: ["'self'", runtimeConfigScriptHash(origin, resolveBasePath(env))],
     styleSrc: ["'self'"],
     imgSrc: ["'self'", 'data:', 'blob:'],
     connectSrc: origin ? ["'self'", origin] : ["'self'"],

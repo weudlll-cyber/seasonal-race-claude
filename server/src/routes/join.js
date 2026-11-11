@@ -37,7 +37,7 @@
 
 import express from 'express';
 import { getDefaultRegistrationStore } from './registrations.js';
-import { resolveCookieSecure } from '../auth/cookiePolicy.js';
+import { resolveCookieSecure, cookieBasePath } from '../auth/cookiePolicy.js';
 import { joinLimiter } from '../auth/rateLimit.js';
 import { unknownFields, unknownFieldsMessage } from '../../utils/recordFields.js';
 
@@ -118,7 +118,9 @@ export function createJoinRouter({ store, limiter = joinLimiter } = {}) {
         // 'auto' is decided per request by trust-proxy for the session cookie; here it means
         // "Secure when this request arrived over HTTPS".
         secure: secure === 'auto' ? req.secure : secure,
-        path: `/api/join/${code}`,
+        // Under a base path (WEBSITE-EMBED-1) the API is below it, so the cookie must be too, or the
+        // browser never sends it back; at "/" this is exactly the old "/api/join/<code>".
+        path: `${cookieBasePath()}/api/join/${code}`,
         maxAge: COOKIE_MAX_AGE_MS,
       });
       const own = resolveStore().ownEntry(code, added.entry.id);

@@ -18,7 +18,9 @@ then until 2026-10-06 it said so (13 of 59 at the 2026-09-27 count, before the e
 points-rule routes added four). `/api/auth` is also described, with the session model behind it, in
 [AUTH.md](AUTH.md).*
 
-The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed with `/api/`.
+The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed with `/api/` — with
+`<base path>/api/` when `RA_BASE_PATH` is set (WEBSITE-EMBED-1; [ENVIRONMENT.md](ENVIRONMENT.md)), and nothing
+outside the base path answers.
 
 ---
 
@@ -1173,7 +1175,8 @@ id**. A user with no team gets 503. A body with a field not listed is 400 (`unkn
 - **`POST /api/join/:code`** `{ name }` — register one name from this device. The player-name rules
   (`shared/nameLimits.mjs`), and a name already registered is refused **ignoring case and spaces**
   (`shared/playerNames.mjs`). 201 `{ you }`, and the cookie `ra_join` (httpOnly, SameSite=Lax,
-  path `/api/join/<code>`, 31 days, `Secure` by `RA_COOKIE_SECURE`'s rule) carrying the entry's id.
+  path `/api/join/<code>` — `<base path>/api/join/<code>` under `RA_BASE_PATH` (WEBSITE-EMBED-1) —, 31 days,
+  `Secure` by `RA_COOKIE_SECURE`'s rule) carrying the entry's id.
   Errors `{ error, code }`: 400 `INVALID_NAME`; 404 `NOT_FOUND`; 409 `CLOSED` ("Registration is
   closed."), `FULL` ("This race is full."), `DUPLICATE_NAME`, `ALREADY_REGISTERED` ("You are already
   registered as <name>.", with `you`); 413 over 1 KB; 429 over 60 attempts a minute from one address

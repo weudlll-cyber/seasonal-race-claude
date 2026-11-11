@@ -9,7 +9,7 @@
 import { createApp } from './app.js';
 import { clientBuildExists } from './staticClient.js';
 import { reportStartupReadiness } from './startupReadiness.js';
-import { assertPublicOriginUsable } from './runtimeConfig.js';
+import { assertPublicOriginUsable, resolveBasePath } from './runtimeConfig.js';
 import { assertSourceUrlUsable } from './sourceUrl.js';
 import { sweepOrphanTmp } from '../utils/sweepOrphanTmp.js';
 import { resolveDataRoot } from './dataPaths.js';
@@ -38,6 +38,7 @@ import { resolveRacesWal } from './races/raceStore.js';
 let bindAddress;
 try {
   assertPublicOriginUsable(process.env);
+  resolveBasePath(process.env); // WEBSITE-EMBED-1: a base path that is not a clean path stops here
   assertSourceUrlUsable(process.env); // LEGAL-PAGES-1: a value that is not a link stops here
   bindAddress = resolveBindAddress(process.env);
   resolveTrustProxy(process.env); // AUDIT-1 A5M-07: a value that is not a hop count stops here

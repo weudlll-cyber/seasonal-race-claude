@@ -25,6 +25,25 @@ considered separately, and that would not be true.
 
 ---
 
+## WEBSITE-EMBED-1 — RaceArena inside Seasonal Entertainment (2026-11-11)
+
+- [ ] ★★ **WEBSITE-EMBED-1 — run RaceArena under the website's path, with the website's accounts.**
+      Pieces 2, 3a, 3b and 4 of the race planning's plan, built on branch `feat/website-embedding`,
+      NOT merged: it is merged once, after the rehearsal, with the owner's approval. Every new
+      behaviour is off unless `RA_MODE=website`; standalone at "/" is unchanged. The state of each
+      piece, every fork decided and why, and what needs his word are on the morning sheet
+      [reports/night/MORNING-WEBSITE-EMBED-1.md](../reports/night/MORNING-WEBSITE-EMBED-1.md).
+      - **Piece 2 — the base path (built):** `RA_BASE_PATH` (e.g. `/games/race`) mounts the whole app
+        below it, 404 outside it; one build serves "/" and the base path (`base: './'`, a rewritten
+        `<base href>`); router, API address, sprites, join link and the session cookie follow it.
+      - **Piece 3a — website sign-in (open):** `RA_MODE=website`, `<base>/auth/website` behind a
+        trusted proxy and its secret, the role mapping, a local stand-in proxy for tests.
+      - **Piece 3b — the account-changes feed (open):** locked / unlocked / rights / deleted.
+      - **Piece 4 — members join through the race's own join page (open).**
+
+      **verify:** the owner's look at the rehearsal — "/" unchanged, and the "Website members only /
+      Anyone with the link" choice on the join flow; until then no command decides it.
+
 ## NEEDS HIS WORD — decide these first
 
 **ONE section is entirely his and leads PART ONE** — HOW MUCH ACTION, immediately below,

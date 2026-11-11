@@ -15,7 +15,14 @@ import { raBuildInfo } from './vite-plugin-ra-build.js';
 // moved to `virtual:ra-build` (read live, force-reloaded when the identity changes); the LIVE TRUTH
 // console line was not, and kept printing the frozen value for two more days until it halted a ship.
 // One value, one source: everything reads the virtual module.
+//
+// WEBSITE-EMBED-1 piece 2: `base: './'` makes every URL Vite writes into the build RELATIVE, so ONE
+// build serves both "/" (standalone) and a base path such as "/games/race/" (website mode). The
+// relative URLs resolve against the page's `<base href>` (client/index.html), which the RaceArena
+// server rewrites to the configured base path (server/src/runtimeConfig.js `injectRuntimeConfig`); the dev
+// server on 5173 and the 4173 preview serve the file as written, `<base href="/">`, i.e. today's "/".
 export default defineConfig({
+  base: './',
   plugins: [react(), raBuildInfo()],
   server: {
     port: 5173,

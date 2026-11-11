@@ -28,6 +28,7 @@ import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import TestAidsSyncOnAuth from './components/TestAidsSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
 import ServerStatusBanner from './components/ServerStatusBanner.jsx';
+import { BASE_PATH } from './modules/runtimeMarker.js';
 import ServerRecoveryProbe from './components/ServerRecoveryProbe.jsx';
 import PendingRaceSync from './components/PendingRaceSync.jsx';
 import { useTestAidsState } from './modules/testAids.js';
@@ -67,8 +68,10 @@ function App() {
 
   // react-router v7: startTransition + relativeSplatPath are the DEFAULT behavior now, so the v6
   // `future` opt-in flags are removed (the app was already running with them enabled).
+  // WEBSITE-EMBED-1: under a base path ("/games/race") every route is below it; at "/" BASE_PATH is
+  // "" and the router is configured exactly as before (modules/runtimeMarker.js).
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={BASE_PATH || undefined}>
       <AuthProvider>
         {/* SERVER-GONE-1: above the router, so the one message about the server does not depend on
             which screen the player happens to be on. It renders nothing unless a request has

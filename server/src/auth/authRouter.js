@@ -16,7 +16,7 @@ import defaultStore, {
   timingDummyHash,
 } from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
-import { resolveCookieSecure, getActiveCookieName } from './session.js';
+import { resolveCookieSecure, getActiveCookieName, sessionCookiePath } from './session.js';
 import { restampSession } from './restampSession.js';
 import { FOUNDING_TEAM } from './teams.js';
 import { asyncRoute } from '../../utils/asyncRoute.js';
@@ -253,9 +253,12 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       }
       const active = getActiveCookieName();
       const secure = resolveCookieSecure(process.env.NODE_ENV === 'production');
-      res.clearCookie(active, { path: '/', httpOnly: true, sameSite: 'lax', secure });
+      // The Path must be the one the cookie was set with, or the browser keeps it: "/" at the root,
+      // the base path under one (WEBSITE-EMBED-1, session.js `sessionCookiePath`).
+      const path = sessionCookiePath();
+      res.clearCookie(active, { path, httpOnly: true, sameSite: 'lax', secure });
       // Orphan cleanup: clear legacy ra.sid when the active name has changed to __Host-ra.sid.
-      if (active !== 'ra.sid') res.clearCookie('ra.sid', { path: '/' });
+      if (active !== 'ra.sid') res.clearCookie('ra.sid', { path });
       res.json({ ok: true });
     });
   });

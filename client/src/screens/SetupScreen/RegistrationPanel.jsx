@@ -53,6 +53,7 @@ import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { fieldCapFor, isTrackOpen } from './fieldCap.js';
 import DeadlineField from './DeadlineField.jsx';
 import { useNow } from './useNow.js';
+import { appUrl } from '../../modules/runtimeMarker.js';
 import styles from './RegistrationPanel.module.css';
 
 const MINUTE = 60 * 1000;
@@ -86,9 +87,12 @@ const POLL_MS = 5 * 1000;
 /** How many CLOSED registrations the list shows; open ones are always all shown. */
 const RECENT_CLOSED = 10;
 
-/** The link a player opens: this app's own address, so it is right behind any proxy. */
+/**
+ * The link a player opens: this app's own address, so it is right behind any proxy — origin, base
+ * path ("" at "/", e.g. "/games/race" in website mode; modules/runtimeMarker.js), then /join/<code>.
+ */
 function joinLinkFor(code) {
-  return `${window.location.origin}/join/${code}`;
+  return `${window.location.origin}${appUrl(`/join/${code}`)}`;
 }
 
 const errorText = (err) => err?.message || 'Something went wrong. Try again.';
