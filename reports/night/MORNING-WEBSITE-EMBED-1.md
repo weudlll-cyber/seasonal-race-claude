@@ -611,15 +611,15 @@ https half of `ra-admin.mjs` are standalone-only and unused in website mode (cor
 
 ## End of the third chain (pieces 5a and 5b)
 
-**Verify, the chain's diff against  (ONE run, 16 changed files):** 17 passed, 0 failed, 21 skipped.
-**The standalone installer test (deploy/test/e2e-local.sh) on the final head : 79 of 79**, refs A = the head,
+**Verify, the chain's diff against `05365fed` (ONE run, 16 changed files):** 17 passed, 0 failed, 21 skipped.
+**The standalone installer test (deploy/test/e2e-local.sh) on the final head `53c48c00`: 79 of 79**, refs A = the head,
 B/C/D as before (throwaway, in a scratch clone, never pushed). **Website mode: Caddy 30/30, nginx 29/29** (piece 5b).
 **Cleanup:** every container, volume and network the harnesses made is gone (ra-rt-*, ra-e2e-web and its two volumes,
 the racearena stack of the standalone test) and the test machine's image ra-e2e-web:img is removed; the pinned nginx,
 Caddy, node and Ubuntu images were on this machine before and stay. The network seasonalraceclaude_default (created
 2026-08-27, the development compose setup) is not the harnesses' and stays. **Engine-reach:** no file of the race
 hull changed in this chain; no fingerprint check was due. The four processes keep running: the client and the server
-did not change in this chain, so they still serve  (badge ).
+did not change in this chain, so they still serve `05365fed` (badge `05365fed · feat/website-embedding · clean`).
 Scratch folders left: C:/tmp/ra-route-test, C:/tmp/ra-e2e-web1, C:/tmp/ra-e2e-std1.
 
 ## Where the code disagreed with the summary
