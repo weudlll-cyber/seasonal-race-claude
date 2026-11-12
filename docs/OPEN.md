@@ -131,7 +131,7 @@ the production cost, the file hashes at cost 4 for itself only — BACKLOG PART 
 row numbers above keep their meaning):**
 
 5. ★ **RaceArena inside Seasonal Entertainment** — the base path, website sign-in, the account-changes
-   feed, members joining through the race's own join page, the installer's second mode inside the website (pieces 5a and 5b, the route file and the install), the Dev Screen without the password and
+   feed, members joining through the race's own join page, the installer's second mode inside the website (pieces 5a, 5b and 5c, the route file and the install, in the website's real layout; rehearsed against the real website on 2026-11-12, nginx and Caddy), the Dev Screen without the password and
    race-director sections in website mode (piece 5) and "Deleted player" in past races through a side
    table (piece 6, both the owner's decisions of 2026-11-11); the morning sheet is
    `reports/night/MORNING-WEBSITE-EMBED-1.md`.

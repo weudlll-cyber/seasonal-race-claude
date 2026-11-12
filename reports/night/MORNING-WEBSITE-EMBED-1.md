@@ -21,7 +21,8 @@ code was followed and the line is in **Where the code disagreed** below.
 | 5 — the Dev Screen in website mode (2026-11-11, second chain) | **done** — `52628908`, pushed |
 | 5a — the route file inside the website's proxy (third chain) | **done** — `3d658d7f`, pushed |
 | 5b — the installer's website mode (third chain) | **done** — `53c48c00`, pushed |
-| 5c — five fixes from the website planning's answers (fourth chain) | **done** — see below |
+| 5c — five fixes from the website planning's answers (fourth chain) | **done** — `00915096`, pushed |
+| the rehearsal against the REAL website (fourth chain; the brief's "piece 6") | **done** — see below |
 | 6 — "Deleted player" in past races (2026-11-11, second chain) | **done** — see below; the race screen of a repeat keeps the stored names — decided 2026-11-11 (fork 1) |
 
 ## Start
@@ -686,6 +687,57 @@ a new kind from the website would stop the feed until the race knows it. (2) `--
 (piece 5b) are removed: MODE comes from the record, the feed is always site:3800. (3) Caddy mode follows
 Bingo (the website's network trusted, the race reached on it) rather than 5b's network connect. (4) The record
 is read first, before the team question, so RACE=no changes nothing at all.
+
+## The rehearsal against the REAL website (fourth chain, 2026-11-12; the brief calls it "piece 6")
+
+*(Not to be confused with piece 6 above, "Deleted player"; the brief of this chain numbers the rehearsal 6.)*
+
+**How.** `deploy/test/real-site.sh`, as Seasonal Bingo Royale's `ops/test/real-site.sh` does it (read-only
+reference): the website cloned at master **`eb1bbe9`** (contains `da618e7`), its OWN end-to-end harness reused as
+a library (`deploy/test/run.sh` without its last line: a systemd Ubuntu 24.04 server with its own Docker,
+Pebble for Let's Encrypt, the test DNS, its expect-driven installer and its checks), the real website installed
+with `RACE=yes` and its own checks green; then in that server the race's `install.sh` in website mode from this
+branch's committed tree (a git bundle, a bare copy inside the server; never pushed), the mode offered and the
+team the default. The website side is driven by curl as Bingo's `real-site-admin.sh` drives it
+(`deploy/test/real-site-race.sh`): its pre-login, login and registration with the key its client derives (the
+site's own crypto in its container), the test admin's 2FA set up on its first login, and the admin's actions —
+"may host" for the race (`POST /api/admin/users/<id>/game-host {game: "race"}` — website master's route; Bingo's
+script still names the older `/can-start-games`), lock, unlock, delete. A finished race is a race the ENGINE
+ran, inside the race's app container (`deploy/test/real-site-record.mjs`). What arrives at the race is
+captured by tcpdump in the race container's own network namespace. The server is capped (--cpus 6
+--memory 8g), the website harness's DNS and Pebble (--cpus 1 --memory 512m); one variant at a time. Test accounts
+and data exist only inside that server.
+
+**nginx — final fresh pass: all checks passed (36 PASS, 0 FAIL, 1 NOT DRIVEN). Caddy — final fresh pass: all checks passed (36 PASS, 0 FAIL, 1 NOT DRIVEN), on 9a94f0e7 after the race-side fix.**
+
+| # | proof | nginx | Caddy |
+| --- | --- | --- | --- |
+| 1 | a member with "May host" for the race → race operator in the team; a website admin → race admin; a member without it → no director screen | pass | pass |
+| 2 | members-only: a member joins exactly once; the director sees it "from the website"; a guest cannot join; "Anyone with the link" accepts a guest name | pass | pass |
+| 3 | removing "May host" ends the race session (nginx 35 s, Caddy 30 s), locking ends it (35 s / 40 s; the feed every 60 s), a sign-in while locked gets no session, unlocking lets them in | pass | pass |
+| 4 | deleting a member removes them from an open registration; (nginx 40 s, Caddy 35 s); a finished race names their index for "Deleted player" and still verifies identically | pass (server answer); **the screens drawing it: NOT DRIVEN** (no browser here; client tests ResultScreen.website, RaceHistory) | pass; screens NOT DRIVEN |
+| 5 | the race never receives se.sid / __Host-se.sid (the wire capture; its own cookie does arrive); forged X-Acting-* / X-Ra-Proxy-Secret change nothing on a race path or the sign-in route | pass | pass |
+| 6 | nothing of the race on 80/443; backup; status; update keeps the mode and the route file; the website unchanged by the race; uninstall removes the route file; every website file byte-identical after it (checkout commit and status, proxy configuration, /etc/seasonal, the site container's start) and the website's checks green | pass | pass |
+
+**Defects found.** *Race side — ONE, fixed (`9a94f0e7`), the Caddy variant then re-run fresh:* install.sh took
+`/etc/seasonal/site-local-port` and `/etc/seasonal/routes/` as the website's markers, but the website makes them only
+in its NGINX mode (its deploy/install/lib/games.sh, the nginx setup); in Caddy mode `/etc/seasonal` holds only
+`install.conf` and `games-sync-token`. A Caddy-mode website was therefore not recognised and the race fell back to a
+standalone install (it asked for a domain). The markers are now the record and the token, site-local-port is read in
+nginx mode only; the install unit test gained the case (red on the old install.sh, 27/27 after), and the harness's
+fake website — which had made both files in Caddy mode too, so it could not see this — makes them in nginx mode only.
+*Website side:* none. *The rehearsal's own script* needed
+seven fixes on the way (all in `29bd8b03`): Docker's `--memory-swap` beside `--memory` for a running container; a
+Windows path for `docker cp`; RESUME keeping the test admin's password and the test accounts (the website makes
+a new password each load, and allows 5 registrations an hour from one address); fresh account names per run;
+**waiting for the grant's own "rights" change before the host signs in** — see below; and a helper that still
+asked as a fixed account name.
+
+**Noticed, left (both sides behave as designed).** Granting "May host" is itself a "rights" change in the
+website's feed (its accounts/gameHosts.js), so a host who signs in to the race in the minute after being
+granted is signed out once when the feed brings it, and signs in again as an operator. Safe and the same for
+Bingo; a host can meet it once. Bingo's `real-site-admin.sh` still grants with `/can-start-games`; website
+master's route is `/game-host {game}` (for the website planning to know, not a defect of either here).
 
 ## Where the code disagreed with the summary
 

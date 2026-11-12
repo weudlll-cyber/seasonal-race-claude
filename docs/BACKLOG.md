@@ -55,6 +55,10 @@ considered separately, and that would not be true.
         and places the route file; `racearena` keeps the mode through updates; tested in a throwaway
         Ubuntu 24.04 machine behind real nginx and real Caddy (`deploy/test/e2e-website.sh`). **Open:** the
         rehearsal on the real website (the owner says when it is ready).
+      - **The rehearsal against the REAL website (fourth chain, 2026-11-12):** `deploy/test/real-site.sh`,
+        website master eb1bbe9 installed by its own harness with RACE=yes; the race installed into it;
+        the six proofs in nginx and Caddy mode (the morning sheet has the table). **Open:** the owner's
+        decision on merging feat/website-embedding.
       - **Piece 5c — five fixes from the website planning's answers (built, fourth chain):** the
         feed read exactly as the website sends it; the website's record /etc/seasonal/install.conf
         (RACE=yes, SITE_DOMAIN, MODE, INSTALL_DIR); the site container by its compose labels; port 3940
