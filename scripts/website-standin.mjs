@@ -35,6 +35,15 @@
 //              headers and WITHOUT the secret, which is the proxy's to add; picking a member sets
 //              se.sid; and it forwards nothing to the race — the proxy routes /games/race/.
 //
+//              WEBSITE-EXTRAS-1 (7a, 7b), for the owner's look:
+//                · /_standin/open-rounds asks the race's GET <base>/api/public/open-rounds (from this
+//                  process, as the website's server does) and lists the rounds the way the website's
+//                  home page "Featured game" box and games page would show them (title, kind, places,
+//                  closes at, Join) — a marked open registration appears, an unmarked one does not;
+//                · /embed/chat is a PLACEHOLDER for the website's chat page, naming the room it was
+//                  asked for, so the frame the race draws on its join page and registrations is
+//                  visible. It is not the website's chat and carries nothing of it.
+//
 // Usage:
 //   node scripts/website-standin.mjs --port=4790 --target=http://127.0.0.1:4791 \
 //        --base=/games/race --secret-file=<path> --token-file=<path>
@@ -132,7 +141,7 @@ function page(base, current, events) {
 <h1>Seasonal Entertainment — local stand-in</h1>
 <p>Pick who you are. The race then signs you in as that member.</p>
 <ul>${links}</ul>
-<p><a href="${base}/">Open the race</a></p>
+<p><a href="${base}/">Open the race</a> · <a href="/_standin/open-rounds">Open sign-ups, as the website shows them</a></p>
 <h2>Account changes (the feed)</h2>
 <ul>${Object.keys(FAKE_MEMBERS)
     .filter((k) => FAKE_MEMBERS[k])
@@ -144,6 +153,61 @@ function page(base, current, events) {
     )
     .join('\n')}</ul>
 <p>${events.length} event(s) so far.</p>`;
+}
+
+/** Text for HTML, so a title or a room name from a request can never become markup. */
+const esc = (v) =>
+  String(v).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+  );
+
+/** GET a JSON answer from the race instance, from this process (as the website's server asks). */
+function getJson(url) {
+  return new Promise((resolve, reject) => {
+    httpRequest(url, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (d) => (body += d));
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, json: JSON.parse(body) });
+        } catch {
+          resolve({ status: res.statusCode, json: null });
+        }
+      });
+    })
+      .on('error', reject)
+      .end();
+  });
+}
+
+/** The open sign-ups, the way the website's home page and games page would list them (7a). */
+function openRoundsPage(answer) {
+  const rounds = answer?.json?.rounds;
+  const list = Array.isArray(rounds)
+    ? rounds
+        .map(
+          (r) =>
+            `<li data-round="${esc(r.id)}"><strong>${esc(r.title)}</strong> — ${esc(r.kind)} · ` +
+            `${esc(r.players)} of ${esc(r.maxPlayers ?? '∞')} signed up · closes ${esc(r.signupClosesAt)} · ` +
+            `<a href="${esc(r.joinUrl)}">Join</a></li>`
+        )
+        .join('\n')
+    : '';
+  return `<!doctype html><meta charset="utf-8"><title>Open sign-ups — stand-in</title>
+<h1>Open sign-ups (as the website would show them)</h1>
+<p>Read from the race's <code>GET &lt;base&gt;/api/public/open-rounds</code> just now (answer ${esc(answer?.status ?? 'none')}).</p>
+${Array.isArray(rounds) && rounds.length ? `<ul>${list}</ul>` : '<p>No open sign-ups.</p>'}
+<p><a href="/">Back to the stand-in</a></p>`;
+}
+
+/** A placeholder for the website's chat page (7b): it names the room, so the frame is visible. */
+function chatPlaceholder(room) {
+  return `<!doctype html><meta charset="utf-8"><title>Chat — stand-in</title>
+<body style="margin:0;font:14px system-ui;background:#1d2330;color:#e8ecf3">
+<p style="padding:12px">Website chat — stand-in placeholder. Room: <strong data-room>${esc(room)}</strong></p>
+</body>`;
 }
 
 /**
@@ -166,6 +230,24 @@ export function startStandin({
     if (url.pathname === '/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       return res.end(page(base, picked(req), events));
+    }
+    // 7b: a placeholder for the website's chat page, in both modes (it carries nothing of the chat).
+    if (url.pathname === '/embed/chat') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      return res.end(chatPlaceholder(url.searchParams.get('room') ?? ''));
+    }
+    // 7a: the race's open rounds, read as the website's server reads them, shown as it would.
+    if (url.pathname === '/_standin/open-rounds' && !site) {
+      getJson(new URL(`${base}/api/public/open-rounds`, targetUrl))
+        .then((answer) => {
+          res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+          res.end(openRoundsPage(answer));
+        })
+        .catch(() => {
+          res.writeHead(502, { 'content-type': 'text/plain' });
+          res.end('The race instance is not answering.');
+        });
+      return;
     }
     // The feed, as the website serves it to the race (piece 3b).
     if (url.pathname === FEED_PATH && token) {

@@ -13,8 +13,8 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 | Piece | State |
 | --- | --- |
 | 7a — open registrations for the website (OWNER-4) | **done** — `37c75e42`, pushed |
-| 7b — the website chat (OWNER-5) | **done** — the 7b commit, pushed |
-| the stand-in's open-rounds page and chat placeholder (the owner's look) | not started |
+| 7b — the website chat (OWNER-5) | **done** — `1feefcce`, pushed |
+| the stand-in's open-rounds page and chat placeholder (the owner's look) | **done** — see below |
 | real-website check (nginx) | not started |
 
 ## 7a — the facts, read BEFORE building
@@ -128,6 +128,17 @@ RegistrationPanel.jsx 680 → 688; csp.js 62 → 68; new WebsiteChat.jsx 58, its
 csp 84 → 121, JoinPage 162 → 165, JoinPage website 107 → 120, panel 371 → 373, panel website 166 → 187;
 docs: AUTH.md 446 → 457, OPERATOR-GUIDE.md 580 → 587; BACKLOG 7708 → 7712 and OPEN 541 → 538 (the 7a/7b
 row to PART TWO). **Fingerprints:** none (`engine-reach --check`: nothing reaches the engine).
+
+## The stand-in, for the owner's look (dev and test only, never in the image)
+
+`scripts/website-standin.mjs` (286 → 369 lines; not in the image — server/Dockerfile copies three named
+scripts and nothing else of scripts/): **`/_standin/open-rounds`** asks the race's
+`GET <base>/api/public/open-rounds` from its own process, as the website's server does, and lists the
+rounds as the website's home page and games page would (title, kind, places, closes at, Join) — linked
+from the stand-in's page; **`/embed/chat`** is a placeholder that names the room it was asked for
+(escaped), so the frame on the race's join page and registrations is visible. Its tests
+(`standin.integration.test.js`, 249 → 284): +2 — a marked open registration listed and an unmarked one
+not; the placeholder names the room and escapes markup. The ten existing tests unchanged and green.
 
 ## 7a — what was built
 
