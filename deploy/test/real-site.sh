@@ -16,10 +16,11 @@
 #              unlocked, (4) deleted, (5) cookie and forged headers, (6) ports, update, backup,
 #              status, uninstall with the website byte-identical. Prints PASS / FAIL / NOT DRIVEN per
 #              check and the website SHA. Everything it made carries the website harness's label and
-#              is removed at the end (KEEP=1 keeps it; RESUME is not offered: each pass is fresh).
+#              is removed at the end. KEEP=1 keeps it; RESUME=1 then reuses that server and its
+#              website for a quicker try of the race part (as Bingo's rehearsal; the final pass is fresh).
 #              The server is capped (--cpus 6 --memory 8g) once it runs. Test only.
 #
-# Usage: [KEEP=1] bash deploy/test/real-site.sh nginx|caddy [<website ref, default master>]
+# Usage: [KEEP=1] [RESUME=1] bash deploy/test/real-site.sh nginx|caddy [<website ref, default master>]
 # ============================================================
 set -euo pipefail
 
@@ -43,6 +44,16 @@ sed '$d' "$WEB/deploy/test/run.sh" >"$WEB/deploy/test/run-lib.sh"
 # shellcheck source=/dev/null
 source "$WEB/deploy/test/run-lib.sh"
 trap 'cleanup; rm -rf "$WEB"' EXIT
+# The website harness makes a new test admin password each time it is loaded; a kept server keeps the
+# one it was installed with, so KEEP=1 writes it to a 0600 scratch file and RESUME=1 reads it back.
+# Test-only, never printed; the scratch folder goes with the rehearsal's cleanup.
+PW_FILE="$SCRATCH/admin-pw-$MODE"
+if [[ "${RESUME:-0}" == 1 ]]; then
+  [[ -s "$PW_FILE" ]] || { echo "RESUME=1 needs the kept server's admin password file ($PW_FILE); run with KEEP=1 first" >&2; exit 1; }
+  TEST_ADMIN_PASSWORD="$(cat "$PW_FILE")"; export TEST_ADMIN_PASSWORD
+elif [[ "${KEEP:-0}" == 1 ]]; then
+  (umask 077; printf '%s' "$TEST_ADMIN_PASSWORD" >"$PW_FILE")
+fi
 FAILED=0
 ok() { local what=$1; shift; if "$@"; then say "PASS $what"; else say "FAIL $what"; FAILED=1; fi; }
 not_driven() { say "NOT DRIVEN $1"; }
@@ -73,7 +84,7 @@ website_print() {
 website_install() {
   say "=== real website $WEB_SHA ($WEB_REF), mode $MODE; race $RACE_SHA"
   infrastructure
-  docker update --cpus 1 --memory 512m seasonal-install-test-dns seasonal-install-test-pebble >/dev/null
+  docker update --cpus 1 --memory 512m --memory-swap 512m seasonal-install-test-dns seasonal-install-test-pebble >/dev/null
   start_server 24.04
   docker update --cpus 6 --memory 8g --memory-swap 8g "$SERVER" >/dev/null
   [[ $MODE == caddy ]] || on_server /etc/seasonal-test/prepare-nginx.sh | tee -a "$RESULTS"
@@ -85,7 +96,7 @@ website_install() {
 }
 
 race_copy() {
-  docker cp "$SCRATCH/race-$MODE.bundle" "$SERVER:/root/race.bundle" >/dev/null
+  docker cp "$(host_path "$SCRATCH/race-$MODE.bundle")" "$SERVER:/root/race.bundle" >/dev/null
   on_server bash -c "git clone -q --bare /root/race.bundle /root/race.git && git -C /root/race.git branch -f rehearsal-a $RACE_SHA &&
     git clone -q /root/race.git /root/race-b && cd /root/race-b && git checkout -q -b rehearsal-b $RACE_SHA &&
     printf '\nrehearsal: B = A + one line (throwaway, never pushed)\n' >>docs/OPEN.md &&
@@ -117,86 +128,105 @@ wait_for() {
 me_status() { ra race "$1" GET /api/auth/me | status; }
 is_signed_out() { [[ "$(me_status "$1")" == 401 ]]; }
 registration_empty() { [[ "$(entry_count "$1")" == 0 ]]; }
-entry_count() { ra race hugo GET "/api/registrations/$1" | body | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["entries"]))'; }
+entry_count() { ra race "$HUGO" GET "/api/registrations/$1" | body | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["entries"]))'; }
 
 proofs() {
+  # The test accounts. The website allows 5 registrations an hour from one address, so a retry on a
+  # kept server (RESUME=1) signs in the accounts of the run that made them (kept, test-only, 0600)
+  # instead of registering new ones.
+  local accounts="$SCRATCH/accounts-$MODE" suffix
   local pw_hugo pw_mia pw_nina reg anyone track code acode id mia_id out key cid took
-  pw_hugo=$(openssl rand -hex 12) pw_mia=$(openssl rand -hex 12) pw_nina=$(openssl rand -hex 12)
   ra admin-login
-  ra register hugo "$pw_hugo"
-  ra register mia "$pw_mia"
-  ra register nina "$pw_nina"
+  if [[ "${RESUME:-0}" == 1 && -s "$accounts" ]]; then
+    read -r suffix pw_hugo pw_mia pw_nina <"$accounts"
+    HUGO=hugo-$suffix MIA=mia-$suffix NINA=nina-$suffix
+    ra login $HUGO "$pw_hugo"
+    ra login $MIA "$pw_mia"
+    ra login $NINA "$pw_nina"
+  else
+    suffix=$(openssl rand -hex 3)
+    pw_hugo=$(openssl rand -hex 12) pw_mia=$(openssl rand -hex 12) pw_nina=$(openssl rand -hex 12)
+    HUGO=hugo-$suffix MIA=mia-$suffix NINA=nina-$suffix
+    if [[ "${KEEP:-0}" == 1 ]]; then (umask 077; echo "$suffix $pw_hugo $pw_mia $pw_nina" >"$accounts"); fi
+    ra register $HUGO "$pw_hugo"
+    ra register $MIA "$pw_mia"
+    ra register $NINA "$pw_nina"
+  fi
 
   say "--- proof 1: who is what in the race"
-  ra host hugo true
-  ra signin hugo >/dev/null
-  out=$(ra race hugo GET /api/auth/me | body)
+  ra host $HUGO true
+  # The grant is itself a "rights" change: the feed brings it within its interval (60 s) and ends any
+  # race session made before it is applied, as for Bingo; the host signs in after it.
+  sleep 75
+  ra signin $HUGO >/dev/null
+  out=$(ra race $HUGO GET /api/auth/me | body)
   ok "1a a member with \"May host\" for the race is a race operator in the team" grep -q '"role":"operator".*"team":"Seasonal Entertainment"' <<<"$out"
   ra signin admin >/dev/null
   ok "1b a website admin is a race admin" grep -q '"role":"admin"' <<<"$(ra race admin GET /api/auth/me | body)"
-  ra signin nina >/dev/null
-  ok "1c a member without it has no director screen (no director session)" test "$(me_status nina)" = 401
+  ra signin $NINA >/dev/null
+  ok "1c a member without it has no director screen (no director session)" test "$(me_status $NINA)" = 401
 
   say "--- proof 2: joining"
-  track=$(ra race hugo GET /api/tracks | body | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["id"])')
-  out=$(ra race hugo POST /api/registrations "{\"trackId\":\"$track\",\"capacity\":4,\"closesAt\":\"$(date -u -d '+2 hour' +%Y-%m-%dT%H:%M:%SZ)\",\"websiteAccess\":\"members\"}" | body)
+  track=$(ra race $HUGO GET /api/tracks | body | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["id"])')
+  out=$(ra race $HUGO POST /api/registrations "{\"trackId\":\"$track\",\"capacity\":4,\"closesAt\":\"$(date -u -d '+2 hour' +%Y-%m-%dT%H:%M:%SZ)\",\"websiteAccess\":\"members\"}" | body)
   reg=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$out")
   code=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])' <<<"$out")
-  ra signin mia >/dev/null
-  ok "2a a member joins a members-only registration" test "$(ra race mia POST "/api/join/$code" '{}' | status)" = 201
-  ok "2b ... exactly once (a second join is refused)" test "$(ra race mia POST "/api/join/$code" '{}' | status)" = 409
-  ok "2c the director sees the entry as from the website" grep -q '"source":"website"' <<<"$(ra race hugo GET "/api/registrations/$reg" | body)"
+  ra signin $MIA >/dev/null
+  ok "2a a member joins a members-only registration" test "$(ra race $MIA POST "/api/join/$code" '{}' | status)" = 201
+  ok "2b ... exactly once (a second join is refused)" test "$(ra race $MIA POST "/api/join/$code" '{}' | status)" = 409
+  ok "2c the director sees the entry as from the website" grep -q '"source":"website"' <<<"$(ra race $HUGO GET "/api/registrations/$reg" | body)"
   ra forget guest
   ra signin guest >/dev/null
   ok "2d a guest cannot join it" test "$(ra race guest POST "/api/join/$code" '{"name":"Walk In"}' | status)" = 403
-  acode=$(ra race hugo POST /api/registrations "{\"trackId\":\"$track\",\"capacity\":4,\"closesAt\":\"$(date -u -d '+2 hour' +%Y-%m-%dT%H:%M:%SZ)\",\"websiteAccess\":\"anyone\"}" | body | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+  acode=$(ra race $HUGO POST /api/registrations "{\"trackId\":\"$track\",\"capacity\":4,\"closesAt\":\"$(date -u -d '+2 hour' +%Y-%m-%dT%H:%M:%SZ)\",\"websiteAccess\":\"anyone\"}" | body | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
   ok "2e \"Anyone with the link\" accepts a guest's name" test "$(ra race guest POST "/api/join/$acode" '{"name":"Walk In"}' | status)" = 201
 
   say "--- proof 5: the website cookie and forged headers"
   # What really arrives at the race's container: its own traffic, captured in its network namespace.
   on_server bash -c 'pid=$(docker inspect -f "{{.State.Pid}}" racearena-app-1); (nsenter -t "$pid" -n timeout 25 tcpdump -A -s0 -i any "tcp dst port 4000" >/root/race-wire.txt 2>/dev/null &) ; sleep 3'
-  ra race mia GET /api/health >/dev/null
-  ra signin mia >/dev/null
-  ra race mia GET "/api/join/$code" >/dev/null
+  ra race $MIA GET /api/health >/dev/null
+  ra signin $MIA >/dev/null
+  ra race $MIA GET "/api/join/$code" >/dev/null
   sleep 25
   ok "5a the race's container received the requests (the capture is not empty)" on_server grep -q "GET /games/race/" /root/race-wire.txt
   ok "5b ... and never the website's cookie (se.sid / __Host-se.sid)" on_server bash -c '! grep -qiE "(^|[; ])(__Host-)?se\.sid=" /root/race-wire.txt'
   ok "5c ... while the race's own session cookie did arrive" on_server grep -q "ra.sid=" /root/race-wire.txt
-  ok "5d forged X-Acting-* and X-Ra-Proxy-Secret on a race path change nothing" test "$(ra race nina GET /api/auth/me '' -H 'X-Acting-User-Id: 1' -H 'X-Acting-User-Roles: admin' -H 'X-Acting-User-Can-Host: true' -H 'X-Ra-Proxy-Secret: forged' | status)" = 401
+  ok "5d forged X-Acting-* and X-Ra-Proxy-Secret on a race path change nothing" test "$(ra race $NINA GET /api/auth/me '' -H 'X-Acting-User-Id: 1' -H 'X-Acting-User-Roles: admin' -H 'X-Acting-User-Can-Host: true' -H 'X-Ra-Proxy-Secret: forged' | status)" = 401
   ra forget forger
   ra signin forger -H 'X-Acting-User-Id: 1' -H 'X-Acting-User: Admin' -H 'X-Acting-User-Roles: admin' -H 'X-Acting-User-Can-Host: true' -H 'X-Ra-Proxy-Secret: forged' >/dev/null
   ok "5e ... and on the sign-in route (a visitor without a website session stays a guest)" test "$(me_status forger)" = 401
 
   say "--- proof 4 (first half): a finished race with Mia in it"
-  mia_id=$(ra user-id mia)
-  on_server bash -c "docker exec -i -e NAMES='[\"mia\",\"Bot A\",\"Bot B\",\"Bot C\"]' -e WEBSITE_RACERS='[{\"index\":0,\"websiteUserId\":\"$mia_id\"}]' racearena-app-1 node --input-type=module - </etc/seasonal-test/race-record.mjs >/root/race.json"
-  out=$(ra race hugo POST /api/races '' --data @/root/race.json | body)
+  mia_id=$(ra user-id $MIA)
+  on_server bash -c "docker exec -i -e NAMES='[\"$MIA\",\"Bot A\",\"Bot B\",\"Bot C\"]' -e WEBSITE_RACERS='[{\"index\":0,\"websiteUserId\":\"$mia_id\"}]' racearena-app-1 node --input-type=module - </etc/seasonal-test/race-record.mjs >/root/race.json"
+  out=$(ra race $HUGO POST /api/races '' --data @/root/race.json | body)
   key=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["shortKey"])' <<<"$out")
   cid=$(on_server python3 -c 'import json; print(json.load(open("/root/race.json"))["clientRaceId"])')
   ok "4a the finished race is stored ($key)" test -n "$key"
 
   say "--- proof 3: \"May host\" removed, locked, unlocked — within the feed interval (60 s)"
-  ra host hugo false
-  took=$(wait_for 150 is_signed_out hugo) && ok "3a removing \"May host\" ends the race session ($took)" true || ok "3a removing \"May host\" ends the race session ($took)" false
-  ra host hugo true
-  ra signin hugo >/dev/null
-  ok "3b ... and the next sign-in is an operator again" test "$(me_status hugo)" = 200
-  ra lock hugo true
-  took=$(wait_for 150 is_signed_out hugo) && ok "3c locking ends the race session ($took)" true || ok "3c locking ends the race session ($took)" false
-  ra signin hugo >/dev/null
-  ok "3d ... and a sign-in while locked gets no director session" test "$(me_status hugo)" = 401
-  ra lock hugo false
+  ra host $HUGO false
+  took=$(wait_for 150 is_signed_out $HUGO) && ok "3a removing \"May host\" ends the race session ($took)" true || ok "3a removing \"May host\" ends the race session ($took)" false
+  ra host $HUGO true
+  sleep 75
+  ra signin $HUGO >/dev/null
+  ok "3b ... and the next sign-in is an operator again" test "$(me_status $HUGO)" = 200
+  ra lock $HUGO true
+  took=$(wait_for 150 is_signed_out $HUGO) && ok "3c locking ends the race session ($took)" true || ok "3c locking ends the race session ($took)" false
+  ra signin $HUGO >/dev/null
+  ok "3d ... and a sign-in while locked gets no director session" test "$(me_status $HUGO)" = 401
+  ra lock $HUGO false
   sleep 70
-  ra login hugo "$pw_hugo"
-  ra signin hugo >/dev/null
-  ok "3e unlocking lets them in again" test "$(me_status hugo)" = 200
+  ra login $HUGO "$pw_hugo"
+  ra signin $HUGO >/dev/null
+  ok "3e unlocking lets them in again" test "$(me_status $HUGO)" = 200
 
   say "--- proof 4 (second half): Mia deleted"
   ok "4b before: Mia is in the open registration" test "$(entry_count "$reg")" = 1
-  ra delete mia
+  ra delete $MIA
   took=$(wait_for 150 registration_empty "$reg") && ok "4c deleting her removes her from the open registration ($took)" true ||
     ok "4c deleting her removes her from the open registration ($took)" false
-  ok "4d the finished race names her index for \"Deleted player\"" grep -q "\"$cid\":\[0\]" <<<"$(ra race hugo GET "/api/races/deleted-racers?clientRaceIds=$cid" | body)"
+  ok "4d the finished race names her index for \"Deleted player\"" grep -q "\"$cid\":\[0\]" <<<"$(ra race $HUGO GET "/api/races/deleted-racers?clientRaceIds=$cid" | body)"
   ok "4e ... and still verifies identically" grep -q '"identical":true' <<<"$(ra race admin POST "/api/races/$key/verify" '{}' | body)"
   not_driven "4f the result screen and the race history DRAWING \"Deleted player\" (no browser in this rehearsal; the screens read the answer of 4d — client tests ResultScreen.website and RaceHistory)"
 }
@@ -216,7 +246,12 @@ operations() {
   website_checks
 }
 
-website_install
+if [[ "${RESUME:-0}" == 1 ]]; then
+  say "=== resuming on the kept server (website $WEB_SHA, mode $MODE; race $RACE_SHA)"
+  on_server bash -c "rm -rf /root/race.git /root/race-b /root/race.bundle"
+else
+  website_install
+fi
 WEBSITE_PRINT=$(website_print)
 race_copy
 race_install
