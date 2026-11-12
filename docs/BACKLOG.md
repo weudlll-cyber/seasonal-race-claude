@@ -25,6 +25,17 @@ considered separately, and that would not be true.
 
 ---
 
+## The Browser gate's pinned runner (2026-11-12)
+
+- [ ] **Unpin ubuntu-24.04 in browser-gate.yml once Playwright supports ubuntu 26.04.** On
+      2026-11-12 `ubuntu-latest` became ubuntu-26.04 and the gate's install step failed: "Playwright
+      does not support chromium on ubuntu26.04-x64" (Playwright 1.59.1) — the scheduled run on
+      691f7429 and the push of f247dafb. `fix/ci-2026-11-12` pinned the job to `ubuntu-24.04`;
+      Playwright was not upgraded there. `ci.yml` installs no browser and stays on `ubuntu-latest`.
+
+      **verify:** a Playwright release that lists ubuntu 26.04; then the gate run by hand with
+      `runs-on: ubuntu-latest` must pass.
+
 ## WEBSITE-EMBED-1, the rest — 7a and 7b (2026-11-12)
 
 - [ ] ★ **WEBSITE-EMBED-1 7a and 7b — what of the race planning stays open after the merge.** The

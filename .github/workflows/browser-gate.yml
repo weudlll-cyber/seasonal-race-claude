@@ -90,6 +90,13 @@
 #
 # 05:41 UTC, not on the hour: GitHub queues cron workloads and on-the-hour schedules are the most
 # delayed. It is also an hour before the dependency audit, so two scheduled jobs do not contend.
+#
+# ── THE RUNNER IS PINNED TO ubuntu-24.04 (fix/ci-2026-11-12) ───────────────────────────────────
+# On 2026-11-12 ubuntu-latest became ubuntu-26.04 and the Playwright install step failed with
+# "ERROR: Playwright does not support chromium on ubuntu26.04-x64" (Playwright 1.59.1) — first on
+# the scheduled run on 691f7429 at 05:42 UTC, then on the push of f247dafb. Nothing in a commit
+# caused it. Unpin once Playwright supports ubuntu 26.04 (BACKLOG PART ONE has the row). ci.yml
+# installs no browser and stays on ubuntu-latest.
 # ============================================================
 
 name: Browser gate (production arm)
@@ -116,7 +123,7 @@ concurrency:
 jobs:
   browser:
     name: Production browser arm (fast set)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: Playwright 1.59.1 does not support ubuntu 26.04 (header)
     timeout-minutes: 25
 
     steps:
