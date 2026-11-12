@@ -42,12 +42,17 @@
 //              (`results-container--compact`): title, logo and the whole podium inside the window,
 //              only the Final Rankings list scrolling, the logo scaled by the race screen's
 //              `brandLogoMaxHeightPx` (RaceScreen/brandLogoSize.js).
+//
+// WEBSITE-EMBED-1 piece 6 (the owner's decision of 2026-11-11, OWNER-3): in website mode a racer
+//   whose website member has been deleted is shown as "Deleted player" (modules/deletedRacers.js),
+//   asked for while this screen is open; the recorded race and its names are untouched.
 // ============================================================
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { recordFinishedRace, SYNC } from '../../modules/raceHistory.js';
 import { sendOne } from '../../modules/pendingRaces.js';
+import { useDeletedRacers, shownName } from '../../modules/deletedRacers.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { brandLogoMaxHeightPx } from '../RaceScreen/brandLogoSize.js';
@@ -142,6 +147,11 @@ function ResultScreen() {
   // React's StrictMode (18 and 19) fires every effect twice in dev (mount → unmount → remount).
   // This ref survives the simulated unmount and prevents a double history write.
   const hasSaved = useRef(false);
+  // WEBSITE-EMBED-1 piece 6: this race's own id when it had website members — the one race asked
+  // about; null (nothing asked, ever) otherwise and in standalone.
+  const [websiteRaceId, setWebsiteRaceId] = useState(null);
+  const deletedRacers = useDeletedRacers(websiteRaceId ? [websiteRaceId] : []);
+  const nameOf = (racer) => shownName(racer.name, racer.index, deletedRacers[websiteRaceId]);
 
   const activeBrand = useActiveBrandProfile();
 
@@ -306,6 +316,7 @@ function ResultScreen() {
     // is logged and returns null — and the send is deliberately not awaited: the player is looking
     // at who won, and that must not wait on a network call or be replaced by an error if one fails.
     const entry = recordFinishedRace(parsed);
+    if (entry?.websiteRacers) setWebsiteRaceId(entry.id);
     if (entry?.sync?.state === SYNC.PENDING) {
       sendOne(entry).catch(() => {
         // Unreachable in practice — `sendOne` catches its own failures — and harmless if it ever
@@ -413,7 +424,7 @@ function ResultScreen() {
                 <div className="podium-medal">🥈</div>
                 <div className="podium-racer">
                   <div className="podium-icon">{second.icon}</div>
-                  <div className="podium-name">{second.name}</div>
+                  <div className="podium-name">{nameOf(second)}</div>
                   {second.finishTimeMs != null && (
                     <div className="podium-finish-time">{formatRaceTime(second.finishTimeMs)}</div>
                   )}
@@ -427,7 +438,7 @@ function ResultScreen() {
                 <div className="podium-medal">🥇</div>
                 <div className="podium-racer">
                   <div className="podium-icon">{first.icon}</div>
-                  <div className="podium-name">{first.name}</div>
+                  <div className="podium-name">{nameOf(first)}</div>
                   {first.finishTimeMs != null && (
                     <div className="podium-finish-time">{formatRaceTime(first.finishTimeMs)}</div>
                   )}
@@ -441,7 +452,7 @@ function ResultScreen() {
                 <div className="podium-medal">🥉</div>
                 <div className="podium-racer">
                   <div className="podium-icon">{third.icon}</div>
-                  <div className="podium-name">{third.name}</div>
+                  <div className="podium-name">{nameOf(third)}</div>
                   {third.finishTimeMs != null && (
                     <div className="podium-finish-time">{formatRaceTime(third.finishTimeMs)}</div>
                   )}
@@ -462,7 +473,7 @@ function ResultScreen() {
                 <div key={racer.index ?? index + 3} className="ranking-row">
                   <span className="rank-number">#{index + 4}</span>
                   <span className="rank-icon">{racer.icon}</span>
-                  <span className="rank-name">{racer.name}</span>
+                  <span className="rank-name">{nameOf(racer)}</span>
                   <span className="rank-time">
                     {racer.finishTimeMs != null ? formatRaceTime(racer.finishTimeMs) : '—'}
                   </span>

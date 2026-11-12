@@ -395,3 +395,29 @@ describe('RACE-SOURCE-1 — the marker survives from the race payload to the ser
     expect(toServerPayload(e).raceSource).toBeNull();
   });
 });
+
+// WEBSITE-EMBED-1 piece 6 (OWNER-3): which racers were which website member sits BESIDE the race —
+// at the top of the entry and of the upload, never inside `inputs` — and only when there are any.
+describe('websiteRacers beside the race (WEBSITE-EMBED-1 piece 6)', () => {
+  const MIA = [{ index: 1, websiteUserId: 'mia-1' }];
+
+  it('★ a race without website members: the entry and the upload carry no such field', () => {
+    const entry = buildHistoryEntry(aParsedResult());
+    expect('websiteRacers' in entry).toBe(false);
+    expect('websiteRacers' in toServerPayload(entry)).toBe(false);
+  });
+
+  it('a race with them: beside the race, the inputs exactly as without', () => {
+    const plain = buildHistoryEntry(aParsedResult());
+    const parsed = aParsedResult();
+    parsed.race = { ...parsed.race, websiteRacers: MIA };
+    const entry = buildHistoryEntry(parsed);
+    expect(entry.websiteRacers).toEqual(MIA);
+    expect(entry.inputs).toEqual(plain.inputs);
+    const payload = toServerPayload(entry);
+    expect(payload.websiteRacers).toEqual(MIA);
+    const { websiteRacers: _w, clientRaceId: _a, finishedAt: _b, ...rest } = payload;
+    const { clientRaceId: _c, finishedAt: _d, ...plainRest } = toServerPayload(plain);
+    expect(rest).toEqual(plainRest);
+  });
+});

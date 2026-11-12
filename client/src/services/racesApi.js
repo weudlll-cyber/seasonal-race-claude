@@ -159,3 +159,19 @@ export async function fetchRaceByShortKey(shortKey) {
     throw err;
   }
 }
+
+/**
+ * WEBSITE-EMBED-1 piece 6 (website mode only; standalone has no such route): for the named races of
+ * this team, the racer indexes whose website member was deleted — `{ <clientRaceId>: [index, …] }`,
+ * a race with none absent.
+ *
+ * @param {string[]} clientRaceIds
+ * @returns {Promise<Record<string, number[]>>}
+ */
+export async function fetchDeletedRacers(clientRaceIds) {
+  const ids = clientRaceIds.map(encodeURIComponent).join(',');
+  const res = await apiCall(`${BASE_URL}/deleted-racers?clientRaceIds=${ids}`, {
+    _skipAuthRedirect: true,
+  });
+  return (await res.json()).deleted ?? {};
+}

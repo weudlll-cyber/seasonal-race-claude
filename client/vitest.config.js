@@ -47,8 +47,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.js'],
     // Let Vite's CSS pipeline process .module.css files in tests
     css: true,
-    // Exclude Playwright e2e specs — they use @playwright/test, not Vitest
-    exclude: ['e2e/**', 'node_modules/**'],
+    // Exclude Playwright e2e specs — they use @playwright/test, not Vitest. e2e-basepath/ is the
+    // base-path arm's (WEBSITE-EMBED-1, playwright.basepath.config.js).
+    exclude: ['e2e/**', 'e2e-basepath/**', 'node_modules/**'],
     // ── GATE-CLIENT-CROWDING-2: THE SUITE STARVED ITSELF, AND THIS IS THE BOUND ────────────────
     //
     // Vitest defaults to roughly one worker per core. On a 14-core machine that is thirteen workers,

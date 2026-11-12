@@ -7,7 +7,11 @@
 //              credentialed fetch→blob→Object-URL pipeline so the resulting
 //              Image is never canvas-tainted. Same-origin / data: URLs use the
 //              direct img.src path unchanged.
+//              WEBSITE-EMBED-1: a root-absolute path is resolved under the
+//              app's base path at the one place it reaches the browser.
 // ============================================================
+
+import { appUrl } from '../modules/runtimeMarker.js';
 
 const _cache = new Map();
 // Tracks object URLs created for http(s) sprites so they can be revoked on clear.
@@ -69,7 +73,11 @@ export function loadSprite(url) {
       console.error(`[RaceArena] loadSprite: failed to load sprite "${url}"`);
       reject(new Error(`Failed to load sprite: ${url}`));
     };
-    img.src = url;
+    // WEBSITE-EMBED-1: every built-in sprite is a root-absolute "/assets/…" path (and a stored
+    // record may carry one too); under a base path it must be asked for below it. The CACHE stays
+    // keyed by the url as given, so callers and getCachedSprite(url) are unchanged. At "/" appUrl is the
+    // identity (modules/runtimeMarker.js).
+    img.src = appUrl(url);
   });
 }
 

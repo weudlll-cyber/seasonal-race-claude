@@ -40,6 +40,7 @@ so on an install that already has an admin a wrong token is never reported as su
 | variable | default | if missing or wrong |
 | --- | --- | --- |
 | `PORT` | `4000` | — |
+| `RA_BASE_PATH` | unset — the app answers at `/`, exactly as it always has | The path the app is reached under when another site forwards to it, e.g. `/games/race` (WEBSITE-EMBED-1). The whole app — API, built client, sign-in, the join page — then answers below it and **everything outside it is a 404**; the page's `<base href>`, the client's router and API address, and the session cookie's `Path` follow it (`server/src/runtimeConfig.js`, `server/src/auth/session.js`). Must start with `/`, must not end with one, letters, digits and `/ _ ~ . -` only, no empty, `.` or `..` segment. **Set but not such a path → the server refuses to start**, naming the variable. With it set, `RA_COOKIE_NAME_MODE=host` refuses to start too: a `__Host-` cookie must have `Path=/`. Added 2026-11-11. |
 | `RA_BIND_ADDRESS` | unset — listens on **every interface**, as it always has | An IP address (`127.0.0.1`, `::1`, …) the API listens on instead. **`127.0.0.1` is the recommended setting behind a reverse proxy**: the API then answers only on the machine itself. **Set but not an IP address → the server refuses to start**, naming the variable (a hostname is refused on purpose — see `server/src/bindAddress.js`). **Not inside a Docker container**: `127.0.0.1` there makes the published port unreachable; bind the published port instead. Added 2026-10-01, RELEASE-BASICS-1. |
 | `RA_CLIENT_DIST` | `client/dist`, resolved relative to the server's own module — never to the working directory | If there is no build there, the server **starts anyway**, logs one line naming the path it tried, and serves the API only. `GET /` is then a 404. |
 | `RA_CLIENT_ORIGIN` | unset — CORS is **off** (`origin: false`), i.e. same-origin only | Needed only for **split hosting**, where the app is served from a different origin than the API. Comma-separated for more than one. A browser on an origin not in the list is refused by CORS, which in the browser looks like the server being down rather than a configuration problem. In the same-origin model it should stay unset. |
@@ -53,7 +54,7 @@ so on an install that already has an admin a wrong token is never reported as su
 | --- | --- | --- | --- |
 | `NODE_ENV` | `production`, `test`, anything | unset | `production` turns on trust-proxy (one hop) while `RA_TRUST_PROXY` is unset, and is what the three `auto` settings below key off. |
 | `RA_COOKIE_SECURE` | `true`, `false`, `auto` | follows `NODE_ENV=production` | Marks the session cookie `Secure`. `auto` delegates to Express's trust-proxy logic. Set it explicitly when a terminating proxy means `NODE_ENV` does not tell the truth about HTTPS. |
-| `RA_COOKIE_NAME_MODE` | `auto`, `host`, `legacy` | `auto` | `auto` uses the `__Host-` cookie prefix only when `Secure` is guaranteed. **`host` THROWS at startup (`COOKIE_NAME_MODE_INVALID`) unless `RA_COOKIE_SECURE=true`** — one of the variables that can stop the server from booting (the others say so in their rows). |
+| `RA_COOKIE_NAME_MODE` | `auto`, `host`, `legacy` | `auto` | `auto` uses the `__Host-` cookie prefix only when `Secure` is guaranteed — under `RA_BASE_PATH` the `__Secure-` prefix instead, because `__Host-` requires `Path=/`. **`host` THROWS at startup (`COOKIE_NAME_MODE_INVALID`) unless `RA_COOKIE_SECURE=true`** — one of the variables that can stop the server from booting (the others say so in their rows). |
 | `RA_CSRF_STRICT` | `true`, `false`, `auto` | follows `NODE_ENV=production` | Rejects mutating requests with no `Origin` header. Wrong value: either mutations from real browsers are refused, or the protection is off. |
 
 ## Storage
@@ -93,6 +94,22 @@ minute per address, generous because every phone at a venue may share one addres
 | variable | when unset | when set |
 | --- | --- | --- |
 | `RA_INTEGRATION_KEY` | **off**: `POST /api/integrations/registrations/<code>/entries` answers `404`, exactly like a path that does not exist. The game is complete without it. | An external site with its own signed-in players may add a player to an open registration, sending `Authorization: Bearer <this value>`. Use a long random value (32 characters or more), keep it secret like a password, and change it by setting a new value and restarting. Read per request; compared in constant time. What it allows and how to call it: [INTEGRATIONS.md](INTEGRATIONS.md). Added 2026-10-21, REGISTRATION-1. |
+
+## Website mode — optional (WEBSITE-EMBED-1)
+
+RaceArena inside the Seasonal Entertainment website: the website owns the accounts, and its proxy
+forwards to this install under a base path (`RA_BASE_PATH`, above). **Every setting here is off
+unless `RA_MODE=website`**; how sign-in then works is [AUTH.md](AUTH.md) §10.
+
+| variable | default | notes |
+| --- | --- | --- |
+| `RA_MODE` | `standalone` — everything as it always was | `website` turns website mode on. **Any other value → the server refuses to start**, naming the variable. |
+| `RA_WEBSITE_PROXY_SECRET_FILE` | — | The path of a file (mode 0600) holding the secret the website proxy sends in `X-Ra-Proxy-Secret`. Read once at start; only its digest is kept; never logged. **In website mode, unset, unreadable or empty → the server refuses to start**, naming the file, never the secret. |
+| `RA_WEBSITE_TRUSTED_PROXIES` | — | The network(s) the website proxy connects from, comma-separated (`172.18.0.0/16`, `127.0.0.1`): in Docker, the compose network the proxy's connections arrive from. The TCP peer is checked, not `X-Forwarded-For`. **In website mode, empty or holding anything that is not an address or a CIDR network → the server refuses to start.** |
+| `RA_WEBSITE_TEAM` | `Seasonal Entertainment` | The team every website director and admin lands in (OWNER-2); founded on the first such sign-in if it does not exist. |
+| `RA_WEBSITE_FEED_URL` | — | The website's address for its account-changes feed (OWNER-3), e.g. `http://site:3800`; the race asks `<it>/api/games/race/account-changes`. **Required in website mode** — without it a deleted member's name would stay in open registrations — **unset or not http(s) → the server refuses to start.** |
+| `RA_WEBSITE_SYNC_TOKEN_FILE` | — | A root-only file holding the token the race sends in `X-Games-Sync-Token`. Read once at start; never logged. **Required in website mode; unreadable or empty → the server refuses to start.** |
+| `RA_WEBSITE_FEED_INTERVAL_MS` | `60000` | How often the race asks the feed, 15000–120000; a full page (500 events) is followed at once, never more than once a second. On errors the wait doubles per failure, up to ten minutes. **Outside the range → the server refuses to start.** |
 
 ## Build identity — optional, and only affects a status line
 

@@ -80,6 +80,13 @@
   cursor: pointer;
 }
 
+/* WEBSITE-EMBED-1: the members-only sign-in is a link styled as this button (JoinPage.jsx). */
+a.join {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
 .join:disabled {
   opacity: 0.5;
   cursor: default;

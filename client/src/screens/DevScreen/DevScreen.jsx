@@ -25,6 +25,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
 import { Ctl } from './sections/ControlInfo.jsx';
 import { CHAPTERS } from './devScreenChapters.js';
+import { SITE_MODE } from '../../modules/runtimeMarker.js';
 import s from './DevScreen.module.css';
 
 // Default-deny: only explicit 'operator' tier is operator-visible; anything else is admin-only.
@@ -33,14 +34,22 @@ export function isOperatorTier(tier) {
   return tier === 'operator';
 }
 
-/** The chapters as one view shows them: the operator view keeps only operator-tier parts, and a
- *  sub-group or chapter left with none is not shown at all. */
+/** Whether a part is shown in this mode: a `standaloneOnly` part (the password and race-director
+ *  sections) is left out in website mode — the same runtime marker the sign-in page reads. */
+function shownInMode(part) {
+  return !(part.standaloneOnly && SITE_MODE === 'website');
+}
+
+/** The chapters as one view shows them: the operator view keeps only operator-tier parts, website
+ *  mode drops the standalone-only parts, and a sub-group or chapter left with none is not shown at
+ *  all. Standalone in the All view is CHAPTERS itself, as before. */
 function chaptersFor(view) {
-  if (view !== 'operator') return CHAPTERS;
+  if (view !== 'operator' && SITE_MODE !== 'website') return CHAPTERS;
+  const keep = (p) => shownInMode(p) && (view !== 'operator' || isOperatorTier(p.tier));
   return CHAPTERS.map((chapter) => ({
     ...chapter,
     subgroups: chapter.subgroups
-      .map((sub) => ({ ...sub, parts: sub.parts.filter((p) => isOperatorTier(p.tier)) }))
+      .map((sub) => ({ ...sub, parts: sub.parts.filter(keep) }))
       .filter((sub) => sub.parts.length > 0),
   })).filter((chapter) => chapter.subgroups.length > 0);
 }

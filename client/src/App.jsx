@@ -28,6 +28,7 @@ import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import TestAidsSyncOnAuth from './components/TestAidsSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
 import ServerStatusBanner from './components/ServerStatusBanner.jsx';
+import { BASE_PATH, SITE_MODE } from './modules/runtimeMarker.js';
 import ServerRecoveryProbe from './components/ServerRecoveryProbe.jsx';
 import PendingRaceSync from './components/PendingRaceSync.jsx';
 import { useTestAidsState } from './modules/testAids.js';
@@ -67,8 +68,10 @@ function App() {
 
   // react-router v7: startTransition + relativeSplatPath are the DEFAULT behavior now, so the v6
   // `future` opt-in flags are removed (the app was already running with them enabled).
+  // WEBSITE-EMBED-1: under a base path ("/games/race") every route is below it; at "/" BASE_PATH is
+  // "" and the router is configured exactly as before (modules/runtimeMarker.js).
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={BASE_PATH || undefined}>
       <AuthProvider>
         {/* SERVER-GONE-1: above the router, so the one message about the server does not depend on
             which screen the player happens to be on. It renders nothing unless a request has
@@ -154,7 +157,14 @@ function App() {
               }
             />
             <Route path="/login" element={<LoginScreen />} />
-            <Route path="/setup-admin" element={<SetupAdminScreen />} />
+            {/* WEBSITE-EMBED-1 piece 3a: in website mode the website owns the accounts; there is no
+                first admin to set up, so the page sends the visitor to the sign-in button. */}
+            <Route
+              path="/setup-admin"
+              element={
+                SITE_MODE === 'website' ? <Navigate to="/login" replace /> : <SetupAdminScreen />
+              }
+            />
             {/* LEGAL-PAGES-1: PUBLIC — no ProtectedRoute. The operator's legal notice and privacy
                 policy are read before anyone signs in (footer: components/LegalFooter). */}
             <Route path="/legal-notice" element={<LegalPage kind="legalNotice" />} />

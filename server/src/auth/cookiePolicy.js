@@ -4,7 +4,8 @@
 // Project:     RaceArena — DELIVERY-CLEAN-3 piece 1 (B9)
 // Created:     2026-09-27
 //
-// WHAT THIS OWNS: the single rule deciding whether the session cookie is marked `Secure`.
+// WHAT THIS OWNS: the single rule deciding whether the session cookie is marked `Secure`, and
+// (WEBSITE-EMBED-1) the base path the cookies are scoped under.
 //
 // ── WHY IT MOVED OUT OF session.js, WHICH IS THE ONLY CHANGE HERE ───────────────────────────────
 //
@@ -27,6 +28,8 @@
 // judged without one — can ask the same question about the environment it was given.
 // ============================================================
 
+import { judgeBasePath } from '../runtimeConfig.js';
+
 /**
  * Is the session cookie marked `Secure`?
  *
@@ -45,4 +48,20 @@ export function resolveCookieSecure(isProduction, env = process.env) {
   if (v === 'false') return false;
   if (v === 'auto') return 'auto';
   return isProduction;
+}
+
+/**
+ * The base path cookies are scoped under, '' at the root (WEBSITE-EMBED-1 piece 2): the session
+ * cookie (session.js) and the join page's device cookie (routes/join.js) both follow it.
+ *
+ * LENIENT ON PURPOSE: session.js is evaluated when app.js is imported, which is BEFORE index.js
+ * judges the settings. A wrong RA_BASE_PATH is refused there with a clear message
+ * (`resolveBasePath`); throwing here instead would turn that refusal into a stack trace.
+ *
+ * @param {object} [env]
+ * @returns {string}
+ */
+export function cookieBasePath(env = process.env) {
+  const verdict = judgeBasePath(env.RA_BASE_PATH);
+  return verdict.ok ? verdict.basePath : '';
 }

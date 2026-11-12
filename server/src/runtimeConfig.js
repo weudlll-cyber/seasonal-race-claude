@@ -39,11 +39,20 @@
 //
 // The script goes in `<head>`, before the module bundle at the end of `<body>`, because
 // `API_BASE_URL` in `client/src/services/api.js` is a module-level constant evaluated at import.
+//
+// ── WEBSITE-EMBED-1 piece 2: THE BASE PATH LIVES HERE TOO ───────────────────────────────────────
+//
+// `RA_BASE_PATH` (e.g. `/games/race`) is the second half of "where this install is reached", so it
+// has the same home as the origin: judged here, refused at start when wrong (index.js), and handed to
+// the bundle in the SAME marker. Unset — the standalone install and every existing flow — the marker,
+// the page and the CSP hash are byte-for-byte what they were: the `basePath` key is written only
+// when a base path is set, and `apiBaseUrl` is then `<origin or ''><base path>`, which is why
+// client/src/services/api.js needed no change (`${API_BASE_URL}/api/…` → `<base>/api/…`).
 // ============================================================
 
 import { createHash } from 'node:crypto';
 
-/** The global the client reads. Must equal `RUNTIME_CONFIG_GLOBAL` in client/src/services/api.js. */
+/** The global the client reads. Must equal `RUNTIME_CONFIG_GLOBAL` in client/src/modules/runtimeMarker.js. */
 export const RUNTIME_CONFIG_GLOBAL = '__RA_RUNTIME_CONFIG__';
 
 /**
@@ -137,6 +146,60 @@ export function assertPublicOriginUsable(env = process.env) {
 }
 
 /**
+ * Is this a usable base path? (WEBSITE-EMBED-1 piece 2.)
+ *
+ * Empty is the root — today's install — and is answered as `''`. Anything else (a lone "/" too) must
+ * start with "/", must not end with one, and is made of URL-safe path characters only, with no
+ * empty, "." or ".." segment. Narrow on purpose, like `judgePublicOrigin`: the value is written
+ * verbatim into the page's `<base href>` and the cookie's Path, so anything a browser would
+ * normalise, decode or escape is refused rather than repaired.
+ *
+ * @param {unknown} raw
+ * @returns {{ok: true, basePath: string} | {ok: false, reason: string}}
+ */
+export function judgeBasePath(raw) {
+  if (raw === undefined || raw === null) return { ok: true, basePath: '' };
+  const text = String(raw).trim();
+  if (text === '') return { ok: true, basePath: '' };
+  if (!text.startsWith('/')) return { ok: false, reason: 'it must start with "/"' };
+  if (text.endsWith('/')) return { ok: false, reason: 'it must not end with "/"' };
+  if (!/^[A-Za-z0-9/_~.-]+$/.test(text)) {
+    return {
+      ok: false,
+      reason: 'it may hold only letters, digits and / _ ~ . -',
+    };
+  }
+  const segments = text.slice(1).split('/');
+  if (segments.some((s) => s === '' || s === '.' || s === '..')) {
+    return {
+      ok: false,
+      reason: 'it must not hold an empty, "." or ".." segment',
+    };
+  }
+  return { ok: true, basePath: text };
+}
+
+/**
+ * The configured base path, `''` when unset. THROWS on a value that is present and wrong — unlike
+ * `resolvePublicOrigin` there is no safe fallback: answering at "/" when "/games/race" was asked
+ * for would put the app where the proxy does not send anyone. index.js turns the throw into a
+ * refusal to start before anything listens.
+ *
+ * @param {object} [env]
+ * @returns {string}
+ */
+export function resolveBasePath(env = process.env) {
+  const verdict = judgeBasePath(env.RA_BASE_PATH);
+  if (!verdict.ok) {
+    throw new Error(
+      `RA_BASE_PATH is set but unusable: ${verdict.reason}. ` +
+        'It is the path this install is reached under, e.g. /games/race, or unset for "/".'
+    );
+  }
+  return verdict.basePath;
+}
+
+/**
  * The one `<script>` that hands the address to the bundle.
  *
  * `JSON.stringify` on the whole payload is what keeps this safe: the origin has already been
@@ -144,36 +207,52 @@ export function assertPublicOriginUsable(env = process.env) {
  * could not open a tag even if one survived. The `</` escape covers the one sequence that could
  * close this script element from inside a JSON string.
  *
- * @param {string} origin
+ * @param {string|null} origin
+ * @param {string} [basePath]  `''` (the root) unless RA_BASE_PATH is set
+ * @param {string} [mode]      'standalone' unless RA_MODE=website (WEBSITE-EMBED-1 piece 3a)
  * @returns {string}
  */
-export function runtimeConfigScript(origin) {
+export function runtimeConfigScript(origin, basePath = '', mode = 'standalone') {
   // ★★ THE MARKER IS WRITTEN EVEN WITH NO ORIGIN (the owner's decision, 2026-09-23: same-origin by
   // default for real deployments). `apiBaseUrl: ''` is not "unconfigured" — it is a POSITIVE
   // statement that this page was served by the RaceArena server and the API is on the page's own
   // origin. The client can only tell "our server, nothing configured" from "somebody else's static
   // server" if our server says so, and this is it saying so.
-  const payload = JSON.stringify({ apiBaseUrl: origin ?? '' }).replace(/</g, '\\u003c');
+  // WEBSITE-EMBED-1: with a base path the API is under it, and the client's router needs it; with
+  // none the payload is exactly the old one, so the standalone page and its CSP hash do not move.
+  const config = { apiBaseUrl: `${origin ?? ''}${basePath}` };
+  if (basePath) config.basePath = basePath;
+  // Piece 3a: the sign-in screen offers the website's sign-in instead of a password form. Written
+  // only in website mode, for the same reason as `basePath`: standalone's payload does not move.
+  if (mode === 'website') config.mode = 'website';
+  const payload = JSON.stringify(config).replace(/</g, '\\u003c');
   return `<script>window.${RUNTIME_CONFIG_GLOBAL}=${payload};</script>`;
 }
 
 /**
- * The CSP source expression that admits exactly the script `runtimeConfigScript(origin)` renders:
- * `'sha256-…'` over the text BETWEEN the tags, which is what a browser hashes. Lives beside the
- * script so the two cannot drift: change the script and the hash follows (AUDIT-1 D1, csp.js).
+ * The CSP source expression that admits exactly the script `runtimeConfigScript(origin, basePath)`
+ * renders: `'sha256-…'` over the text BETWEEN the tags, which is what a browser hashes. Lives beside
+ * the script so the two cannot drift: change the script and the hash follows (AUDIT-1 D1, csp.js).
  *
  * @param {string|null} origin
+ * @param {string} [basePath]
+ * @param {string} [mode]
  * @returns {string}
  */
-export function runtimeConfigScriptHash(origin) {
-  const body = runtimeConfigScript(origin)
+export function runtimeConfigScriptHash(origin, basePath = '', mode = 'standalone') {
+  const body = runtimeConfigScript(origin, basePath, mode)
     .replace(/^<script>/, '')
     .replace(/<\/script>$/, '');
   return `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`;
 }
 
+/** The shell's `<base href="/">` (client/index.html), as written by the build. */
+const BASE_HREF_ROOT = /<base\s+href="\/"\s*\/?>/i;
+
 /**
- * `html` with the runtime config inserted, or `html` unchanged when there is nothing to insert.
+ * `html` with the runtime config inserted, and — when a base path is set — its `<base href="/">`
+ * rewritten to `<base href="<base path>/">`, so every relative URL the build wrote (`./assets/…`,
+ * the favicons, the fonts through the CSS) resolves under the base path.
  *
  * Inserted immediately after `<head>` so it runs before the module bundle. If there is no `<head>`
  * — which would mean someone replaced the shell — the script is prepended rather than dropped,
@@ -181,14 +260,18 @@ export function runtimeConfigScriptHash(origin) {
  *
  * @param {string} html
  * @param {string|null} origin
+ * @param {string} [basePath]
+ * @param {string} [mode]
  * @returns {string}
  */
-export function injectRuntimeConfig(html, origin) {
+export function injectRuntimeConfig(html, origin, basePath = '', mode = 'standalone') {
   // ★ `origin` may be null — that is the SAME-ORIGIN case and it is injected, not skipped. This used
   // to `return html` unchanged, which is what left a standalone image's page indistinguishable from
   // a page served by any other static server.
-  const script = runtimeConfigScript(origin ?? null);
+  const script = runtimeConfigScript(origin ?? null, basePath, mode);
+  // `basePath` has passed `judgeBasePath`: URL-safe characters only, so it needs no escaping here.
+  const page = basePath ? html.replace(BASE_HREF_ROOT, `<base href="${basePath}/" />`) : html;
   const headOpen = /<head(\s[^>]*)?>/i;
-  if (headOpen.test(html)) return html.replace(headOpen, (m) => `${m}${script}`);
-  return script + html;
+  if (headOpen.test(page)) return page.replace(headOpen, (m) => `${m}${script}`);
+  return script + page;
 }

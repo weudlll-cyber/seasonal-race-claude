@@ -382,6 +382,62 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     });
   }
 
+  /**
+   * WEBSITE-EMBED-1 piece 3a: the user record of a website DIRECTOR or ADMIN, created on their first
+   * sign-in through the website and brought up to date on every later one — check-then-create inside
+   * the same lock as every other write, so two simultaneous first sign-ins make one record.
+   *
+   * The record is an ordinary user record, so requireAuth, the role policy and the team scoping
+   * (guards.js, races, registrations) treat a website director exactly like a local one. What marks
+   * it: `websiteUserId`, a username `website:<id>` (which no local name can collide with as a
+   * login — local sign-in is closed in website mode), NO password hash (it can never sign in with a
+   * password), and `displayName` from the website. The team is the configured website team; it is
+   * founded on purpose if it does not exist yet (`allowNewTeam`), and an existing spelling is
+   * adopted, as for every other create.
+   *
+   * ★ The last-admin guard of updateUser does not apply: the role is the website's decision,
+   * recomputed at every sign-in, and recover-admin.mjs still makes a local admin if it is needed.
+   *
+   * @param {{ websiteUserId: string, displayName: string, role: 'operator'|'admin', team: string }} p
+   * @returns {Promise<object>} the full auth record (the caller stamps its sessionEpoch)
+   */
+  async function upsertWebsiteUser({ websiteUserId, displayName, role, team }) {
+    return enqueue(async function run() {
+      if (role !== 'operator' && role !== 'admin') {
+        const err = new Error('Role must be "operator" or "admin"');
+        err.code = 'INVALID_ROLE';
+        throw err;
+      }
+      const users = readUsers();
+      const idx = users.findIndex((u) => u.websiteUserId === websiteUserId);
+      if (idx === -1) {
+        const username = `website:${websiteUserId}`;
+        const resolvedTeam = resolveTeam(team, true, users);
+        const record = {
+          id: randomUUID(),
+          username,
+          usernameNormalized: normalizeUsername(username),
+          passwordHash: null, // never signs in with a password
+          role,
+          team: resolvedTeam.team,
+          teamNormalized: resolvedTeam.teamNormalized,
+          sessionEpoch: 0,
+          websiteUserId,
+          displayName,
+          createdAt: new Date().toISOString(),
+          createdBy: 'website',
+        };
+        users.push(record);
+        writeUsers(users);
+        return record;
+      }
+      const record = { ...users[idx], role, displayName };
+      users[idx] = record;
+      writeUsers(users);
+      return record;
+    });
+  }
+
   async function deleteUser(id) {
     return enqueue(function run() {
       const users = readUsers();
@@ -419,6 +475,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     findAuthRecordById,
     createUser,
     updateUser,
+    upsertWebsiteUser,
     deleteUser,
   };
 }

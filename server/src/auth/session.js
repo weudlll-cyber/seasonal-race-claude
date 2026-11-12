@@ -15,7 +15,7 @@ import { join } from 'path';
 import { DATA_ROOT } from '../dataPaths.js';
 // Imported as well as re-exported below: a bare `export {} from` does not bind the name locally,
 // and `getActiveCookieName` and `createSessionMiddleware` below call it.
-import { resolveCookieSecure } from './cookiePolicy.js';
+import { resolveCookieSecure, cookieBasePath } from './cookiePolicy.js';
 
 // Checked: sqliteStoreFactory({ Store }) — the factory destructures session.Store from the
 // express-session function object, which is standard connect-store adapter convention.
@@ -28,13 +28,35 @@ const SqliteStore = sqliteStoreFactory(session);
 // it can be judged without an environment. The alternative was a second copy of the rule.
 export { resolveCookieSecure } from './cookiePolicy.js';
 
+/**
+ * The session cookie's Path: "/" at the root, exactly as before; the base path when one is set, so
+ * a game cookie never travels to the rest of the website it is embedded in (the website does not
+ * strip game cookies — each game scopes its own).
+ */
+export function sessionCookiePath(env = process.env) {
+  return cookieBasePath(env) || '/';
+}
+
 // RA_COOKIE_NAME_MODE controls the session cookie name:
 //   auto (default): __Host-ra.sid when Secure is guaranteed (literal true), else ra.sid
 //   host:           always __Host-ra.sid; throws if Secure is not guaranteed
 //   legacy:         always ra.sid (transition escape hatch)
-export function resolveCookieName(secureResolved) {
+// ★ WEBSITE-EMBED-1: with a base path the cookie's Path is not "/", and a `__Host-` cookie MUST have
+// Path=/ (the browser drops it otherwise), so there `auto` gives `__Secure-ra.sid` when Secure is
+// guaranteed, else `ra.sid`, and `host` is refused. Without a base path nothing here changed.
+export function resolveCookieName(secureResolved, basePath = cookieBasePath()) {
   const mode = process.env.RA_COOKIE_NAME_MODE ?? 'auto';
   if (mode === 'legacy') return 'ra.sid';
+  if (basePath) {
+    if (mode === 'host') {
+      const e = new Error(
+        'RA_COOKIE_NAME_MODE=host cannot be used with RA_BASE_PATH: a __Host- cookie must have Path=/'
+      );
+      e.code = 'COOKIE_NAME_MODE_INVALID';
+      throw e;
+    }
+    return secureResolved === true ? '__Secure-ra.sid' : 'ra.sid';
+  }
   if (mode === 'host') {
     if (secureResolved !== true) {
       const e = new Error(
@@ -143,7 +165,7 @@ export function createSessionMiddleware(opts = {}) {
       httpOnly: true,
       sameSite: 'lax',
       secure: cookieSecure,
-      path: '/',
+      path: sessionCookiePath(), // "/" unless RA_BASE_PATH is set (WEBSITE-EMBED-1)
       maxAge: 30 * 24 * 60 * 60 * 1000,
     },
   });

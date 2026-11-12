@@ -171,7 +171,11 @@ in again (`openSessionDatabase`, `server/src/auth/session.js`). Only damage does
 permission error still stops the start.
 
 **The cookie:** `httpOnly`, `sameSite: 'lax'`, `path: '/'`, `secure` per §2, and **`maxAge` 30 days**.
-Its name is `__Host-ra.sid` when Secure is guaranteed, otherwise `ra.sid`.
+Its name is `__Host-ra.sid` when Secure is guaranteed, otherwise `ra.sid`. **Under a base path**
+(`RA_BASE_PATH`, e.g. `/games/race`, WEBSITE-EMBED-1) the path is the base path, so the cookie never
+travels to the rest of the site the game is embedded in, and its name is `__Secure-ra.sid` when Secure
+is guaranteed (a `__Host-` cookie must have `Path=/`), otherwise `ra.sid`; `RA_COOKIE_NAME_MODE=host`
+is refused there (`resolveCookieName`, `sessionCookiePath` in `server/src/auth/session.js`).
 
 **How it ends:** `POST /api/auth/logout` destroys the server-side session and clears the cookie —
 including the legacy name, so a rename cannot strand an old cookie. Logging out without a session
@@ -354,3 +358,78 @@ not work.
 | client API calls                       | `client/src/services/authApi.js`           |
 | client session state                   | `client/src/contexts/AuthContext.jsx`      |
 | client route guard                     | `client/src/components/ProtectedRoute.jsx` |
+| website mode (§10)                     | `server/src/website/`                      |
+
+---
+
+## 10. Website mode — the Seasonal Entertainment website owns the accounts (WEBSITE-EMBED-1)
+
+**Off unless `RA_MODE=website`** ([ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*); standalone is
+everything above, unchanged. In website mode the race runs under the website's path (`RA_BASE_PATH`)
+behind the website's proxy, and the website decides who is who.
+
+**The one door: `GET <base>/auth/website`** (`server/src/website/websiteSignIn.js`). The website's
+proxy sets the identity headers on this route only — `X-Acting-User-Id`, `X-Acting-User` (the
+display name), `X-Acting-User-Roles` (`member` / `organiser` / `admin`), `X-Acting-User-Can-Host`,
+or `X-Acting-Guest: true` alone — plus the race's secret, `X-Ra-Proxy-Secret`. **They are believed
+only when the TCP peer (`req.socket.remoteAddress`, not `req.ip`) is inside
+`RA_WEBSITE_TRUSTED_PROXIES` AND the secret matches** (compared timing-safe); otherwise `403` with no
+detail. No other route reads them. `X-Acting-User-Email-Verified` and `X-Acting-User-Steps` are
+accepted and not used.
+
+**The mapping, recomputed at every sign-in.** Website `admin` → race **admin**; `Can-Host: true` →
+race **operator** (a director); any other member → a **player** identity only; a guest → no identity
+(and whatever the browser was signed in as ends). Nothing maps above admin. Directors and admins get
+an ordinary user record `website:<id>` with no password, the website's display name and the team
+`RA_WEBSITE_TEAM` (`upsertWebsiteUser`, `server/src/auth/usersStore.js`), so every guard above treats
+them like a local director. Players get **no** user record, only the identity in their session. A
+locked or deleted member is refused. The browser is then sent to `returnTo` if that is a path under
+the base path, else to the base path.
+
+**How a website session ends.** What the race knows of each member — display name, mapped role, an
+**epoch**, locked, deleted — is kept in `registrations.sqlite` (`server/src/website/identityStore.js`).
+A session carries the epoch it was made under and is good only while it equals the member's
+(`server/src/website/websiteSession.js`). For directors `requireAuth` checks it beside
+`sessionEpoch`, and also that the last sign-in still made them a director, so **a host whose hosting
+right is revoked loses the director role on their next request** once they sign in again anywhere. A
+sign-in that maps a member to a different role bumps the epoch.
+
+**The website's account changes** (piece 3b, `server/src/website/accountFeed.js`). In website mode
+the race follows the website's feed (`RA_WEBSITE_FEED_URL`, `RA_WEBSITE_SYNC_TOKEN_FILE`): **locked**
+ends the member's sessions and refuses sign-in, **unlocked** allows it again, **rights** ends their
+sessions so the role is recomputed at the next sign-in, **deleted** removes their entries from open
+registrations at once and marks the identity deleted. The cursor is kept in the same SQLite file, and
+a page's changes and its cursor are written together, so every event is safe to apply twice. **The
+answer is read exactly as the website sends it** (piece 5c; the website's
+`server/src/accounts/accountChanges.js`): `{"changes":[{"id":42,"kind":"locked"}],"next":"118"}` —
+`kind` one of the four above, `id` a JSON number kept as `String(id)` (the same string the sign-in
+route records from `X-Acting-User-Id`), `next` a digit string, at most 500 changes a page (a full page
+is followed at once). The first request asks `since=0`. Any other shape is an error: nothing is
+applied, the cursor stays, and the poller backs off.
+
+**Joining a race** (piece 4, `server/src/routes/join.js`). A member signed in through the website
+joins a registration through the race's own join page as themselves — their display name, keyed by
+their website id, one entry per account. A director chooses, when opening a registration, between
+*Website members only* (the default; a guest sees it read-only with a sign-in button that comes back
+to the page) and *Anyone with the link* (a guest types a name, as today).
+
+**A deleted member in past races** (piece 6, the owner's decision of 2026-11-11, OWNER-3) is shown
+as *Deleted player* on the result screen and in the race history. A race whose players came from a
+registration carries, BESIDE the race, which racer was which website member
+(`websiteRacers`); the server keeps it in its own table and never in the stored race, which stays
+byte-identical, and answers `GET /api/races/deleted-racers` from the account feed's deleted list.
+The stored name, the coat, the colours and a replay are unchanged; the race screen of a repeat
+still draws the stored names (the sheet says why). Details: API.md, *Races*.
+
+**Closed in website mode** (`server/src/website/closedInWebsiteMode.js`): local sign-in
+(`POST /api/auth/login`), first-admin setup (`GET /api/auth/setup-needed`, `POST /api/auth/setup`),
+`POST /api/auth/change-password` and everything under `/api/users` answer `404`. The sign-in screen
+shows one button, *Sign in through Seasonal Entertainment*, to `<base>/auth/website`. The Dev
+Screen leaves out *Your password* and *Race directors* there (the owner's decision of 2026-11-11;
+the parts marked `standaloneOnly` in `client/src/screens/DevScreen/devScreenChapters.js`).
+`scripts/recover-admin.mjs` is a command on the server and keeps working.
+
+**For tests and a look, never for an install:** `scripts/website-standin.mjs`, a local stand-in for
+the website's proxy on 127.0.0.1. It forwards the full path, sets the headers and the secret for a
+fake member picked on its page (member, host, admin, guest) on `<base>/auth/website` only, and strips
+such headers from everything else.

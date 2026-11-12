@@ -32,11 +32,43 @@ import { mountClientAssets, mountSpaFallback, mountApiNotFound } from './staticC
 import { apiErrorHandler } from './apiErrorHandler.js';
 import { applyTrustProxy } from './trustProxy.js';
 import { cspDirectives } from './csp.js';
+import { resolveBasePath } from './runtimeConfig.js';
+import usersStore from './auth/usersStore.js';
+import { siteMode, websiteConfig } from './website/websiteConfig.js';
+import { getDefaultIdentityStore } from './website/identityStore.js';
+import { createWebsiteSignIn } from './website/websiteSignIn.js';
+import { closedInWebsiteMode } from './website/closedInWebsiteMode.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
 
+/**
+ * The app as it is reached: the RaceArena app itself, at "/" — or, with `RA_BASE_PATH` set
+ * (WEBSITE-EMBED-1 piece 2), mounted under that path, with everything outside it a plain 404.
+ *
+ * ★ MOUNTING, NOT REWRITING. The website's proxy forwards the FULL path (`/games/race/…` is not
+ * stripped), so the app must answer under it. Mounting the unchanged app as a sub-app does exactly
+ * that: inside it `req.path` is relative to the mount, so every route, the public allow-list and the
+ * role policy (guards.js), the static files and the SPA fallback (staticClient.js) judge the same
+ * paths they always did. Nothing below learns the base path except the places that must WRITE it
+ * into what the browser sees: the runtime marker and `<base href>` (runtimeConfig.js), the CSP hash
+ * of that marker (csp.js), the cookies' Paths (session.js, routes/join.js) and, in website mode,
+ * where a sign-in sends the browser afterwards (website/websiteSignIn.js).
+ *
+ * Unset — the standalone install — this returns the app itself, so "/" is exactly as before.
+ */
 export function createApp() {
+  const basePath = resolveBasePath();
+  const raceApp = createRaceApp(basePath);
+  if (!basePath) return raceApp;
+  const outer = express();
+  outer.disable('x-powered-by'); // helmet removes it inside the race app; this 404 is outside it
+  outer.use(basePath, raceApp);
+  outer.use((_req, res) => res.status(404).type('text/plain').send('Not found'));
+  return outer;
+}
+
+function createRaceApp(basePath) {
   const app = express();
   applyTrustProxy(app); // AUDIT-1 A5M-07: RA_TRUST_PROXY; unset keeps the NODE_ENV rule
   // AUDIT-1 D1: the Content-Security-Policy is ON; its directives and why each is what it is live in
@@ -68,6 +100,23 @@ export function createApp() {
   });
   app.use(sessionMiddleware);
   app.use(csrfOriginGuard);
+
+  // WEBSITE-EMBED-1 piece 3a: in website mode the website owns the accounts. The race's own account
+  // doors answer 404, and <base>/auth/website — the ONE route that reads the identity headers — is
+  // mounted ahead of the built client so its GET is never answered with the app's shell. Standalone
+  // (the default) mounts neither: GET /auth/website stays what it was, a deep link into the app.
+  if (siteMode() === 'website') {
+    app.use(closedInWebsiteMode);
+    app.get(
+      '/auth/website',
+      createWebsiteSignIn({
+        config: websiteConfig(),
+        identities: getDefaultIdentityStore(),
+        users: usersStore,
+        basePath,
+      })
+    );
+  }
 
   // SERVE-SPA-1 — THE BUILT CLIENT, AND IT IS MOUNTED ABOVE THE GUARDS ON PURPOSE.
   // A visitor who is not signed in must still be able to load the app that draws the sign-in form,

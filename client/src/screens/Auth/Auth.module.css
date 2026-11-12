@@ -92,6 +92,13 @@
   font-size: 0.95rem;
 }
 
+/* WEBSITE-EMBED-1: the website sign-in is a link styled as this button (LoginScreen.jsx). */
+a.button {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

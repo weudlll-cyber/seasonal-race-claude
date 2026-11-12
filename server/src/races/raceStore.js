@@ -54,6 +54,16 @@
 // decide, not mine to prejudge with a trigger he would have to find and remove. The orphan case —
 // deleting a roster an old race still points at — is already refused by `PRAGMA foreign_keys = ON`.
 //
+// ── WEBSITE-EMBED-1 piece 6: WHICH RACER WAS WHICH WEBSITE MEMBER, BESIDE THE RACE ─────────────
+// The owner's decision of 2026-11-11 (OWNER-3): a deleted website member is shown as "Deleted
+// player" in past races, and the stored race stays byte-identical. So the racer index -> website id
+// mapping is NOT a field of the race (contrast the race_source note in storeRace, a technical rule
+// for facts that ARE about the race): it is its own table, `race_website_racers`, keyed by the
+// race's id and the racer's index in the roster, written only in website mode by POST /api/races
+// (routes/races.js), and read for the display-time mask. Its rows are immutable like the race's.
+// Team scope comes from the race it points at: a race id is a content id over a row that carries
+// the team, and every read joins the races table on the team. Standalone never writes a row.
+//
 // ── WHAT THIS STORE DOES NOT PROTECT AGAINST ────────────────────────────────────────────────────
 // If the ENGINE CODE changes, an old race can run differently from identical stored values. Nothing
 // in this file can see that, and nothing in it tries: it stores inputs faithfully, and identical
@@ -199,6 +209,22 @@ CREATE TABLE IF NOT EXISTS races (
 CREATE INDEX IF NOT EXISTS races_by_team ON races(team_normalized, finished_at DESC);
 `;
 
+// WEBSITE-EMBED-1 piece 6 (see the header): created if missing, so a database from before this
+// piece gains the table at its next open; nothing else in the file is touched.
+const WEBSITE_RACERS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS race_website_racers (
+  race_id          TEXT NOT NULL REFERENCES races(id),
+  racer_index      INTEGER NOT NULL,
+  website_user_id  TEXT NOT NULL,
+  PRIMARY KEY (race_id, racer_index)
+);
+
+CREATE TRIGGER IF NOT EXISTS race_website_racers_is_immutable BEFORE UPDATE ON race_website_racers
+BEGIN
+  SELECT RAISE(ABORT, 'race_website_racers rows are immutable (WEBSITE-EMBED-1 piece 6)');
+END;
+`;
+
 // The immutability the owner asked for, enforced by the database rather than by the caller.
 // One pair per table; the message is what a future reader sees when they try.
 const IMMUTABILITY_TRIGGERS = ['races', 'rosters', 'racer_types']
@@ -268,6 +294,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH, { wal = resolveRa
   applyJournalMode(db, wal);
   db.exec(SCHEMA);
   db.exec(IMMUTABILITY_TRIGGERS);
+  db.exec(WEBSITE_RACERS_SCHEMA);
 
   // ── Content-addressed insert, shared by both value tables ───────────────────
   //
@@ -703,6 +730,39 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH, { wal = resolveRa
     return row ? { id, ...JSON.parse(row.content) } : null;
   }
 
+  /**
+   * WEBSITE-EMBED-1 piece 6: record which racers of a stored race were which website members.
+   * INSERT OR IGNORE, so a resend of the same race writes nothing twice. The race row is not read
+   * or touched; the caller has validated the list (routes/races.js).
+   *
+   * @param {string} raceId
+   * @param {{index: number, websiteUserId: string}[]} racers
+   */
+  const recordWebsiteRacers = db.transaction((raceId, racers) => {
+    const insert = db.prepare(
+      'INSERT OR IGNORE INTO race_website_racers (race_id, racer_index, website_user_id) VALUES (?, ?, ?)'
+    );
+    for (const r of racers) insert.run(raceId, r.index, r.websiteUserId);
+  });
+
+  /**
+   * WEBSITE-EMBED-1 piece 6: the website racers of this team's races, found by the client's own
+   * race ids (the one id a race carries both on the device and on the server).
+   *
+   * @returns {{clientRaceId: string, index: number, websiteUserId: string}[]}
+   */
+  function websiteRacersOf(team, clientRaceIds) {
+    if (clientRaceIds.length === 0) return [];
+    return db
+      .prepare(
+        'SELECT r.client_race_id AS clientRaceId, m.racer_index AS "index", ' +
+          'm.website_user_id AS websiteUserId FROM race_website_racers m ' +
+          'JOIN races r ON r.id = m.race_id WHERE r.team_normalized = ? AND r.client_race_id IN ' +
+          `(${clientRaceIds.map(() => '?').join(', ')})`
+      )
+      .all(normalizeTeam(team), ...clientRaceIds);
+  }
+
   function counts() {
     return {
       races: db.prepare('SELECT COUNT(*) AS n FROM races').get().n,
@@ -720,6 +780,8 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH, { wal = resolveRa
     listRacesPage,
     raceResultsInPeriod,
     getRacerTypes,
+    recordWebsiteRacers,
+    websiteRacersOf,
     counts,
     close: () => db.close(),
     /** @internal for tests that need to prove the database itself refuses an update. */

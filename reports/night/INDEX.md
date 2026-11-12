@@ -8,6 +8,9 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [MORNING-WEBSITE-EMBED-1.md](MORNING-WEBSITE-EMBED-1.md) — the morning sheet for WEBSITE-EMBED-1 (2026-11-11/12):
+  RaceArena under the website's path and accounts, done / running / open / needs the owner, per piece.
+
 - [MORNING-2026-10-12.md](MORNING-2026-10-12.md) — the morning sheet for the owner's AUDIT-1
   decisions of 2026-10-12: the GitHub settings, pieces 1-4, the review branch, the handover.
 

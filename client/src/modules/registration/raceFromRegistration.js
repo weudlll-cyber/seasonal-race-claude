@@ -7,7 +7,11 @@
 //                · the race's event name — the brand profile's event name and the registration's
 //                  name together, "<base> – <registration>";
 //                · which registration a started race marks as "Raced" — the one whose players were
-//                  last taken, for as long as the roster is still theirs.
+//                  last taken, for as long as the roster is still theirs;
+//                · WEBSITE-EMBED-1 piece 6: which racers are website members — the website id of
+//                  each entry the website joined (source 'website'), carried to the race by name,
+//                  so a deleted member can be shown as "Deleted player" later. Website mode only;
+//                  a standalone registration has no such entries, so nothing is carried.
 // ============================================================
 
 /** Between the two parts of a composed event name: an en dash with a space on each side. */
@@ -57,4 +61,41 @@ export function nextRegistrationToMark(current, event) {
     default:
       return current;
   }
+}
+
+/**
+ * WEBSITE-EMBED-1 piece 6: the website id of every member who joined this registration through the
+ * website, by the name they joined with — or null when there is none (every standalone one).
+ *
+ * @param {{name: string, source?: string, externalId?: string|null}[]} entries
+ * @returns {Record<string, string>|null}
+ */
+export function websiteIdsByName(entries) {
+  const out = {};
+  for (const e of entries ?? []) {
+    if (e?.source === 'website' && typeof e.externalId === 'string' && e.externalId) {
+      out[e.name] = e.externalId;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/**
+ * WEBSITE-EMBED-1 piece 6: the race's `websiteRacers` — { index, websiteUserId } for each racer of
+ * the roster whose name is a website member's from the registration taken — or null for none, so a
+ * race without website members carries no such field at all. The index is the racer's place in the
+ * roster, which is its index in the race (raceCore.js) and in the stored roster.
+ *
+ * @param {{name: string}[]} players  the roster, in order
+ * @param {Record<string, string>|null} idsByName  from `websiteIdsByName`
+ * @returns {{index: number, websiteUserId: string}[]|null}
+ */
+export function websiteRacersFor(players, idsByName) {
+  if (!idsByName) return null;
+  const list = [];
+  players.forEach((p, index) => {
+    const id = Object.hasOwn(idsByName, p.name) ? idsByName[p.name] : null;
+    if (id) list.push({ index, websiteUserId: id });
+  });
+  return list.length > 0 ? list : null;
 }

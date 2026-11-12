@@ -87,22 +87,32 @@ export function identifierForStoredInputs(inputs) {
  * (`SetupScreen.jsx` → `SetupScreen`), so the value is there whether the screen is mounted yet or not, and the
  * field shows what is about to run rather than starting something invisible.
  *
+ * WEBSITE-EMBED-1 piece 6: `websiteRacers`, when the race had website members, travels in the note
+ * so the repeat — the same roster, so the same indexes — is masked for a deleted member like the
+ * race it repeats. It is not part of the identifier: it changes nothing about the race.
+ *
  * @param {object} inputs a stored race's inputs
- * @returns {{identifier: string, buildId: string}}
+ * @param {{index: number, websiteUserId: string}[]|null} [websiteRacers]
+ * @returns {{identifier: string, buildId: string, websiteRacers?: object[]}}
  * @throws when the inputs cannot be encoded — the caller reports it; nothing is armed.
  */
-export function armRepeat(inputs) {
+export function armRepeat(inputs, websiteRacers = null) {
   const identifier = identifierForStoredInputs(inputs);
   storageSet(KEYS.RACE_SEED, identifier);
-  sessionStorage.setItem(ARMED_KEY, JSON.stringify({ identifier, buildId: inputs.buildId }));
-  return { identifier, buildId: inputs.buildId };
+  const note = {
+    identifier,
+    buildId: inputs.buildId,
+    ...(websiteRacers?.length ? { websiteRacers } : {}),
+  };
+  sessionStorage.setItem(ARMED_KEY, JSON.stringify(note));
+  return note;
 }
 
 /**
  * Take the armed repeat, if there is one. ONE-SHOT: it is removed as it is read, so returning to
  * the setup screen later does not start a race the person did not ask for again.
  *
- * @returns {{identifier: string, buildId: string}|null}
+ * @returns {{identifier: string, buildId: string, websiteRacers?: object[]}|null}
  */
 export function takeArmedRepeat() {
   const raw = sessionStorage.getItem(ARMED_KEY);

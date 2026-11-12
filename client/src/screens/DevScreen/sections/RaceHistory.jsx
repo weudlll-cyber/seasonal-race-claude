@@ -36,6 +36,12 @@
 // (RACE-SAVE-3). A race that HAS gone up is shown once, from the server, because that is where its
 // short key lives. A race that has not is shown too — it is the owner's race and it exists — with
 // its state said plainly and no key, because it has none to show.
+//
+// ── WEBSITE-EMBED-1 piece 6: "DELETED PLAYER" (the owner's decision of 2026-11-11, OWNER-3) ─────
+// In website mode the winners of a race whose website member was deleted show "Deleted player"
+// for that member (modules/deletedRacers.js asks the server for the rows on screen); the stored
+// race is untouched. "Run it again" carries the race's website racers when this device has them,
+// so the repeat is masked too. Export CSV acts on the local history as before, names as stored.
 // ============================================================
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -47,6 +53,7 @@ import { DEFAULT_RACE_HISTORY } from '../../../modules/storage/defaults.js';
 import { Ctl, Info } from './ControlInfo.jsx';
 import { SYNC } from '../../../modules/raceHistory.js';
 import { armRepeat } from '../../../modules/repeatRace.js';
+import { useDeletedRacers, shownNames } from '../../../modules/deletedRacers.js';
 import { fetchRacesPage, verifyRace } from '../../../services/racesApi.js';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
 import { formatDateTime } from '../../../modules/registration/timeLeft.js';
@@ -85,6 +92,9 @@ function rowFromServerRace(race) {
     playerCount: race.names?.length ?? 0,
     seed: race.racePlanSeed,
     winners: race.winners ?? [],
+    // WEBSITE-EMBED-1 piece 6: what the mask needs — the race's own id and its roster.
+    clientRaceId: race.clientRaceId ?? null,
+    roster: race.names ?? null,
     shortKey: race.shortKey,
     state: 'stored',
     // The hydrated race carries every input field by the same names `identifierForStoredInputs`
@@ -103,6 +113,8 @@ function rowFromLocalEntry(entry) {
     playerCount: entry.playerCount,
     seed: entry.seed,
     winners: entry.winners ?? [],
+    clientRaceId: entry.id,
+    roster: entry.inputs?.names ?? null,
     shortKey: null, // it has none: nothing has issued one, and inventing one here would be a lie
     state: entry.sync?.state ?? 'local',
     syncError: entry.sync?.error ?? null,
@@ -261,6 +273,9 @@ function RaceHistory() {
     return [...unsent, ...stored].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   }, [filtered, page.races, filterDate, filterTrack, tracks]);
 
+  // WEBSITE-EMBED-1 piece 6: the rows on screen whose website member was deleted (website mode only).
+  const deletedRacers = useDeletedRacers(rows.map((r) => r.clientRaceId));
+
   // ★ HISTORY-FILTER-SAYS-SO-1 — A FILTER MAY HIDE A RACE; IT MAY NOT HIDE THAT IT IS HIDING ONE.
   //
   // The track and date filters apply to BOTH halves of this list — the device's own races and the
@@ -299,7 +314,9 @@ function RaceHistory() {
   function handleRepeat(row) {
     setRepeatError(null);
     try {
-      armRepeat(row.inputs);
+      // WEBSITE-EMBED-1 piece 6: the website racers this device recorded for the race, if any.
+      const own = history.find((e) => e?.id === row.clientRaceId);
+      armRepeat(row.inputs, own?.websiteRacers ?? null);
     } catch (err) {
       setRepeatError(
         `This race cannot be run again here: ${err?.message ?? String(err)}. ` +
@@ -504,7 +521,11 @@ function RaceHistory() {
                       </td>
                       <td>{row.duration != null ? `${row.duration}s` : '—'}</td>
                       <td>{row.playerCount}</td>
-                      <td>{row.winners.join(', ')}</td>
+                      <td>
+                        {shownNames(row.winners, row.roster, deletedRacers[row.clientRaceId]).join(
+                          ', '
+                        )}
+                      </td>
                       <td>
                         {row.shortKey ? (
                           <code data-testid="short-key" style={{ letterSpacing: '1px' }}>

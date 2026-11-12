@@ -13,6 +13,8 @@ import {
   composeEventName,
   EVENT_NAME_SEPARATOR,
   nextRegistrationToMark,
+  websiteIdsByName,
+  websiteRacersFor,
 } from './raceFromRegistration.js';
 
 describe('composeEventName — "<brand profile> – <registration>"', () => {
@@ -66,5 +68,30 @@ describe('nextRegistrationToMark — the registration a started race marks "Race
     let id = nextRegistrationToMark(null, { type: 'take', id: 'reg-a' });
     id = nextRegistrationToMark(id, { type: 'names', count: 1 });
     expect(id).toBe('reg-a');
+  });
+});
+
+// WEBSITE-EMBED-1 piece 6: which racers are website members — only the website's own entries, by
+// name, and nothing at all when there is none (every standalone registration).
+describe('websiteIdsByName / websiteRacersFor (WEBSITE-EMBED-1 piece 6)', () => {
+  const entries = [
+    { name: 'Mia Member', source: 'website', externalId: 'mia-1' },
+    { name: 'Walk-in', source: 'public', externalId: null },
+    { name: 'Hugo Host', source: 'website', externalId: 'hugo-1' },
+  ];
+
+  it('takes the website entries by name, and only them', () => {
+    expect(websiteIdsByName(entries)).toEqual({ 'Mia Member': 'mia-1', 'Hugo Host': 'hugo-1' });
+  });
+
+  it('★ a registration without website entries carries nothing — standalone sends no mapping', () => {
+    expect(websiteIdsByName([{ name: 'Ada', source: 'public' }])).toBeNull();
+    expect(websiteRacersFor([{ name: 'Ada' }], null)).toBeNull();
+  });
+
+  it("gives each member the racer's index in the roster; an edited-away name carries no id", () => {
+    const ids = websiteIdsByName(entries);
+    const roster = [{ name: 'Walk-in' }, { name: 'Hugo Host' }, { name: 'Mia Membr' }];
+    expect(websiteRacersFor(roster, ids)).toEqual([{ index: 1, websiteUserId: 'hugo-1' }]);
   });
 });

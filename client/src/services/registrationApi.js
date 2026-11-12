@@ -35,7 +35,12 @@ export async function fetchJoinInfo(code) {
   return res.json();
 }
 
-/** @returns {Promise<{ you: JoinInfo['you'] }>} */
+/**
+ * Register on a join link. With a `name`, the typed name; WITHOUT one (WEBSITE-EMBED-1 piece 4), a
+ * member signed in through the website joins as themselves — the body is then `{}`, since JSON
+ * leaves an undefined name out.
+ * @returns {Promise<{ you: JoinInfo['you'] }>}
+ */
 export async function joinRegistration(code, name) {
   const res = await apiCall(`${JOIN}/${encodeURIComponent(code)}`, {
     method: 'POST',
@@ -47,10 +52,23 @@ export async function joinRegistration(code, name) {
 
 // ── The director's routes ───────────────────────────────────────────────────────────────────────
 
-export async function createRegistration({ trackId, capacity, eventName, closesAt }) {
+export async function createRegistration({
+  trackId,
+  capacity,
+  eventName,
+  closesAt,
+  websiteAccess,
+}) {
+  // `websiteAccess` only in website mode (piece 4); without it the body is exactly the old one.
   const res = await apiCall(REGISTRATIONS, {
     method: 'POST',
-    ...json({ trackId, capacity, eventName: eventName || null, closesAt }),
+    ...json({
+      trackId,
+      capacity,
+      eventName: eventName || null,
+      closesAt,
+      ...(websiteAccess ? { websiteAccess } : {}),
+    }),
   });
   return res.json();
 }

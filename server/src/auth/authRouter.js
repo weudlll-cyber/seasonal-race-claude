@@ -16,7 +16,7 @@ import defaultStore, {
   timingDummyHash,
 } from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
-import { resolveCookieSecure, getActiveCookieName } from './session.js';
+import { resolveCookieSecure, getActiveCookieName, sessionCookiePath } from './session.js';
 import { restampSession } from './restampSession.js';
 import { FOUNDING_TEAM } from './teams.js';
 import { asyncRoute } from '../../utils/asyncRoute.js';
@@ -253,9 +253,12 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       }
       const active = getActiveCookieName();
       const secure = resolveCookieSecure(process.env.NODE_ENV === 'production');
-      res.clearCookie(active, { path: '/', httpOnly: true, sameSite: 'lax', secure });
+      // The Path must be the one the cookie was set with, or the browser keeps it: "/" at the root,
+      // the base path under one (WEBSITE-EMBED-1, session.js `sessionCookiePath`).
+      const path = sessionCookiePath();
+      res.clearCookie(active, { path, httpOnly: true, sameSite: 'lax', secure });
       // Orphan cleanup: clear legacy ra.sid when the active name has changed to __Host-ra.sid.
-      if (active !== 'ra.sid') res.clearCookie('ra.sid', { path: '/' });
+      if (active !== 'ra.sid') res.clearCookie('ra.sid', { path });
       res.json({ ok: true });
     });
   });
@@ -331,7 +334,10 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     }
     const safe = toSafeUser(record);
     // `team` is null for a user who predates the backfill — reported, never a reason to refuse.
-    res.json({ username: safe.username, role: safe.role, team: safe.team ?? null });
+    // WEBSITE-EMBED-1 piece 3a: a website director's record carries the website's display name; the
+    // key is added only then, so a local user's answer is exactly what it was.
+    const name = safe.displayName ? { displayName: safe.displayName } : {};
+    res.json({ username: safe.username, role: safe.role, team: safe.team ?? null, ...name });
   });
 
   return router;

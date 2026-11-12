@@ -6,6 +6,9 @@
 (VPS-INSTALL-1, 2026-10-07): it installs Docker, Caddy with a real certificate, the firewall, daily
 backups and a status check, and leaves a `racearena` command for status, backups, restores and
 updates. What follows here is for every other arrangement, and the reference for each setting.
+**Inside the Seasonal Entertainment website**, on its own server, the same command has a second mode
+(WEBSITE-EMBED-1 pieces 5a and 5b): the app alone under `/games/race`, behind the website's proxy
+with the race's own route file — [VPS-INSTALL.md](VPS-INSTALL.md), *Inside Seasonal Entertainment*.
 
 **How authentication BEHAVES — the first-admin channel, sessions, what is protected, and what the auth code does when a variable is absent — is [AUTH.md](AUTH.md)'s.**
 

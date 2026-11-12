@@ -14,7 +14,12 @@ import { join } from 'path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import Database from 'better-sqlite3';
-import { createSessionMiddleware, resolveCookieSecure, resolveCookieName } from './session.js';
+import {
+  createSessionMiddleware,
+  resolveCookieSecure,
+  resolveCookieName,
+  sessionCookiePath,
+} from './session.js';
 import { createApp } from '../app.js';
 
 function makeTempDb() {
@@ -237,6 +242,37 @@ describe('resolveCookieName', () => {
     process.env.RA_COOKIE_NAME_MODE = 'legacy';
     expect(resolveCookieName(true)).toBe('ra.sid');
     expect(resolveCookieName(false)).toBe('ra.sid');
+  });
+
+  // WEBSITE-EMBED-1 piece 2: a __Host- cookie must have Path=/, so under a base path the guaranteed-
+  // Secure name is __Secure-ra.sid, and `host` is refused rather than silently dropped by the browser.
+  it('with a base path: __Secure-ra.sid when Secure is guaranteed, else ra.sid', () => {
+    delete process.env.RA_COOKIE_NAME_MODE;
+    expect(resolveCookieName(true, '/games/race')).toBe('__Secure-ra.sid');
+    expect(resolveCookieName('auto', '/games/race')).toBe('ra.sid');
+    expect(resolveCookieName(false, '/games/race')).toBe('ra.sid');
+  });
+
+  it('with a base path: host mode is refused, legacy stays ra.sid', () => {
+    process.env.RA_COOKIE_NAME_MODE = 'host';
+    expect(() => resolveCookieName(true, '/games/race')).toThrow(/Path=\//);
+    process.env.RA_COOKIE_NAME_MODE = 'legacy';
+    expect(resolveCookieName(true, '/games/race')).toBe('ra.sid');
+  });
+
+  it('★ without a base path the names are exactly the old ones (the standalone install)', () => {
+    delete process.env.RA_COOKIE_NAME_MODE;
+    expect(resolveCookieName(true, '')).toBe('__Host-ra.sid');
+    expect(resolveCookieName(false, '')).toBe('ra.sid');
+  });
+});
+
+describe('sessionCookiePath (WEBSITE-EMBED-1)', () => {
+  it('is "/" unset, the base path when set, and "/" again for a value the start gate refuses', () => {
+    expect(sessionCookiePath({})).toBe('/');
+    expect(sessionCookiePath({ RA_BASE_PATH: '/games/race' })).toBe('/games/race');
+    // Lenient by design: index.js refuses this value before anything listens (resolveBasePath).
+    expect(sessionCookiePath({ RA_BASE_PATH: 'games/race/' })).toBe('/');
   });
 });
 

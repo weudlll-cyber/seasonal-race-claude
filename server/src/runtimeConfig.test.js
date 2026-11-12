@@ -14,7 +14,10 @@ import {
   resolvePublicOrigin,
   assertPublicOriginUsable,
   runtimeConfigScript,
+  runtimeConfigScriptHash,
   injectRuntimeConfig,
+  judgeBasePath,
+  resolveBasePath,
   RUNTIME_CONFIG_GLOBAL,
 } from './runtimeConfig.js';
 
@@ -145,5 +148,80 @@ describe('the injected script', () => {
     const html = '<html><head></head><body></body></html>';
     const out = injectRuntimeConfig(html, 'https://races.example.com');
     expect(out).toContain('"apiBaseUrl":"https://races.example.com"');
+  });
+});
+
+// ── WEBSITE-EMBED-1 piece 2: the base path ──────────────────────────────────────────────────────
+describe('judgeBasePath / resolveBasePath', () => {
+  it('unset or empty is the root, answered as ""', () => {
+    for (const raw of [undefined, null, '', '  '])
+      expect(judgeBasePath(raw)).toEqual({ ok: true, basePath: '' });
+    expect(resolveBasePath({})).toBe('');
+  });
+
+  it('a clean path is accepted as written', () => {
+    expect(judgeBasePath('/games/race')).toEqual({
+      ok: true,
+      basePath: '/games/race',
+    });
+    expect(judgeBasePath('/race')).toEqual({ ok: true, basePath: '/race' });
+  });
+
+  it('★ every malformed shape is refused, with a reason', () => {
+    for (const raw of [
+      'games/race',
+      '/games/race/',
+      '/',
+      '/games/../x',
+      '/games//race',
+      '/./x',
+      '/games race',
+      '/g%2e%2e',
+      '/g?x',
+      '/g#x',
+    ]) {
+      const v = judgeBasePath(raw);
+      expect(v.ok, raw).toBe(false);
+      expect(v.reason, raw).toBeTruthy();
+    }
+  });
+
+  it('★ resolveBasePath THROWS on a malformed value — answering at "/" would be a silent wrong place', () => {
+    expect(() => resolveBasePath({ RA_BASE_PATH: '/games/race/' })).toThrow(/RA_BASE_PATH/);
+  });
+});
+
+describe('the marker and the shell under a base path', () => {
+  const SHELL = '<html><head><base href="/" /></head><body></body></html>';
+
+  it('★ unset: the payload and the shell are exactly the old ones (no basePath key, base href "/")', () => {
+    expect(runtimeConfigScript(null)).toBe(runtimeConfigScript(null, ''));
+    expect(runtimeConfigScript(null, '')).toContain('{"apiBaseUrl":""}');
+    expect(injectRuntimeConfig(SHELL, null)).toContain('<base href="/" />');
+  });
+
+  it('set: apiBaseUrl carries the base path, basePath is named, <base href> is rewritten', () => {
+    const out = injectRuntimeConfig(SHELL, null, '/games/race');
+    expect(out).toContain('{"apiBaseUrl":"/games/race","basePath":"/games/race"}');
+    expect(out).toContain('<base href="/games/race/" />');
+    expect(out).not.toContain('<base href="/" />');
+    expect(injectRuntimeConfig(SHELL, 'https://site.example', '/games/race')).toContain(
+      '"apiBaseUrl":"https://site.example/games/race"'
+    );
+  });
+
+  it('website mode (piece 3a): the marker says so; standalone says nothing new', () => {
+    expect(runtimeConfigScript(null, '/games/race', 'website')).toContain(
+      '{"apiBaseUrl":"/games/race","basePath":"/games/race","mode":"website"}'
+    );
+    expect(runtimeConfigScript(null, '', 'standalone')).toBe(runtimeConfigScript(null));
+    expect(runtimeConfigScriptHash(null, '/games/race', 'website')).not.toBe(
+      runtimeConfigScriptHash(null, '/games/race')
+    );
+  });
+
+  it('the CSP hash follows the script it covers', () => {
+    expect(runtimeConfigScriptHash(null, '/games/race')).not.toBe(runtimeConfigScriptHash(null));
+    expect(runtimeConfigScriptHash(null, '')).toBe(runtimeConfigScriptHash(null));
   });
 });

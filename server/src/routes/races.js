@@ -8,6 +8,16 @@
 //              POST /            store one finished race
 //              GET  /            one PAGE of this team's races, newest first
 //              GET  /:shortKey   one race by the short name it can be read aloud by
+//              GET  /deleted-racers  website mode only (WEBSITE-EMBED-1 piece 6): which racers of
+//                                the asked races were website members since deleted
+//
+// ── WEBSITE-EMBED-1 piece 6: WHO WAS WHICH MEMBER TRAVELS BESIDE THE RACE ───────────────────────
+// In website mode a POST may carry `websiteRacers` beside the race; it is checked
+// (website/websiteRacers.js) and written to the store's own side table AFTER the race, on the
+// stored and the already-stored answer alike, so a resend completes a mapping a crash cut short.
+// storeRace never sees it, so the stored race and its id are what they would be without it
+// (the owner's decision of 2026-11-11, OWNER-3). Standalone ignores the field and has no
+// /deleted-racers: it answers 404 there, as a route that does not exist.
 //
 // ── RETRYABILITY IS CARRIED BY THE STATUS CODE, AND ONLY BY IT ─────────────────────────────────
 // The client has to tell two failures apart: one worth sending again (the server is down, the
@@ -51,6 +61,12 @@ import { evaluatePeriod } from '../races/periodEvaluation.js';
 import { createPointsRuleStore, validatePointsRule } from '../races/pointsRule.js';
 import { asyncRoute } from '../../utils/asyncRoute.js';
 import { verifyOffMainThread, BUSY } from '../races/verifyOffMainThread.js';
+import { siteMode } from '../website/websiteConfig.js';
+import { getDefaultIdentityStore } from '../website/identityStore.js';
+import { acceptedWebsiteRacers, deletedRacersByRace } from '../website/websiteRacers.js';
+
+/** How many races one /deleted-racers question may name — a history page and the local list. */
+const MAX_DELETED_RACERS_QUERY = 200;
 
 // VERIFY-ON-DEMAND-1 (2026-10-04): the engine path that re-races a stored record. It lives in
 // `scripts/lib/storedRaceReplay.mjs`, shared with `scripts/diag/replay-stored-race.mjs` — one copy.
@@ -88,9 +104,25 @@ function getDefaultStore() {
   return defaultStore;
 }
 
-export function createRacesRouter({ store, tracks, pointsRule } = {}) {
+export function createRacesRouter({ store, tracks, pointsRule, identities } = {}) {
   const router = express.Router();
   const resolveStore = () => store ?? getDefaultStore();
+  const resolveIdentities = () => identities ?? getDefaultIdentityStore();
+
+  // WEBSITE-EMBED-1 piece 6: the website racers beside an upload, in website mode only. Never
+  // throws into the race's answer — the race is stored; a mapping that fails is logged.
+  function recordWebsiteRacers(body, raceId, rosterSize) {
+    if (siteMode() !== 'website' || body.websiteRacers === undefined) return;
+    try {
+      const accepted = acceptedWebsiteRacers(body.websiteRacers, rosterSize, resolveIdentities());
+      if (accepted.length > 0) resolveStore().recordWebsiteRacers(raceId, accepted);
+    } catch (err) {
+      console.error(
+        '[races] the website racers of a stored race could not be recorded:',
+        err.message
+      );
+    }
+  }
   // Tests pass their track records; the server reads its own data directory.
   const resolveTracks = () => tracks ?? readInstallTracks();
   let defaultPointsRule = null;
@@ -123,6 +155,7 @@ export function createRacesRouter({ store, tracks, pointsRule } = {}) {
       if (existing) {
         // Recognised and accepted quietly — the second arrival of a race is a retry that worked,
         // not a fault. The stored id comes back so the client can mark it sent either way.
+        recordWebsiteRacers(body, existing.id, existing.names?.length ?? 0);
         return res.status(200).json({
           id: existing.id,
           shortKey: existing.shortKey,
@@ -130,7 +163,11 @@ export function createRacesRouter({ store, tracks, pointsRule } = {}) {
         });
       }
 
-      const result = resolveStore().storeRace({ ...body, team });
+      // WEBSITE-EMBED-1 piece 6: the website racers are taken OFF the race before it is stored, so
+      // the store never sees them and the race is the race it would be without them.
+      const { websiteRacers: _beside, ...race } = body;
+      const result = resolveStore().storeRace({ ...race, team });
+      recordWebsiteRacers(body, result.id, body.names.length);
       // The key travels back on the store, so the client can show it beside the race the moment it
       // lands rather than fetching the list again to learn its own race's name.
       return res.status(201).json({
@@ -226,6 +263,30 @@ export function createRacesRouter({ store, tracks, pointsRule } = {}) {
   // deliberately the same answer: "forbidden" would confirm that the race exists, which is exactly
   // what somebody holding a key they were not given should not learn. The store enforces this by
   // taking the team as a required argument rather than as a filter this route could forget.
+  // GET /deleted-racers?clientRaceIds=a,b — WEBSITE-EMBED-1 piece 6, website mode only: for each
+  // asked race of THIS team, the racer indexes whose website member was deleted, as
+  // { deleted: { <clientRaceId>: [index, …] } }; a race with none is absent. Keyed by the client's
+  // race id because it is the one id a race has both on the device and on the server. Declared
+  // before /:shortKey so the path is never read as a key.
+  router.get('/deleted-racers', (req, res) => {
+    if (siteMode() !== 'website') {
+      return res.status(404).json({ error: `no such API route: GET ${req.originalUrl}` });
+    }
+    const team = req.authUser?.team;
+    const ids = String(req.query.clientRaceIds ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (ids.length > MAX_DELETED_RACERS_QUERY) {
+      return res
+        .status(400)
+        .json({ error: `At most ${MAX_DELETED_RACERS_QUERY} races can be asked at once.` });
+    }
+    if (!team || ids.length === 0) return res.json({ deleted: {} });
+    const rows = resolveStore().websiteRacersOf(team, ids);
+    return res.json({ deleted: deletedRacersByRace(rows, resolveIdentities().deletedIds()) });
+  });
+
   router.get('/:shortKey', (req, res) => {
     const team = req.authUser?.team;
     const race = team ? resolveStore().getRaceByShortKey(req.params.shortKey, team) : null;

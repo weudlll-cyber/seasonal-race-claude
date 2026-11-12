@@ -237,9 +237,10 @@ EXPOSE 4000
 # `node -e` rather than curl or wget, because this is a `node:24-alpine` image and neither is
 # installed — a HEALTHCHECK that cannot run reports unhealthy forever, which is worse than none.
 # The port is read from the environment so it follows PORT rather than repeating 4000.
+# WEBSITE-EMBED-1: so is the base path (RA_BASE_PATH, empty = '/'): under one, /api/health is below it.
 #
 # start-period 15s covers boot (npm install is already done; this is process start plus seed
 # delivery). interval 30s, timeout 5s, 3 retries: a dead server is reported within ~1.5 min.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+(process.env.RA_BASE_PATH||'')+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "src/index.js"]

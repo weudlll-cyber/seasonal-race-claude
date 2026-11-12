@@ -32,6 +32,13 @@
 // "the inputs, plus one thing that is not an input". It is a fact ABOUT the race, which is the class
 // the outcome belongs to, so it is written at the top of the entry and `toServerPayload` forwards it
 // by name, exactly as it forwards the duration and the finish order.
+//
+// ★ WEBSITE-EMBED-1 piece 6 (2026-11-11): `websiteRacers` — which racers were which website member —
+// sits at the top of the entry too, for the same reason, and only when the race had any (website
+// mode, players from a registration): an entry without them is the entry it always was. It waits
+// here with the pending race and goes up BESIDE it (`toServerPayload`); the server keeps it out of
+// the stored race, whose bytes and id are the same with or without it (the owner's decision of
+// 2026-11-11, OWNER-3).
 // ============================================================
 
 import { storageGet, storageSet, KEYS, newId } from './storage/storage';
@@ -105,6 +112,8 @@ export function buildHistoryEntry(parsed) {
     // a value here would be this file inventing the one fact the marker exists to stop anyone
     // inventing.
     raceSource: race.raceSource ?? null,
+    // WEBSITE-EMBED-1 piece 6: present only when the race had website members (see the header).
+    ...(race.websiteRacers?.length ? { websiteRacers: race.websiteRacers } : {}),
     winners: order.slice(0, PODIUM_PLACES).map((r) => r.name),
     finishOrder: order,
 
@@ -161,6 +170,8 @@ export function toServerPayload(entry) {
     // An older entry has no such field and sends `undefined`, which the store reads as "no marker",
     // which means TEST. That is the intended answer, not a gap.
     raceSource: entry.raceSource ?? null,
+    // WEBSITE-EMBED-1 piece 6: beside the race, never part of it — absent when the entry has none.
+    ...(entry.websiteRacers?.length ? { websiteRacers: entry.websiteRacers } : {}),
   };
 }
 
