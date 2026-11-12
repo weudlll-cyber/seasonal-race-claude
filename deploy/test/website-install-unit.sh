@@ -94,6 +94,16 @@ record MODE=nginx SITE_DOMAIN=seasonal.example RACE=yes
 out="$(case_run 'STUB_CADDY=seasonal-site-caddy-1 STUB_SITE=seasonal-site-site-1; website_record; website_detect; echo REACHED')"
 expect "MODE=nginx where the website's Caddy runs stops too" "$out" 'recorded nginx mode.*looks like caddy'
 
+echo "── the website's markers in both of its modes (found by the rehearsal, 2026-11-12)"
+# Caddy mode: the website makes only its record and the sync token in /etc/seasonal — no
+# site-local-port, no routes/ (those are its nginx setup's).
+record MODE=caddy SITE_DOMAIN=seasonal.example INSTALL_DIR=/srv/site RACE=yes
+printf 'x\n' >"$T/seasonal/games-sync-token"
+out="$(case_run 'rm -rf "$SEASONAL/site-local-port" "$SEASONAL/routes"; website_markers_present && echo MARKERS; STUB_CADDY=c STUB_SITE=s STUB_CTR_NETWORKS="seasonal-site_default " STUB_SITE_SUBNETS="172.18.0.0/16 "; website_record; website_detect; echo "DETECTED $PROXY"')"
+expect "a Caddy-mode website (record + token, no site-local-port, no routes/) is recognised and detected" "$out" 'MARKERS.*DETECTED caddy'
+out="$(case_run 'rm -f "$SEASONAL/install.conf"; website_markers_present && echo MARKERS || echo NONE')"
+expect "without the website's record there are no markers (standalone, no question)" "$out" 'NONE'
+
 echo "── 3 · the website's container and network"
 record MODE=nginx SITE_DOMAIN=seasonal.example RACE=yes
 out="$(case_run 'STUB_NGINX=1 STUB_SITE=seasonal-site-site-1 STUB_CTR_NETWORKS="other seasonal-site_default "; website_record; website_detect; echo "NET=$SITE_NETWORK"')"

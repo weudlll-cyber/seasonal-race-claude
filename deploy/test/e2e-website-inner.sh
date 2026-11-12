@@ -44,9 +44,14 @@ check() { local name="$1"; shift; if "$@" >>/root/checks.log 2>&1; then pass "$n
 until docker info >/dev/null 2>&1; do sleep 1; done
 
 echo "── the fake website ($VARIANT), in its real layout"
-mkdir -p /etc/seasonal/routes "$SITE_DIR/deploy/site/routes" "$SITE_DIR/standin"
-chmod 755 /etc/seasonal/routes
-printf '3801\n' >/etc/seasonal/site-local-port
+mkdir -p /etc/seasonal "$SITE_DIR/deploy/site/routes" "$SITE_DIR/standin"
+# The routes folder and the site-local-port exist only in the website's nginx mode (its
+# deploy/install/lib/games.sh makes them in the nginx setup) — as the rehearsal against the real
+# website showed, 2026-11-12. Caddy mode has only the record and the sync token.
+if [[ "$VARIANT" == nginx ]]; then
+  install -d -m 755 /etc/seasonal/routes
+  printf '3801\n' >/etc/seasonal/site-local-port
+fi
 # The website's sync token: root-only, one for all games. Generated for this run; never printed.
 ( umask 077; openssl rand -hex 32 >/etc/seasonal/games-sync-token )
 git -C /src/repo.git show "$REF_A:scripts/website-standin.mjs" >"$SITE_DIR/standin/website-standin.mjs"

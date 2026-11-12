@@ -457,8 +457,11 @@ summary() {
 # the compose project "seasonal-site", and each game takes its own fixed port and subnet (Bingo
 # 3900 and 172.30.249.0/24, Mini Games 3920 and 172.30.250.0/24, the race 3940 and 172.30.251.0/24).
 
+# The website's markers in BOTH of its modes: its record and the games' sync token. (site-local-port and
+# routes/ exist only in its nginx mode — its deploy/install/lib/games.sh makes them in the nginx setup —
+# found by the rehearsal against the real website, 2026-11-12.)
 website_markers_present() {
-  [[ -f "$SEASONAL/site-local-port" && -f "$SEASONAL/games-sync-token" && -d "$SEASONAL/routes" ]]
+  [[ -f "$SEASONAL/install.conf" && -f "$SEASONAL/games-sync-token" ]]
 }
 
 # Which install. With no markers and no --mode there is NO question: standalone, exactly as before.
@@ -481,7 +484,7 @@ choose_mode() {
     fi
   fi
   if [[ "$MODE" == website ]] && ((markers == 0)); then
-    local msg="website mode needs the website's markers on this server ($SEASONAL/site-local-port, $SEASONAL/games-sync-token, $SEASONAL/routes/) — none are here"
+    local msg="website mode needs the website's markers on this server ($SEASONAL/install.conf and $SEASONAL/games-sync-token) — they are not here"
     if ((DRY_RUN)); then say "[dry-run] $msg. A real run stops here."; else die "$msg"; fi
   fi
 }
@@ -590,8 +593,11 @@ website_detect() {
     website_routes
     return 0
   fi
-  SITE_PORT="$(tr -dc '0-9' <"$SEASONAL/site-local-port")"
-  [[ -n "$SITE_PORT" ]] || die "$SEASONAL/site-local-port does not hold a port"
+  # nginx mode only: the port nginx reaches the website on (Caddy mode has no such file).
+  if [[ "$SITE_MODE" == nginx ]]; then
+    SITE_PORT="$(tr -dc '0-9' <"$SEASONAL/site-local-port" 2>/dev/null || true)"
+    [[ -n "$SITE_PORT" ]] || die "the website runs in nginx mode but $SEASONAL/site-local-port does not hold a port"
+  fi
   # The record names the mode; what runs here must say the same, or the record is out of date.
   local caddy site seen=""
   caddy="$(website_container caddy)"

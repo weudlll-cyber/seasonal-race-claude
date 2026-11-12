@@ -99,8 +99,10 @@ with the website's accounts (sign-in: [AUTH.md](AUTH.md) §10; settings:
 [ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*). It follows the website's own layout, as Seasonal
 Bingo Royale and Seasonal Mini Games do.
 
-**Which install.** When the server carries the website's markers — `/etc/seasonal/site-local-port`,
-`/etc/seasonal/games-sync-token` and the folder `/etc/seasonal/routes/` — the installer asks first
+**Which install.** When the server carries the website's markers — its record
+`/etc/seasonal/install.conf` and `/etc/seasonal/games-sync-token`, which the website makes in both of
+its modes (`/etc/seasonal/site-local-port` and `/etc/seasonal/routes/` exist only in its nginx mode) —
+the installer asks first
 whether to install inside it (Enter = yes). Without them there is no question and everything above is
 exactly as it was. `--mode standalone|website` decides without asking. The mode is kept in
 `/etc/racearena/mode`; `racearena update` keeps it.
