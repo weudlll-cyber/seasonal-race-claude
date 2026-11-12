@@ -104,7 +104,8 @@ function browser() {
     }
     throw new Error('too many redirects');
   }
-  const intoTheApp = (url) => url.pathname.startsWith(`${BASE}/`) && !url.pathname.includes('/auth/');
+  const intoTheApp = (url) =>
+    url.pathname.startsWith(`${BASE}/`) && !url.pathname.includes('/auth/');
   const signIn = (who) => go(`/_standin/as/${who}`, {}, { stopAt: intoTheApp });
   return { go, signIn };
 }
