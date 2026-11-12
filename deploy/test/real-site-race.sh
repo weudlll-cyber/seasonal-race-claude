@@ -14,6 +14,11 @@
 #              is the race's own routes under /games/race, with the member's website session in the
 #              same cookie jar (the website's proxy asks the website who they are). Cookie jars and
 #              the admin's TOTP secret stay in /etc/seasonal-test/race (mode 700). Test only.
+#              WEBSITE-EXTRAS-1: `page` reads any page of the site with a member's jar (headers to a
+#              file the caller names), and `open-rounds-check` reads the race's open-rounds list as
+#              the website's server would (no cookie, through the website's proxy) and runs it
+#              through the website's OWN checker (its server/src/games/openRoundsContract.js, in the
+#              site container), printing the ids it accepts.
 #
 # Usage: race-admin.sh <command> [args]   (TEST_ADMIN_PASSWORD in the environment for the admin)
 # ============================================================
@@ -117,6 +122,23 @@ race() {
     -H "Origin: $SITE" "${data[@]}" "$@" -w '\n%{http_code}' "$RACE$path"
 }
 
+# page NAME PATH [extra curl args…]: a page of the site (not the API) with NAME's jar; prints the
+# body, then the status on its own last line.
+page() {
+  local jar=$DIR/$1.jar path=$2
+  shift 2
+  curl -sS --max-time 60 --cacert "$ROOT_CA" -b "$jar" -c "$jar" "$@" -w '\n%{http_code}' "$SITE$path"
+}
+
+# open_rounds_check: the race's list, read without a cookie through the website's proxy, judged by
+# the website's own parseOpenRounds; prints one accepted round id per line.
+open_rounds_check() {
+  curl -sS --max-time 30 --cacert "$ROOT_CA" "$RACE/api/public/open-rounds" |
+    in_site "import { parseOpenRounds } from '/app/server/src/games/openRoundsContract.js';
+      let body = ''; for await (const chunk of process.stdin) body += chunk;
+      for (const r of parseOpenRounds(body, process.argv[1])) console.log(r.id);" "$RACE/api/public/open-rounds"
+}
+
 # race_signin NAME [extra curl args…]: the race's sign-in route, the website session in the jar;
 # prints the status and where it sends the browser.
 race_signin() {
@@ -139,5 +161,7 @@ case $command in
   forget) rm -f "$DIR/$1.jar" ;;
   signin) race_signin "$@" ;;
   race) race "$@" ;;
+  page) page "$@" ;;
+  open-rounds-check) open_rounds_check ;;
   *) echo "unknown command $command" >&2; exit 2 ;;
 esac
