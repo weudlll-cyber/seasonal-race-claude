@@ -119,6 +119,8 @@ describe('opening a registration', () => {
     expect(sent).toMatchObject({ trackId: 'dirt-oval', capacity: 12, eventName: 'Friday cup' });
     // ...and none is sent.
     expect(sent).not.toHaveProperty('showOnWebsite');
+    // Standalone frames no website chat, on the form nor on the registration (piece 7b).
+    expect(screen.queryByTestId('website-chat')).toBeNull();
     const ms = Date.parse(sent.closesAt) - before;
     expect(ms).toBeGreaterThan(59 * 60 * 1000);
     expect(ms).toBeLessThan(61 * 60 * 1000);

@@ -33,11 +33,17 @@
 // A checkbox on the form (off by default) and on an open registration's detail; a marked open
 // registration is listed in the website's open sign-ups (server/src/website/openRounds.js).
 // Standalone draws neither and sends nothing new.
+//
+// ── WEBSITE MODE ONLY: THE WEBSITE CHAT (WEBSITE-EXTRAS-1 piece 7b, OWNER-5) ────────────────────
+// The website's chat (components/WebsiteChat) below the list and below one registration's detail —
+// last, so it never pushes the controls down — but NOT while the full-screen QR stage is up: that
+// stage is shown to an audience. Standalone renders nothing for it.
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QrCode from '../../components/QrCode/QrCode.jsx';
 import QrShareButtons from '../../components/QrCode/QrShareButtons.jsx';
+import WebsiteChat from '../../components/WebsiteChat/WebsiteChat.jsx';
 import {
   closeRegistration,
   createRegistration,
@@ -225,6 +231,7 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
         </p>
       )}
       {!anyOpen && listBlock}
+      <WebsiteChat />
     </div>
   );
 }
@@ -622,7 +629,8 @@ function RegistrationView({
         </button>
       </div>
 
-      {stage && <QrStage registration={r} link={link} onExit={exitStage} />}
+      {/* The chat is for the director's page only, never on the stage shown to an audience. */}
+      {stage ? <QrStage registration={r} link={link} onExit={exitStage} /> : <WebsiteChat />}
     </div>
   );
 }

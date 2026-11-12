@@ -10,6 +10,8 @@
 //              (piece 6) "Use these players" hands the entries over, so the race knows its members.
 //              WEBSITE-EXTRAS-1 piece 7a: "Show on the website" — off by default on the form and
 //              sent; on an open registration's detail it toggles; not on a closed one.
+//              WEBSITE-EXTRAS-1 piece 7b: the website chat below the list and below a registration's
+//              detail, and NOT while the full-screen QR stage (shown to an audience) is up.
 //              Standalone is RegistrationPanel.test.jsx, which runs unchanged and never sees the
 //              choice.
 // ============================================================
@@ -162,5 +164,24 @@ describe('RegistrationPanel in website mode', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Open registration 1/ }));
     await screen.findByTestId('registration-view');
     expect(screen.queryByTestId('registration-show-on-website')).toBeNull();
+  });
+
+  it('★ piece 7b: the website chat is below the list, after the form', async () => {
+    renderPanel();
+    await screen.findByText('No registrations yet.');
+    const frame = screen.getByTestId('website-chat');
+    const form = screen.getByRole('form', { name: 'Open registration' });
+    expect(form.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("★ piece 7b: below a registration's detail — and gone while the QR stage is shown", async () => {
+    api.listRegistrations.mockResolvedValue([registration()]);
+    api.fetchRegistration.mockResolvedValue(registration());
+    renderPanel();
+    await screen.findByTestId('registration-view');
+    expect(screen.getByTestId('website-chat')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show QR full screen' }));
+    await screen.findByTestId('qr-stage');
+    expect(screen.queryByTestId('website-chat')).toBeNull();
   });
 });

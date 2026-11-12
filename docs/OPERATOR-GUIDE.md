@@ -272,6 +272,13 @@ director opens a **registration** and the players add their own names from their
    address under Admin → Games → *Sign-up status URL*:
    `https://<your site>/games/race/api/public/open-rounds`. Standalone has no such checkbox.
 
+**The website chat** (inside Seasonal Entertainment only; since 2026-11-12). Below the registrations
+on your Players tab, and below the join page your players open, is the website's own chat — its room
+*Seasonal Race*. It is the website's chat, with the website's accounts and rules: members read and
+write there, a guest sees what the website shows a guest. It never appears on the race screen, the
+start ceremony, the result screen or the full-screen QR code, so nothing on the big screen shows it.
+Standalone has no chat.
+
 **The public page.** The link opens `/join/<code>` — no sign-in, made for a phone. A player sees the
 event, the track, the places left and a countdown, types a name and presses *Join*, and is told
 "You're in! You are number N of M." The same name twice is refused (capitals and extra spaces do not

@@ -12,8 +12,8 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 
 | Piece | State |
 | --- | --- |
-| 7a — open registrations for the website (OWNER-4) | **done** — `(this commit)`, pushed |
-| 7b — the website chat (OWNER-5) | not started |
+| 7a — open registrations for the website (OWNER-4) | **done** — `37c75e42`, pushed |
+| 7b — the website chat (OWNER-5) | **done** — the 7b commit, pushed |
 | the stand-in's open-rounds page and chat placeholder (the owner's look) | not started |
 | real-website check (nginx) | not started |
 
@@ -58,6 +58,76 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 - `:12-13` (header) — **standalone: the option does not exist and the list is empty.**
 - `apps/server/src/db/migrations/0017_show_on_website.sql` — the per-match flag;
   `packages/contracts/src/http/openRounds.ts:19-33` — the same contract in zod.
+
+## 7b — the facts, read BEFORE building
+
+**The website's embed** (seasonal-entertainment `docs/EMBED.md`):
+
+- `:15-17` — `/embed/chat?room=<slug>&theme=<light|dark|auto>` shows only the chat, compact, no site
+  header or footer. `:19` room: a room's slug, e.g. `race`. `:21-23` theme `auto` (the default) follows
+  the site's own rule.
+- `:24-26` — **room rules apply unchanged: a guest can read `general` but not `race` (members only)**;
+  the frame then opens the guest's first room with "This room isn't available."
+- `:33-37` — on the site's own pages the login state is the site's own: the session cookie applies as
+  on any page; logging in is on the site's login page.
+- `:45-49` — the race's row: room `race`, "Seasonal Race", **`/embed/chat?room=race&theme=auto`**.
+  `:57-61` the race's room is the first-start room, members read and write.
+- `:66-68` — framing: the games are under `/games/<slug>/` on the site's own domain, so its
+  `frame-ancestors 'self'` lets them frame `/embed/chat`; nothing to approve.
+- `:173-203` — the postMessage API (`ready`, `unread`, `resize` from the chat; `visible`, `theme` to it),
+  each side checking origin, source and `data.source`. `:187-188` a host on another site must not send
+  `no-referrer`.
+- `:205-217` — **the snippet**: "the same for this site's pages (the race game) … a relative [src] on
+  this site"; `<iframe id="se-chat" title="Chat" src="…/embed/chat?room=race&theme=auto"
+  style="width: 100%; height: 32rem; border: 0">`.
+- `docs/GAME-INTEGRATION.md:188-196` — the same embed URL for the race; `:198-202` **Required: allow the
+  iframe in the game's `frame-src` CSP; keep a referrer (`strict-origin`) so Firefox can identify the
+  parent**; validate messages; `:204-205` Bingo embeds the chat without the unread and visibility
+  messages.
+
+**How the reference games embed it:**
+
+- Bingo `apps/web/src/shell/ChatDock.tsx:5-14` — website mode only, on the lobby, match screens and the
+  host console, behind a "Chat" button (a side panel, a drawer on phones); the frame created on first
+  open and kept; `:162` `<iframe className="chat-panel__frame" title="Chat" src={src}>`; it follows the
+  game's theme. Standalone: no button, no frame, no request.
+- Bingo `apps/server/src/http/plugins/securityHeaders.ts:33-34` — `'frame-src': ["'self'"]` ("the
+  website's chat frame is on the same site; nothing else may be framed"); `:48` `referrerPolicy:
+  no-referrer` for its pages. Mini Games `apps/server/src/http/plugins/securityHeaders.ts:76` the same
+  no-referrer; its `frame-src` admits the website's room path (`apps/server/src/chat/provider.ts:119`).
+
+## 7b — what was built
+
+**Client.** `client/src/components/WebsiteChat/WebsiteChat.jsx` (new): renders NOTHING unless
+`SITE_MODE === 'website'`; otherwise a "Chat" section in the app's panel tokens with `<iframe title="Chat"
+src="/embed/chat?room=race&theme=auto" loading="lazy" referrerpolicy="strict-origin">`, full width, 32rem,
+no border. Mounted in exactly two files: `JoinPage.jsx` (after `<main>`, in the page's centred column)
+and `RegistrationPanel.jsx` (below the list and the form; below one registration's detail, **not while
+the full-screen QR stage is up**).
+
+**Server.** `server/src/csp.js`: `frame-src 'self'` in website mode only; `frame-ancestors 'none'` in both;
+the mode resolved once.
+
+**Tests.** `WebsiteChat.test.jsx` (new, 3): standalone renders nothing; website mode the exact
+attributes; **by the source, exactly two files import it** (the join page and the registration panel —
+so the race screen, the result screen and the start ceremony cannot draw it). `JoinPage.website.test.jsx`
++1 (framed below the card, after the form, outside `<main>`); `JoinPage.test.jsx` (standalone: none);
+`RegistrationPanel.website.test.jsx` +2 (below the list after the form; on the detail, gone while the QR
+stage is shown); `RegistrationPanel.test.jsx` (standalone: none). `csp.test.js` +3: **standalone's
+header pinned byte for byte** to what master `dcc9a250` sent (captured before the change, with and
+without a public origin), and website mode's `frame-src 'self'` with `frame-ancestors 'none'`.
+
+**Sabotage, each RED then restored:** the mode check removed (3 red); `WebsiteChat` imported into
+`RaceScreen/index.jsx` (1); the chat rendered beside the QR stage (1); the chat above the join form (1);
+`frame-src` in every mode (2 — the pinned standalone headers); `frame-src` dropped in website mode (1).
+
+**Reused:** `SITE_MODE` (runtimeMarker.js); the app's panel tokens (`--color-surface`, `--radius`,
+`--color-muted`); the join page's centred column width; the piece-4 test harnesses. **Removed:**
+nothing. **Moved out:** nothing. **Lines (before → after):** JoinPage.jsx 201 → 208, its CSS 123 → 130;
+RegistrationPanel.jsx 680 → 688; csp.js 62 → 68; new WebsiteChat.jsx 58, its CSS 31, its test 87; tests:
+csp 84 → 121, JoinPage 162 → 165, JoinPage website 107 → 120, panel 371 → 373, panel website 166 → 187;
+docs: AUTH.md 446 → 457, OPERATOR-GUIDE.md 580 → 587; BACKLOG 7708 → 7712 and OPEN 541 → 538 (the 7a/7b
+row to PART TWO). **Fingerprints:** none (`engine-reach --check`: nothing reaches the engine).
 
 ## 7a — what was built
 
@@ -132,3 +202,20 @@ routers), AUTH.md 435 → 446, OPERATOR-GUIDE.md 572 → 580. **Fingerprints:** 
    nowhere; OPERATOR-GUIDE says so.
 7. **7a: rate limit = its own instance of the join limiter** (60 / minute / address) rather than sharing
    the join route's bucket, so a busy join minute never starves the website's poll and vice versa.
+8. **7b: the chat sits BELOW the page, always there, not behind a button.** Bingo puts it behind a
+   "Chat" button in a side panel; the brief places it "below the page's own content … without pushing
+   the join form or the registration controls off a phone screen", which a section after the content
+   does by construction. `loading="lazy"` instead of Bingo's created-on-first-open.
+9. **7b: `referrerpolicy="strict-origin"` on the FRAME, the page headers unchanged.** The website
+   requires a kept referrer (GAME-INTEGRATION.md:199); Bingo and Mini Games send `no-referrer` for their
+   pages, as the race does (helmet's default). Putting it on the iframe alone meets the website's rule
+   without touching standalone's headers.
+10. **7b: no postMessage.** Neither `unread` nor `resize` is needed for a frame that is always shown at a
+    fixed height; Bingo does not use them either (GAME-INTEGRATION.md:204-205). Nothing to validate,
+    nothing sent.
+11. **7b: `theme=auto`**, the URL the website's own table gives the race (EMBED.md:49). The race has one
+    (dark) theme and no theme switch to follow.
+12. **7b: not on the full-screen QR stage** — it is part of the registration's detail but is shown to
+    an audience, so the brief's "not on any screen shown to an audience" wins there.
+13. **BACKLOG: the 7a/7b row moved to PART TWO now** that both are built, as the brief says, marked
+    unmerged; the merge is the owner's, after his look.

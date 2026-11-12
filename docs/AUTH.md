@@ -429,6 +429,17 @@ own proxy, and an admin enters its address once, Admin → Games → "Sign-up st
 (`https://<site>/games/race/api/public/open-rounds`). It names a registration only by its public
 code, the event and track, the counts, the deadline and the join link: never a player, an entry,
 the team or who opened it ([API.md](API.md), *The website's open-rounds list*).
+
+**The website chat** (WEBSITE-EXTRAS-1 piece 7b, the owner's decision of 2026-11-11, OWNER-5;
+`client/src/components/WebsiteChat/WebsiteChat.jsx`). In website mode the join page and the director's
+registrations (the list and one registration's detail) frame the website's own chat page,
+`/embed/chat?room=race&theme=auto` (the website's `docs/EMBED.md`), below their own content. It signs in
+with the **website's** session cookie, not the race's, so it shows a member the room and a guest what the
+website shows a guest; the race reads nothing from it and sends it nothing. It is **never** on the race
+screen, the start ceremony, the result screen or the full-screen QR stage — nothing an audience sees.
+The race's Content-Security-Policy gains `frame-src 'self'` in website mode only (`server/src/csp.js`;
+the race is on the website's origin, so that is exactly the chat); `frame-ancestors 'none'` stays, and
+standalone's policy is unchanged byte for byte.
 The stored name, the coat, the colours and a replay are unchanged; the race screen of a repeat
 still draws the stored names (the sheet says why). Details: API.md, *Races*.
 

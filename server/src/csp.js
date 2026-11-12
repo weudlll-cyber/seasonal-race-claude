@@ -26,6 +26,12 @@
 //   font-src     'self' — the fonts are self-hosted (client/src/styles/fonts.css).
 //   object-src 'none', base-uri 'self', form-action 'self', frame-ancestors 'none' — nothing in the
 //                app needs more, and frame-ancestors replaces the old X-Frame-Options.
+//   frame-src    WEBSITE MODE ONLY, 'self' (WEBSITE-EXTRAS-1 piece 7b, OWNER-5): the website's chat,
+//                /embed/chat?room=race, framed on the join page and the director's registrations —
+//                the race is on the website's own origin, so 'self' is exactly it (the website's
+//                GAME-INTEGRATION.md: allow the iframe in frame-src; Bingo sends the same). Standalone
+//                frames nothing and gets no frame-src at all: its header is byte-identical to before
+//                (csp.test.js pins it). frame-ancestors stays 'none' in both: nobody frames the race.
 //
 // ★ SCOPE: only pages THIS server serves (the production image, `npm start`). The dev server on
 // 5173 and the 4173 preview are served by Vite and scripts/serve-production.mjs, which send no CSP.
@@ -40,13 +46,11 @@ import { resolveSiteMode } from './website/websiteConfig.js';
  */
 export function cspDirectives(env = process.env) {
   const origin = resolvePublicOrigin(env);
+  const mode = resolveSiteMode(env);
   return {
     defaultSrc: ["'self'"],
     // WEBSITE-EMBED-1: the hash covers the script as rendered, base path and mode included.
-    scriptSrc: [
-      "'self'",
-      runtimeConfigScriptHash(origin, resolveBasePath(env), resolveSiteMode(env)),
-    ],
+    scriptSrc: ["'self'", runtimeConfigScriptHash(origin, resolveBasePath(env), mode)],
     styleSrc: ["'self'"],
     imgSrc: ["'self'", 'data:', 'blob:'],
     connectSrc: origin ? ["'self'", origin] : ["'self'"],
@@ -55,6 +59,8 @@ export function cspDirectives(env = process.env) {
     baseUri: ["'self'"],
     formAction: ["'self'"],
     frameAncestors: ["'none'"],
+    // WEBSITE-EXTRAS-1 piece 7b: the website's chat frame, website mode only (see the header).
+    ...(mode === 'website' ? { frameSrc: ["'self'"] } : {}),
     // NOT upgrade-insecure-requests (helmet's default set has it; app.js passes useDefaults: false):
     // it would break a plain-HTTP install on a LAN, the owner's own 4000 included. HTTPS is the
     // proxy's to enforce, with HSTS.
