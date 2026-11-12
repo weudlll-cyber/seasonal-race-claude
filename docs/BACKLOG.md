@@ -25,54 +25,15 @@ considered separately, and that would not be true.
 
 ---
 
-## WEBSITE-EMBED-1 — RaceArena inside Seasonal Entertainment (2026-11-11)
+## WEBSITE-EMBED-1, the rest — 7a and 7b (2026-11-12)
 
-- [ ] ★★ **WEBSITE-EMBED-1 — run RaceArena under the website's path, with the website's accounts.**
-      Pieces 2, 3a, 3b and 4 of the race planning's plan, built on branch `feat/website-embedding`,
-      NOT merged: it is merged once, after the rehearsal, with the owner's approval. Every new
-      behaviour is off unless `RA_MODE=website`; standalone at "/" is unchanged. The state of each
-      piece, every fork decided and why, and what needs his word are on the morning sheet
-      [reports/night/MORNING-WEBSITE-EMBED-1.md](../reports/night/MORNING-WEBSITE-EMBED-1.md).
-      - **Piece 2 — the base path (built):** `RA_BASE_PATH` (e.g. `/games/race`) mounts the whole app
-        below it, 404 outside it; one build serves "/" and the base path (`base: './'`, a rewritten
-        `<base href>`); router, API address, sprites, join link and the session cookie follow it.
-      - **Piece 3a — website sign-in (built):** `RA_MODE=website`, `<base>/auth/website` believed only
-        from a trusted peer with the proxy secret, the role mapping recomputed at every sign-in, the
-        race's own account doors closed, a local stand-in proxy (`scripts/website-standin.mjs`).
-      - **Piece 3b — the account-changes feed (built, server part):** the poller, the durable cursor,
-        locked / unlocked / rights / deleted. Masking a deleted member in PAST races: piece 6.
-      - **Piece 4 — members join through the race's own join page (built):** a member joins as
-        themselves, one entry per account (source `website`, the website id as external id); the
-        director chooses *Website members only* (default) or *Anyone with the link*; website entries
-        are marked "from the website".
-      - **Piece 5 — the Dev Screen in website mode (built):** *Your password* and *Race directors*
-        are not shown there (the owner's decision of 2026-11-11); standalone shows both.
-      - **Piece 5a — the race's route file in the website's proxy (built, third chain):**
-        `deploy/website-route.sh`, one generator for nginx and Caddy; proven behind both real proxies
-        (`deploy/test/route-test.sh`).
-      - **Piece 5b — the installer's website mode (built, third chain):** `install.sh` offers
-        "inside Seasonal Entertainment" when the website's markers exist (`--mode`), asks only the team,
-        and places the route file; `racearena` keeps the mode through updates; tested in a throwaway
-        Ubuntu 24.04 machine behind real nginx and real Caddy (`deploy/test/e2e-website.sh`). **Open:** the
-        rehearsal on the real website (the owner says when it is ready).
-      - **The rehearsal against the REAL website (fourth chain, 2026-11-12):** `deploy/test/real-site.sh`,
-        website master eb1bbe9 installed by its own harness with RACE=yes; the race installed into it;
-        the six proofs in nginx and Caddy mode (the morning sheet has the table). **Open:** the owner's
-        decision on merging feat/website-embedding.
-      - **Piece 5c — five fixes from the website planning's answers (built, fourth chain):** the
-        feed read exactly as the website sends it; the website's record /etc/seasonal/install.conf
-        (RACE=yes, SITE_DOMAIN, MODE, INSTALL_DIR); the site container by its compose labels; port 3940
-        and subnet 172.30.251.0/24; race.conf / race.caddy in the website's real layout.
-      - **Piece 6 — "Deleted player" in past races (built):** the owner's decision of 2026-11-11
-        (OWNER-3) — a side table beside the race (`race_website_racers`), the stored race
-        byte-identical; the result screen and the race history show "Deleted player". **Decided by the
-        owner, 2026-11-11:** a re-run race ("Run again") keeps drawing the stored names on the race
-        screen (name tags, start board, standings, winner card) — the result and the race history mask
-        them; not to be built. Also as built: Export CSV keeps the stored names, and a repeat from
-        another device's server row carries no mapping.
+- [ ] ★ **WEBSITE-EMBED-1 7a and 7b — what of the race planning stays open after the merge.** The
+      base path, website sign-in, the feed, members joining, "Deleted player" and the installer's
+      website mode are merged (PART TWO, WEBSITE-EMBED-1, closed 2026-11-12). Two pieces are not built:
+      - **7a — open registrations shown on the website** (OWNER-4).
+      - **7b — the website chat** (OWNER-5).
 
-      **verify:** the owner's look at the rehearsal — "/" unchanged, and the "Website members only /
-      Anyone with the link" choice on the join flow; until then no command decides it.
+      **verify:** none yet — neither piece is specified; the owner's word on each comes first.
 
 ## NEEDS HIS WORD — decide these first
 
@@ -1961,6 +1922,61 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **WEBSITE-EMBED-1 — run RaceArena under the website's path, with the website's accounts —
+      CLOSED 2026-11-12, merged to `master`** by the owner's merge approval of 2026-11-12 (branch
+      `feat/website-embedding`, merged with a merge commit and then deleted). **What closed it:**
+      pieces 2–6 built, and the rehearsal against the real website (master `eb1bbe9`, installed by its
+      own harness with RACE=yes) passed in BOTH variants on 2026-11-12, nginx and Caddy, every check
+      (the screens drawing "Deleted player" were not driven there — no browser; their client tests
+      cover them). The rest of the owner's planning — 7a and 7b — stays in PART ONE under its own row.
+      *As it stood when it closed:*
+      Pieces 2, 3a, 3b and 4 of the race planning's plan, built on branch `feat/website-embedding`,
+      NOT merged: it is merged once, after the rehearsal, with the owner's approval. Every new
+      behaviour is off unless `RA_MODE=website`; standalone at "/" is unchanged. The state of each
+      piece, every fork decided and why, and what needs his word are on the morning sheet
+      [reports/night/MORNING-WEBSITE-EMBED-1.md](../reports/night/MORNING-WEBSITE-EMBED-1.md).
+      - **Piece 2 — the base path (built):** `RA_BASE_PATH` (e.g. `/games/race`) mounts the whole app
+        below it, 404 outside it; one build serves "/" and the base path (`base: './'`, a rewritten
+        `<base href>`); router, API address, sprites, join link and the session cookie follow it.
+      - **Piece 3a — website sign-in (built):** `RA_MODE=website`, `<base>/auth/website` believed only
+        from a trusted peer with the proxy secret, the role mapping recomputed at every sign-in, the
+        race's own account doors closed, a local stand-in proxy (`scripts/website-standin.mjs`).
+      - **Piece 3b — the account-changes feed (built, server part):** the poller, the durable cursor,
+        locked / unlocked / rights / deleted. Masking a deleted member in PAST races: piece 6.
+      - **Piece 4 — members join through the race's own join page (built):** a member joins as
+        themselves, one entry per account (source `website`, the website id as external id); the
+        director chooses *Website members only* (default) or *Anyone with the link*; website entries
+        are marked "from the website".
+      - **Piece 5 — the Dev Screen in website mode (built):** *Your password* and *Race directors*
+        are not shown there (the owner's decision of 2026-11-11); standalone shows both.
+      - **Piece 5a — the race's route file in the website's proxy (built, third chain):**
+        `deploy/website-route.sh`, one generator for nginx and Caddy; proven behind both real proxies
+        (`deploy/test/route-test.sh`).
+      - **Piece 5b — the installer's website mode (built, third chain):** `install.sh` offers
+        "inside Seasonal Entertainment" when the website's markers exist (`--mode`), asks only the team,
+        and places the route file; `racearena` keeps the mode through updates; tested in a throwaway
+        Ubuntu 24.04 machine behind real nginx and real Caddy (`deploy/test/e2e-website.sh`). The rehearsal
+        on the real website followed in the fourth chain (below).
+      - **The rehearsal against the REAL website (fourth chain, 2026-11-12):** `deploy/test/real-site.sh`,
+        website master eb1bbe9 installed by its own harness with RACE=yes; the race installed into it;
+        the six proofs in nginx and Caddy mode, both passed (the morning sheet has the table). Merged
+        with the owner's approval of 2026-11-12.
+      - **Piece 5c — five fixes from the website planning's answers (built, fourth chain):** the
+        feed read exactly as the website sends it; the website's record /etc/seasonal/install.conf
+        (RACE=yes, SITE_DOMAIN, MODE, INSTALL_DIR); the site container by its compose labels; port 3940
+        and subnet 172.30.251.0/24; race.conf / race.caddy in the website's real layout.
+      - **Piece 6 — "Deleted player" in past races (built):** the owner's decision of 2026-11-11
+        (OWNER-3) — a side table beside the race (`race_website_racers`), the stored race
+        byte-identical; the result screen and the race history show "Deleted player". **Decided by the
+        owner, 2026-11-11:** a re-run race ("Run again") keeps drawing the stored names on the race
+        screen (name tags, start board, standings, winner card) — the result and the race history mask
+        them; not to be built. Also as built: Export CSV keeps the stored names, and a repeat from
+        another device's server row carries no mapping.
+
+      **Closed by:** the rehearsal's two passes (`deploy/test/real-site.sh`) and the owner's merge
+      approval of 2026-11-12. The owner's look at "/" unchanged and the "Website members only / Anyone
+      with the link" choice was folded into that approval.
 
 - [x] **fix/audit-launch-editor · master's CI red on the audit gate — CLOSED 2026-10-22, merged.**
       From `6470e2e6` (2026-10-21) every CI run on master failed one step, the client's *Security

@@ -92,8 +92,8 @@ something goes wrong — is in the [operator guide](OPERATOR-GUIDE.md).
 
 ## Inside Seasonal Entertainment (website mode)
 
-*(WEBSITE-EMBED-1 pieces 5a, 5b and 5c, 2026-11-11, on branch `feat/website-embedding`; not merged
-until the rehearsal on the real website.)* The same command installs RaceArena **inside** the Seasonal
+*(WEBSITE-EMBED-1 pieces 5a, 5b and 5c, 2026-11-11; rehearsed against the real website in nginx and
+Caddy mode and merged 2026-11-12.)* The same command installs RaceArena **inside** the Seasonal
 Entertainment website, on the website's own server: under `/games/race`, behind the website's proxy,
 with the website's accounts (sign-in: [AUTH.md](AUTH.md) §10; settings:
 [ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*). It follows the website's own layout, as Seasonal

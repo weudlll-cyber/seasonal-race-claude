@@ -222,7 +222,7 @@ removal (`removeOpenWebsiteEntries`, one statement beside `removeEntry`); the st
 also the feed, with links on its page to lock, unlock, revoke or delete each fake member.
 
 **Tests.** `accountFeed.test.js` (13, a fake feed and real stores in one temporary
-`registrations.sqlite`): the settings and refusals; the tolerant reader; **paging past 500** (the
+`registrations.sqlite`): the settings and refusals; the tolerant reader (replaced in piece 5c by the exact one); **paging past 500** (the
 second page asked within a second, `?since=<cursor>`, the cursor advancing); **a repeated batch**
 changing nothing; **an error, then backoff** (0, 2×, 4×, 8×, 10 min, 10 min, then the interval
 again); each event's effect; website mode without the feed refuses to start.
@@ -238,7 +238,8 @@ doubling dropped — each red, all restored. Website tests 46/46.
 2. *The answer's field names are not in the summary,* so the reader accepts `events`/`changes`,
    `type`/`event`, `userId`/`user_id`/`id`, `nextCursor`/`cursor`, and `hasMore` (or a full page of
    500 for "ask again now"). An answer without a cursor is an error (it could not be remembered); an
-   event of an unknown kind, or naming nobody, is skipped. **To confirm against the website's feed.**
+   event of an unknown kind, or naming nobody, is skipped. *Superseded by piece 5c:* confirmed against
+   website master eb1bbe9 and replaced — the feed is now read exactly in the website's format (below).
 3. *A lock for a member the race has never met is remembered*, so their first sign-in is refused.
 4. *A deleted member's entries stay in CLOSED registrations* — a race may already have been run from
    that list; past races are masked at display time instead.
@@ -741,8 +742,9 @@ master's route is `/game-host {game}` (for the website planning to know, not a d
 
 ## Where the code disagreed with the summary
 
-- The account-changes feed's field names are not in the summary (piece 3b, fork 2): read tolerantly
-  and to be confirmed against the website's real answer.
+- The account-changes feed's field names were not in the summary (piece 3b, fork 2). Since piece 5c the
+  feed is read exactly in the website's format, website master eb1bbe9:
+  {changes:[{id:<number>,kind}],next:'<digits>'}; any other shape is an error (the 5c section above).
 
 ## Needs the owner's word
 

@@ -27,8 +27,8 @@ path but a setting of any of them: `RA_MODE=website` runs the game inside the Se
 Entertainment website, under its path (`RA_BASE_PATH`) and with its accounts. Everything on this
 page is unchanged without it; with it, the race's own sign-in and account management are closed and
 members sign in through the website. Settings: [ENVIRONMENT.md](ENVIRONMENT.md), *Website mode*;
-how sign-in works: [AUTH.md](AUTH.md) §10. **The VPS install has it as its second mode** (pieces 5a
-and 5b, on `feat/website-embedding`): on the website's own server, the same command offers to install
+how sign-in works: [AUTH.md](AUTH.md) §10. **The VPS install has it as its second mode** (pieces 5a,
+5b and 5c, merged 2026-11-12): on the website's own server, the same command offers to install
 inside it, asks only the team, and places the race's route file in the website's proxy —
 [VPS-INSTALL.md](VPS-INSTALL.md), *Inside Seasonal Entertainment*. There, `racearena status` names the
 mode and the route file's state instead of https, `racearena logs caddy` and `harden-ssh` do not
