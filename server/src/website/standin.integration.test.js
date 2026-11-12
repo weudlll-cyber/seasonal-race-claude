@@ -8,6 +8,10 @@
 //              the stand-in's page signs the browser in as that member, through the full path; and
 //              identity headers a browser sends itself never get through. The secret is generated
 //              per run and never printed.
+//              Needs no built client (fix/ci-2026-11-12): a sign-in is followed up to its redirect
+//              into the app, never into it — CI's server job builds no client, so the page there
+//              answered 404 and the test failed on master f247dafb; the role is asked of the race's
+//              own session endpoint under the base path.
 // ============================================================
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
@@ -71,12 +75,19 @@ afterAll(async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-/** A tiny browser: follows redirects by hand and keeps the cookies it is given, per name. */
+/**
+ * A tiny browser: follows redirects by hand and keeps the cookies it is given, per name.
+ * `signIn(who)` picks a fake member and follows the sign-in up to — not into — its redirect into the
+ * app: the page there is the built client, which a test run (CI) does not have, so it is never
+ * fetched; the session is then asked of the race's own endpoint. Returns the redirect's target, or
+ * the response the sign-in stopped with (a refusal).
+ */
 function browser() {
   const jar = new Map();
-  async function go(path, init = {}) {
+  async function go(path, init = {}, { stopAt } = {}) {
     let url = new URL(path, origin);
     for (let hops = 0; hops < 5; hops++) {
+      if (hops > 0 && stopAt?.(url)) return { status: 303, stoppedAt: url };
       const cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
       const res = await fetch(url, {
         ...init,
@@ -93,7 +104,10 @@ function browser() {
     }
     throw new Error('too many redirects');
   }
-  return { go };
+  const intoTheApp = (url) =>
+    url.pathname.startsWith(`${BASE}/`) && !url.pathname.includes('/auth/');
+  const signIn = (who) => go(`/_standin/as/${who}`, {}, { stopAt: intoTheApp });
+  return { go, signIn };
 }
 
 describe('the website stand-in in front of a website-mode race', () => {
@@ -105,8 +119,8 @@ describe('the website stand-in in front of a website-mode race', () => {
 
   it('picking "host" signs the browser in as a race operator, under the base path', async () => {
     const b = browser();
-    const landed = await b.go('/_standin/as/host');
-    expect(landed.status).toBe(200); // the app shell (or the API 404 page with no build)… either way, arrived
+    const landed = await b.signIn('host');
+    expect(landed.stoppedAt?.pathname).toBe(`${BASE}/`);
     const me = await b.go(`${BASE}/api/auth/me`);
     expect(me.status).toBe(200);
     const body = await me.json();
@@ -116,7 +130,7 @@ describe('the website stand-in in front of a website-mode race', () => {
 
   it('picking "member" gives a player identity only — no director API', async () => {
     const b = browser();
-    await b.go('/_standin/as/member');
+    await b.signIn('member');
     expect((await b.go(`${BASE}/api/auth/me`)).status).toBe(401);
   });
 
@@ -136,7 +150,7 @@ describe('the website stand-in in front of a website-mode race', () => {
 
   it('★ piece 3b: an event fired on the stand-in page reaches the race through the feed', async () => {
     const b = browser();
-    await b.go('/_standin/as/host');
+    await b.signIn('host');
     expect((await b.go(`${BASE}/api/auth/me`)).status).toBe(200);
     // The website locks Hugo Host.
     expect(
@@ -152,7 +166,7 @@ describe('the website stand-in in front of a website-mode race', () => {
     expect(page.events).toEqual([{ type: 'locked', userId: '9002' }]);
     // His director session ends on the next request, and he cannot sign in again.
     expect((await b.go(`${BASE}/api/auth/me`)).status).toBe(401);
-    const again = await b.go('/_standin/as/host');
+    const again = await b.signIn('host');
     expect(again.status).toBe(403);
     // A wrong token gets nothing from the feed.
     const refused = await fetch(`${origin}/api/games/race/account-changes`, {
