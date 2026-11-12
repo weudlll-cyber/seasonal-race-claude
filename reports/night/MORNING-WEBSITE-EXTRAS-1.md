@@ -15,7 +15,7 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 | 7a — open registrations for the website (OWNER-4) | **done** — `37c75e42`, pushed |
 | 7b — the website chat (OWNER-5) | **done** — `1feefcce`, pushed |
 | the stand-in's open-rounds page and chat placeholder (the owner's look) | **done** — see below |
-| real-website check (nginx) | not started |
+| real-website check (nginx) | **done** — see below; proofs 7 and 8 pass, two NOT DRIVEN |
 
 ## 7a — the facts, read BEFORE building
 
@@ -58,6 +58,15 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 - `:12-13` (header) — **standalone: the option does not exist and the list is empty.**
 - `apps/server/src/db/migrations/0017_show_on_website.sql` — the per-match flag;
   `packages/contracts/src/http/openRounds.ts:19-33` — the same contract in zod.
+
+## The end of the chain
+
+**verify** (`--premerge --base=dcc9a250`, one run, while the rehearsal loaded the machine): **24 pass,
+2 fail, 12 skip.** (1) `check-index` — a real finding: this sheet was not in `reports/night/INDEX.md`;
+added, re-checked: 0 unindexed. (2) `server-suite` — `websiteJoin.integration.test.js` and
+`websiteMode.integration.test.js` timed out in their 10 s setup hooks under load (the same two as on
+2026-11-12); re-run alone once: 2 files, 19 tests, green — CI decides. Fingerprints: none moved, none ran
+(no change reaches the engine).
 
 ## 7b — the facts, read BEFORE building
 
@@ -129,15 +138,48 @@ csp 84 → 121, JoinPage 162 → 165, JoinPage website 107 → 120, panel 371 �
 docs: AUTH.md 446 → 457, OPERATOR-GUIDE.md 580 → 587; BACKLOG 7708 → 7712 and OPEN 541 → 538 (the 7a/7b
 row to PART TWO). **Fingerprints:** none (`engine-reach --check`: nothing reaches the engine).
 
+## The real-website check (nginx, fresh, 2026-11-12/13)
+
+`deploy/test/real-site.sh nginx master`: the website at master **`72aac53`** (contains `da618e7`)
+installed fresh by its own harness with RACE=yes, the race (`858413e3`) installed into it in website mode,
+driven by curl through `https://example.org`. The rehearsal gained proofs 7 and 8 (`858413e3`); the
+in-server driver gained `page` and `open-rounds-check`.
+
+| # | proof | result |
+| --- | --- | --- |
+| 7a | a registration marked "Show on the website" is in the race's list, read with NO session through the website's proxy (`/games/race/api/public/open-rounds`) | pass |
+| 7b | an unmarked one is not | pass |
+| 7c | exactly the website's eight fields, kind "Seasonal Race", the join link on `https://example.org/games/race/join/<code>`, no player name | pass |
+| 7d | **the website's OWN checker** (`parseOpenRounds`, its `server/src/games/openRoundsContract.js`, run in the site container on the fetched answer) accepts the marked round and not the unmarked | pass |
+| 7e | unticking it takes it off the list | pass |
+| 7f | the website's own poll and its home / games page showing it | **NOT DRIVEN** — its guarded fetch takes public addresses only (its `server/src/previews/safeFetch.js:59-63`, `ipPolicy.js:16`), and the harness's server is `10.77.0.10` (its `deploy/test/run.sh:87`). 7a–7d read exactly what that poll reads and judge it with the website's own code. Not a website defect: it is its SSRF guard working. |
+| 8a | a signed-in member's join page: the race's CSP carries `frame-src 'self'` and `frame-ancestors 'none'` | pass |
+| 8b | the race's built page frames `/embed/chat?room=race&theme=auto` (in its bundle) | pass |
+| 8c | the website's embed answers that member (200) and lets the same site frame it (`frame-ancestors 'self'`) — so the race's CSP and the website's agree | pass |
+| 8d | a browser drawing the frame inside the join page | **NOT DRIVEN** — no browser in this rehearsal; the client tests render it |
+
+The proofs before them in the run all passed: install (3), 1a–1c, 2a–2e, 5a–5d.
+**The run was stopped by me during proof 5 — my error.** The log file showed proof 1 for half an hour
+while the run was in fact progressing (the output reached the file late), I took it for a hang and sent
+SIGTERM; its exit trap removed the server and the website harness's containers. So **5e, 3, 4 and 6 did
+not run in this chain**; none of them touches code this chain changed (they all passed fresh on
+2026-11-12 in WEBSITE-EMBED-1's rehearsal, the same race paths), and the brief asked for 7 and 8 only.
+**Website-side defect: none. Race-side defect: none.**
+
+**Cleanup:** the harness's containers, volume, network and its server image are gone (the exit trap);
+compared with the Docker state recorded before the run, nothing of it is left. **Not deleted (refused by
+the permission system):** the scratch folder `C:/tmp/ra-rehearsal` (the race bundle and the website
+clone) and the read-only reference clones in `C:/tmp/ra-refs`.
+
 ## The stand-in, for the owner's look (dev and test only, never in the image)
 
-`scripts/website-standin.mjs` (286 → 369 lines; not in the image — server/Dockerfile copies three named
+`scripts/website-standin.mjs` (286 → 368 lines; not in the image — server/Dockerfile copies three named
 scripts and nothing else of scripts/): **`/_standin/open-rounds`** asks the race's
 `GET <base>/api/public/open-rounds` from its own process, as the website's server does, and lists the
 rounds as the website's home page and games page would (title, kind, places, closes at, Join) — linked
 from the stand-in's page; **`/embed/chat`** is a placeholder that names the room it was asked for
 (escaped), so the frame on the race's join page and registrations is visible. Its tests
-(`standin.integration.test.js`, 249 → 284): +2 — a marked open registration listed and an unmarked one
+(`standin.integration.test.js`, 249 → 285): +2 — a marked open registration listed and an unmarked one
 not; the placeholder names the room and escapes markup. The ten existing tests unchanged and green.
 
 ## 7a — what was built
