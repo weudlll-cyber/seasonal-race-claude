@@ -8,7 +8,8 @@
 //              code and its names with a remove button each, Close now and Extend send what they say,
 //              "Use these players" hands over exactly the registered names, the track, the id and the
 //              event name, a raced registration shows "Raced" and when (follow-up 2) and can still be
-//              used, Delete asks first, and the full-screen QR stage opens and closes.
+//              used, Delete asks first, and the full-screen QR stage opens and closes. Standalone
+//              draws and sends no "Show on the website" (WEBSITE-EXTRAS-1 piece 7a).
 // ============================================================
 
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
@@ -109,11 +110,15 @@ describe('opening a registration', () => {
     fireEvent.change(screen.getByLabelText('Event name (optional)'), {
       target: { value: ' Friday cup ' },
     });
+    // Standalone: the form has no website setting (WEBSITE-EXTRAS-1 piece 7a).
+    expect(screen.queryByTestId('registration-show-on-website')).toBeNull();
     const before = Date.now();
     fireEvent.click(screen.getByRole('button', { name: 'Open registration' }));
     await screen.findByTestId('registration-view');
     const sent = api.createRegistration.mock.calls[0][0];
     expect(sent).toMatchObject({ trackId: 'dirt-oval', capacity: 12, eventName: 'Friday cup' });
+    // ...and none is sent.
+    expect(sent).not.toHaveProperty('showOnWebsite');
     const ms = Date.parse(sent.closesAt) - before;
     expect(ms).toBeGreaterThan(59 * 60 * 1000);
     expect(ms).toBeLessThan(61 * 60 * 1000);

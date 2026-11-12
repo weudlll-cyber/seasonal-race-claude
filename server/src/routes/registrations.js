@@ -15,6 +15,7 @@
 //              POST   /:id/close                 close it now
 //              POST   /:id/extend                move the deadline later  { closesAt }
 //              POST   /:id/raced                 a race was started with its players (first time kept)
+//              POST   /:id/website               website mode: "Show on the website" on/off  { show }
 //              DELETE /:id/entries/:entryId      remove one name
 //              DELETE /:id                       delete it and every name in it
 //
@@ -45,8 +46,10 @@ export function getDefaultRegistrationStore() {
 const CREATE_FIELDS = new Set(['trackId', 'capacity', 'eventName', 'closesAt']);
 // WEBSITE-EMBED-1 piece 4: in website mode a registration also says who may join. In standalone the
 // field stays unknown, so a body that names it is refused exactly as before.
-const WEBSITE_CREATE_FIELDS = new Set([...CREATE_FIELDS, 'websiteAccess']);
+// Website mode adds who may join (piece 4) and "Show on the website" (WEBSITE-EXTRAS-1 piece 7a).
+const WEBSITE_CREATE_FIELDS = new Set([...CREATE_FIELDS, 'websiteAccess', 'showOnWebsite']);
 const EXTEND_FIELDS = new Set(['closesAt']);
+const SHOW_FIELDS = new Set(['show']);
 
 const NOT_FOUND = { error: 'No registration with that id.' };
 
@@ -104,6 +107,9 @@ export function createRegistrationsRouter({ store, tracks } = {}) {
         closesAt: body.closesAt,
         // Website mode: 'members' unless the director chose 'anyone'; standalone stores nothing.
         websiteAccess: website ? (body.websiteAccess ?? 'members') : null,
+        // Website mode: off unless the director ticked it (OWNER-4: registrations the director
+        // MARKS); standalone stores nothing.
+        showOnWebsite: website ? (body.showOnWebsite ?? false) : null,
       });
       return res.status(201).json(created);
     } catch (err) {
@@ -159,6 +165,26 @@ export function createRegistrationsRouter({ store, tracks } = {}) {
     if (!team) return;
     const marked = resolveStore().markRaced(req.params.id, team);
     return marked ? res.json(marked) : res.status(404).json(NOT_FOUND);
+  });
+
+  // POST /:id/website — "Show on the website" on or off, while open (WEBSITE-EXTRAS-1 piece 7a).
+  // Website mode only: standalone has no such setting, so it falls through to the API's own 404
+  // (staticClient.js mountApiNotFound), exactly as an unknown route does.
+  // Team-scoped like every route here; CSRF by the global origin guard, as every write.
+  router.post('/:id/website', (req, res, next) => {
+    if (siteMode() !== 'website') return next();
+    const team = teamOf(req, res);
+    if (!team) return;
+    const unknown = unknownFields(req.body, SHOW_FIELDS);
+    if (unknown.length) {
+      return res.status(400).json({ error: unknownFieldsMessage(unknown, 'The setting') });
+    }
+    try {
+      const after = resolveStore().setShowOnWebsite(req.params.id, team, req.body.show);
+      return after ? res.json(after) : res.status(404).json(NOT_FOUND);
+    } catch (err) {
+      return answerRefusal(res, err);
+    }
   });
 
   // DELETE /:id/entries/:entryId — remove one name; its place is free again.

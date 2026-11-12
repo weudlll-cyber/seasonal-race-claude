@@ -47,6 +47,13 @@
 // in standalone — means the link works as it always did (anyone may type a name). A member joins as
 // source 'website' with their website id as the external id (OWNER-6), so the existing UNIQUE
 // (registration_id, external_id) makes it one entry per account.
+//
+// ── WEBSITE-EXTRAS-1 piece 7a: "SHOW ON THE WEBSITE" (OWNER-4) ─────────────────────────────────
+// `show_on_website` (1 | 0) is added the same way, check-then-alter, nullable; the three columns now
+// share one helper (`addColumnIfMissing`). It is set only for a registration opened in website mode
+// (0 unless the director ticked it — the owner's decision says registrations the director MARKS);
+// NULL elsewhere. `openRoundsForWebsite` reads the marked ones that are open now, for the website's
+// open-rounds contract (website/openRounds.js) — never a name, an entry or the internal id.
 // ============================================================
 
 import Database from 'better-sqlite3';
@@ -143,41 +150,61 @@ const RACED_COLUMN = 'raced_at_ms';
 /** The column "who may join" is stored in (piece 4); see the header. */
 const ACCESS_COLUMN = 'website_access';
 
+/** The column "Show on the website" is stored in (piece 7a); see the header. */
+const SHOW_COLUMN = 'show_on_website';
+
 /**
- * Add `website_access` to a registrations table that predates it; a table that has it is left
- * alone. The same check-then-alter as `addRacedColumn`, below.
+ * Add a nullable column to a registrations table that predates it; a table that has it is left
+ * alone. `CREATE TABLE IF NOT EXISTS` never alters an existing table, so every column added after
+ * the first release comes through here when the store opens (see the header).
+ *
+ * @returns {boolean} true when the column was added
+ */
+function addColumnIfMissing(db, column, type) {
+  const has = db
+    .prepare('PRAGMA table_info(registrations)')
+    .all()
+    .some((c) => c.name === column);
+  if (has) return false;
+  db.exec(`ALTER TABLE registrations ADD COLUMN ${column} ${type}`);
+  return true;
+}
+
+/**
+ * Add `website_access` to a table that predates it. Nullable, no default: NULL is "opened outside
+ * website mode" — the link works as it always did.
  *
  * @param {import('better-sqlite3').Database} db
  * @returns {boolean} true when the column was added
  */
 export function addWebsiteAccessColumn(db) {
-  const has = db
-    .prepare('PRAGMA table_info(registrations)')
-    .all()
-    .some((c) => c.name === ACCESS_COLUMN);
-  if (has) return false;
-  // Nullable, no default: NULL is "opened outside website mode" — the link works as it always did.
-  db.exec(`ALTER TABLE registrations ADD COLUMN ${ACCESS_COLUMN} TEXT`);
-  return true;
+  return addColumnIfMissing(db, ACCESS_COLUMN, 'TEXT');
 }
 
 /**
- * Add `raced_at_ms` to a registrations table that predates it; a table that has it is left alone.
- * Exported for the test that opens a database made without the column.
+ * Add `show_on_website` to a table that predates it (piece 7a). Nullable, no default: NULL is
+ * "opened outside website mode", which no website list ever shows.
+ *
+ * @param {import('better-sqlite3').Database} db
+ * @returns {boolean} true when the column was added
+ */
+export function addShowOnWebsiteColumn(db) {
+  return addColumnIfMissing(db, SHOW_COLUMN, 'INTEGER');
+}
+
+/**
+ * Add `raced_at_ms` to a table that predates it. Nullable, no default: NULL is "not raced", which
+ * every existing registration is. Exported for the test that opens a database made without it.
  *
  * @param {import('better-sqlite3').Database} db
  * @returns {boolean} true when the column was added
  */
 export function addRacedColumn(db) {
-  const has = db
-    .prepare('PRAGMA table_info(registrations)')
-    .all()
-    .some((c) => c.name === RACED_COLUMN);
-  if (has) return false;
-  // Nullable, no default: NULL is "not raced", which every existing registration is.
-  db.exec(`ALTER TABLE registrations ADD COLUMN ${RACED_COLUMN} INTEGER`);
-  return true;
+  return addColumnIfMissing(db, RACED_COLUMN, 'INTEGER');
 }
+
+/** The most rounds the website reads from one answer (its docs/OPEN-ROUNDS.md:35). */
+export const OPEN_ROUNDS_MAX = 20;
 
 /** A new public code: 16 random bytes, URL-safe, 22 characters. */
 export function newRegistrationCode() {
@@ -200,6 +227,7 @@ export function createRegistrationStore(
   db.exec(SCHEMA);
   addRacedColumn(db);
   addWebsiteAccessColumn(db);
+  addShowOnWebsiteColumn(db);
 
   const isClosed = (row, at) => row.closed_early_ms != null || at >= row.closes_at_ms;
 
@@ -234,6 +262,7 @@ export function createRegistrationStore(
       closedEarlyAt: iso(row.closed_early_ms),
       racedAt: iso(row.raced_at_ms),
       ...(row.website_access ? { websiteAccess: row.website_access } : {}),
+      ...(row[SHOW_COLUMN] != null ? { showOnWebsite: row[SHOW_COLUMN] === 1 } : {}),
       state: isClosed(row, at) ? 'closed' : 'open',
       taken,
       placesLeft: Math.max(0, row.capacity - taken),
@@ -305,7 +334,8 @@ export function createRegistrationStore(
    *
    * @param {{ team: string, createdBy: string, trackId: string, trackName: string,
    *           capacity: number, eventName?: string|null, closesAt: string,
-   *           websiteAccess?: 'members'|'anyone'|null }} input  `websiteAccess` only in website mode
+   *           websiteAccess?: 'members'|'anyone'|null, showOnWebsite?: boolean|null }} input
+   *        `websiteAccess` and `showOnWebsite` only in website mode (null elsewhere)
    */
   function create({
     team,
@@ -316,6 +346,7 @@ export function createRegistrationStore(
     eventName,
     closesAt,
     websiteAccess = null,
+    showOnWebsite = null,
   }) {
     if (!isWellFormedTeam(team)) {
       throw refusal('INVALID_TEAM', 'A registration needs the team of the user who opens it.');
@@ -333,11 +364,14 @@ export function createRegistrationStore(
     if (websiteAccess !== null && !WEBSITE_ACCESS.includes(websiteAccess)) {
       throw refusal('INVALID_REGISTRATION', 'websiteAccess must be "members" or "anyone".');
     }
+    if (showOnWebsite !== null && typeof showOnWebsite !== 'boolean') {
+      throw refusal('INVALID_REGISTRATION', 'showOnWebsite must be true or false.');
+    }
     db.prepare(
       `INSERT INTO registrations (id, code, team, team_normalized, created_by, track_id, track_name,
          capacity, event_name, created_at_ms, opens_at_ms, closes_at_ms, closed_early_ms,
-         website_access)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`
+         website_access, ${SHOW_COLUMN})
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
     ).run(
       id,
       newRegistrationCode(),
@@ -351,7 +385,8 @@ export function createRegistrationStore(
       at,
       at,
       closesAtMs,
-      websiteAccess
+      websiteAccess,
+      showOnWebsite === null ? null : Number(showOnWebsite)
     );
     return toDirectorView(rowById(id, team), { withEntries: true });
   }
@@ -416,6 +451,53 @@ export function createRegistrationStore(
       `UPDATE registrations SET ${RACED_COLUMN} = ? WHERE id = ? AND ${RACED_COLUMN} IS NULL`
     ).run(now(), id);
     return get(id, team);
+  }
+
+  /**
+   * Turn "Show on the website" on or off (piece 7a). Only while the registration is open — a
+   * closed one is never listed anyway — and only for one opened in website mode (the setting does
+   * not exist elsewhere). Null for an id that is not this team's.
+   */
+  function setShowOnWebsite(id, team, show) {
+    const row = rowById(id, team);
+    if (!row) return null;
+    if (typeof show !== 'boolean') {
+      throw refusal('INVALID_REGISTRATION', 'show must be true or false.');
+    }
+    if (row[SHOW_COLUMN] == null) {
+      throw refusal('INVALID_REGISTRATION', 'This registration was not opened in website mode.');
+    }
+    if (isClosed(row, now())) {
+      throw refusal('CLOSED', 'This registration is closed.');
+    }
+    db.prepare(`UPDATE registrations SET ${SHOW_COLUMN} = ? WHERE id = ?`).run(Number(show), id);
+    return get(id, team);
+  }
+
+  /**
+   * The registrations the website lists (piece 7a; the website's docs/OPEN-ROUNDS.md): open now —
+   * not closed early, deadline still ahead — and marked "Show on the website"; soonest deadline
+   * first, at most OPEN_ROUNDS_MAX. Every team's: a website install has one. Only what the
+   * contract carries comes out — the public code (already in the join link), the event and track
+   * names, the counts and the deadline; never a name, an entry, the team or the internal id.
+   */
+  function openRoundsForWebsite() {
+    const at = now();
+    return db
+      .prepare(
+        `SELECT * FROM registrations
+          WHERE ${SHOW_COLUMN} = 1 AND closed_early_ms IS NULL AND closes_at_ms > ?
+          ORDER BY closes_at_ms, created_at_ms LIMIT ?`
+      )
+      .all(at, OPEN_ROUNDS_MAX)
+      .map((row) => ({
+        code: row.code,
+        eventName: row.event_name,
+        trackName: row.track_name,
+        taken: countOf(row.id),
+        capacity: row.capacity,
+        closesAt: iso(row.closes_at_ms),
+      }));
   }
 
   /** Remove one name. Returns the registration, or null when either id is not this team's. */
@@ -575,6 +657,8 @@ export function createRegistrationStore(
     close,
     extend,
     markRaced,
+    setShowOnWebsite,
+    openRoundsForWebsite,
     removeEntry,
     removeOpenWebsiteEntries,
     remove,

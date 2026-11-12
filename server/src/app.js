@@ -38,6 +38,7 @@ import { siteMode, websiteConfig } from './website/websiteConfig.js';
 import { getDefaultIdentityStore } from './website/identityStore.js';
 import { createWebsiteSignIn } from './website/websiteSignIn.js';
 import { closedInWebsiteMode } from './website/closedInWebsiteMode.js';
+import { createOpenRoundsRouter } from './website/openRounds.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -156,6 +157,10 @@ function createRaceApp(basePath) {
   app.use('/api/registrations', registrationsRouter);
   // REGISTRATION-1: the join link — PUBLIC by an anchored pattern on PUBLIC_PATHS (guards.js).
   app.use('/api/join', joinRouter);
+  // WEBSITE-EXTRAS-1 piece 7a: the open registrations marked for the website, in its open-rounds
+  // contract — PUBLIC by PUBLIC_PATHS (guards.js), mounted ONLY in website mode, so standalone
+  // answers the API's own 404 below (website/openRounds.js).
+  if (siteMode() === 'website') app.use('/api/public/open-rounds', createOpenRoundsRouter());
   app.use('/api/settings', settingsRouter);
   // AUDIT-1 D2: the admin status box — read-only, admin-only by ROUTE_POLICY (all of /api/admin).
   app.use('/api/admin', adminStatusRouter);

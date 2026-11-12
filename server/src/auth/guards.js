@@ -31,6 +31,10 @@ export const PUBLIC_PATHS = [
   // of this guard and checks its own key (routes/integrations.js).
   { method: 'GET', pattern: /^\/api\/join\/[a-z0-9_-]{22}$/ },
   { method: 'POST', pattern: /^\/api\/join\/[a-z0-9_-]{22}$/ },
+  // WEBSITE-EXTRAS-1 piece 7a: the website's server reads the open registrations marked for it,
+  // with no login (its docs/OPEN-ROUNDS.md:19). Mounted ONLY in website mode (app.js); in
+  // standalone nothing answers here but the API's own 404, so being on this list opens nothing.
+  { method: 'GET', path: '/api/public/open-rounds' },
 ];
 
 // ── Role-elevation policy (operator+ by default; explicit entries raise to admin) ─

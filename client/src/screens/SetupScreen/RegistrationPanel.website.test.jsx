@@ -8,6 +8,8 @@
 //              members only" (the default) or "Anyone with the link" — and sends it; the list marks
 //              a member's entry "from the website"; the join link carries the base path; and
 //              (piece 6) "Use these players" hands the entries over, so the race knows its members.
+//              WEBSITE-EXTRAS-1 piece 7a: "Show on the website" — off by default on the form and
+//              sent; on an open registration's detail it toggles; not on a closed one.
 //              Standalone is RegistrationPanel.test.jsx, which runs unchanged and never sees the
 //              choice.
 // ============================================================
@@ -28,6 +30,7 @@ const api = {
   closeRegistration: vi.fn(),
   extendRegistration: vi.fn(),
   removeRegistrationEntry: vi.fn(),
+  setShowOnWebsite: vi.fn(),
   deleteRegistration: vi.fn(),
 };
 vi.mock('../../services/registrationApi.js', () =>
@@ -52,6 +55,7 @@ const registration = (over = {}) => ({
   taken: 2,
   placesLeft: 38,
   websiteAccess: 'members',
+  showOnWebsite: false,
   entries: [
     { id: 'e1', name: 'Mia Member', source: 'website', externalId: 'm-1' },
     { id: 'e2', name: 'Walk-in', source: 'public' },
@@ -112,5 +116,51 @@ describe('RegistrationPanel in website mode', () => {
     await screen.findByTestId('registration-view');
     fireEvent.click(screen.getByRole('button', { name: 'Use these players' }));
     expect(onUsePlayers.mock.calls[0][0].entries).toEqual(closed.entries);
+  });
+
+  it('★ piece 7a: "Show on the website" is OFF by default on the form, and is sent', async () => {
+    api.createRegistration.mockResolvedValue(registration({ entries: [], taken: 0 }));
+    renderPanel();
+    await screen.findByText('No registrations yet.');
+    const box = screen.getByTestId('registration-show-on-website');
+    expect(box.checked).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Open registration' }));
+    await screen.findByTestId('registration-view');
+    expect(api.createRegistration.mock.calls[0][0]).toMatchObject({ showOnWebsite: false });
+  });
+
+  it('★ piece 7a: ticked on the form, it is sent as true', async () => {
+    api.createRegistration.mockResolvedValue(registration({ entries: [], taken: 0 }));
+    renderPanel();
+    await screen.findByText('No registrations yet.');
+    fireEvent.click(screen.getByTestId('registration-show-on-website'));
+    fireEvent.click(screen.getByRole('button', { name: 'Open registration' }));
+    await screen.findByTestId('registration-view');
+    expect(api.createRegistration.mock.calls[0][0]).toMatchObject({ showOnWebsite: true });
+  });
+
+  it('★ piece 7a: on an open registration it toggles through the server', async () => {
+    api.listRegistrations.mockResolvedValue([registration()]);
+    api.fetchRegistration.mockResolvedValue(registration());
+    api.setShowOnWebsite.mockResolvedValue(registration({ showOnWebsite: true }));
+    renderPanel();
+    await screen.findByTestId('registration-view');
+    const box = screen.getByTestId('registration-show-on-website');
+    expect(box.checked).toBe(false);
+    fireEvent.click(box);
+    expect(api.setShowOnWebsite).toHaveBeenCalledWith('r1', true);
+    await vi.waitFor(() =>
+      expect(screen.getByTestId('registration-show-on-website').checked).toBe(true)
+    );
+  });
+
+  it('piece 7a: a closed registration shows no such box', async () => {
+    const closed = registration({ state: 'closed' });
+    api.listRegistrations.mockResolvedValue([closed]);
+    api.fetchRegistration.mockResolvedValue(closed);
+    renderPanel();
+    fireEvent.click(await screen.findByRole('button', { name: /^Open registration 1/ }));
+    await screen.findByTestId('registration-view');
+    expect(screen.queryByTestId('registration-show-on-website')).toBeNull();
   });
 });

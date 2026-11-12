@@ -28,6 +28,11 @@
 // ── LIVE BY POLLING ────────────────────────────────────────────────────────────────────────────
 // While a registration is shown and open, it is asked for again every 5 s (no new transport); the
 // countdown ticks every second from this device's clock, and the server's clock decides.
+//
+// ── WEBSITE MODE ONLY: "SHOW ON THE WEBSITE" (WEBSITE-EXTRAS-1 piece 7a, OWNER-4) ─────────────────
+// A checkbox on the form (off by default) and on an open registration's detail; a marked open
+// registration is listed in the website's open sign-ups (server/src/website/openRounds.js).
+// Standalone draws neither and sends nothing new.
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -41,6 +46,7 @@ import {
   fetchRegistration,
   listRegistrations,
   removeRegistrationEntry,
+  setShowOnWebsite,
 } from '../../services/registrationApi.js';
 import {
   deadlineProblem,
@@ -175,6 +181,7 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
         onClose={() => act(() => closeRegistration(shown.id))}
         onExtend={(closesAt) => act(() => extendRegistration(shown.id, closesAt))}
         onRemove={(entryId) => act(() => removeRegistrationEntry(shown.id, entryId))}
+        onShowOnWebsite={(show) => act(() => setShowOnWebsite(shown.id, show))}
         onDelete={() =>
           act(async () => {
             await deleteRegistration(shown.id);
@@ -230,6 +237,9 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
   const [eventName, setEventName] = useState('');
   // WEBSITE-EMBED-1 piece 4: who may join — asked ONLY in website mode, members by default.
   const [websiteAccess, setWebsiteAccess] = useState('members');
+  // WEBSITE-EXTRAS-1 piece 7a (OWNER-4): listed on the website only when the director MARKS it —
+  // asked ONLY in website mode, off by default.
+  const [showOnWebsite, setShowOnWebsiteChoice] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const track = tracks.find((t) => t.id === trackId) ?? null;
@@ -255,7 +265,7 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
         capacity,
         eventName: eventName.trim(),
         closesAt,
-        ...(SITE_MODE === 'website' ? { websiteAccess } : {}),
+        ...(SITE_MODE === 'website' ? { websiteAccess, showOnWebsite } : {}),
       });
     } finally {
       setBusy(false);
@@ -333,6 +343,9 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
           ))}
         </fieldset>
       )}
+      {SITE_MODE === 'website' && (
+        <ShowOnWebsiteBox checked={showOnWebsite} onChange={setShowOnWebsiteChoice} />
+      )}
       <button
         className={styles.primary}
         type="submit"
@@ -341,6 +354,25 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
         Open registration
       </button>
     </form>
+  );
+}
+
+/**
+ * "Show on the website" (WEBSITE-EXTRAS-1 piece 7a, OWNER-4): the registration is listed in the
+ * website's open sign-ups (its home page and games page) while it is open. One box for the create
+ * form and the open registration's detail; the caller shows it only in website mode.
+ */
+function ShowOnWebsiteBox({ checked, onChange }) {
+  return (
+    <label className={styles.choice}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        data-testid="registration-show-on-website"
+      />
+      Show on the website (its home page and games page list it while it is open)
+    </label>
   );
 }
 
@@ -429,6 +461,7 @@ function RegistrationView({
   onClose,
   onExtend,
   onRemove,
+  onShowOnWebsite,
   onDelete,
   onUsePlayers,
 }) {
@@ -493,6 +526,11 @@ function RegistrationView({
           <dd data-testid="registration-time-left">{formatTimeLeft(open ? timeLeft : 0)}</dd>
         </div>
       </dl>
+      {/* Piece 7a: changeable while open, and only for a registration opened in website mode
+          (the server names the setting only for those). */}
+      {SITE_MODE === 'website' && open && typeof r.showOnWebsite === 'boolean' && (
+        <ShowOnWebsiteBox checked={r.showOnWebsite} onChange={onShowOnWebsite} />
+      )}
 
       {error && (
         <p role="alert" className={styles.error} data-testid="registration-error">

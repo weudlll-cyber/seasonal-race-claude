@@ -263,6 +263,14 @@ director opens a **registration** and the players add their own names from their
    name keeps the mark coming. *Use these players* stays available on a raced registration.
 6. **Delete registration** when you are done: the names are kept until you do (see
    [PRIVACY-FACTS.md](PRIVACY-FACTS.md)).
+7. **Inside Seasonal Entertainment only** (website mode; since 2026-11-12): **Show on the website**,
+   a checkbox on the form and on an open registration, **off unless you tick it**. While it is ticked
+   and the registration is open, the website lists it as an open sign-up on its home page and its
+   games page — the event and track, places taken of the total, when it closes and a *Join* link —
+   never the players' names. Untick it to take it off; a closed registration drops off by itself.
+   The website picks the list up within about a minute, once its admin has entered the race's
+   address under Admin → Games → *Sign-up status URL*:
+   `https://<your site>/games/race/api/public/open-rounds`. Standalone has no such checkbox.
 
 **The public page.** The link opens `/join/<code>` — no sign-in, made for a phone. A player sees the
 event, the track, the places left and a countdown, types a name and presses *Join*, and is told

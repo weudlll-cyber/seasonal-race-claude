@@ -2,13 +2,15 @@
 
 **Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Complete as of 2026-11-11: all 81 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
+**Complete as of 2026-11-12: all 83 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
 the two settings routes, AUDIT-1 D2 the admin status route, LEGAL-PAGES-1 the two legal-pages routes,
 REGISTRATION-1 the ten registration routes, its follow-up 2 the "raced" route, which this page was
 missing until WEBSITE-EMBED-1 recounted, and WEBSITE-EMBED-1 the website sign-in, `GET <base>/auth/website`,
 the one route outside `/api`, mounted only in website mode, and in piece 6
-`GET /api/races/deleted-racers`, which answers only in website mode). Counted from source, not from earlier
-counts: the `router.<verb>(` calls in the fourteen routers `server/src/app.js` mounts under `/api` (69), the three promote/export sub-routes
+`GET /api/races/deleted-racers`, which answers only in website mode; WEBSITE-EXTRAS-1 piece 7a the
+website-mode toggle `POST /api/registrations/:id/website` and the website's open-rounds list
+`GET /api/public/open-rounds`, both answering only in website mode). Counted from source, not from earlier
+counts: the `router.<verb>(` calls in the fifteen routers `server/src/app.js` mounts under `/api` (71), the three promote/export sub-routes
 `attachPromoteExport`
 (`server/src/routes/_defaultPromote.js`) adds to each of tracks, player groups and brands (9), and
 `GET /api/health` (1). Every entry says who may call it, what it takes, what it answers and every
@@ -46,7 +48,9 @@ and exact method with `HEAD` judged as `GET` (`server/src/auth/guards.js`, match
 three GET paths is public too (since 2026-10-18). Since 2026-10-21 (REGISTRATION-1) an entry may
 instead be an anchored **pattern** on the same normalised path: `GET` and `POST` on
 `/api/join/<22 URL-safe characters>` (`:31-32`), the join link — so `HEAD` there too, and nothing
-under or beside it. The integration seam is not on the list; it is mounted ahead of the guard.
+under or beside it. Since 2026-11-12 (WEBSITE-EXTRAS-1 piece 7a) also `GET /api/public/open-rounds`,
+the website's list of open registrations — mounted only in website mode, so in standalone the entry opens
+nothing but the API's own 404. The integration seam is not on the list; it is mounted ahead of the guard.
 
 **Any signed-in user** — every other `/api/*` path (deny by default). `requireAuth` answers
 `401 {"error":"not authenticated"}` when there is no session user (`server/src/auth/guards.js` → `createRequireAuth`),
@@ -1179,7 +1183,8 @@ decides** whether a registration is open (closed early, or now ≥ `closesAt`), 
 attempt; nothing runs at the deadline. A registration as the director sees it:
 
 `{ id, code, team, createdBy, trackId, trackName, capacity, eventName, createdAt, opensAt, closesAt,
-closedEarlyAt, state: 'open'|'closed', taken, placesLeft, entries? }`, each entry
+closedEarlyAt, state: 'open'|'closed', taken, placesLeft, entries? }` — in website mode also
+`websiteAccess` and `showOnWebsite` for a registration opened there —, each entry
 `{ id, name, source: 'public'|'integration', externalId?, createdAt }` in the order it arrived.
 
 ### The director's routes — `server/src/routes/registrations.js`
@@ -1189,8 +1194,9 @@ session's (`req.authUser.team`); **another team's registration is 404, the same 
 id**. A user with no team gets 503. A body with a field not listed is 400 (`unknownFields`).
 
 - **`POST /api/registrations`** `{ trackId, capacity, eventName?, closesAt }` — open one, now. In
-  website mode also `websiteAccess?` — `members` (the default) or `anyone`, who may join (piece 4); in
-  standalone the field is unknown and refused like any other.
+  website mode also `websiteAccess?` — `members` (the default) or `anyone`, who may join (piece 4) —
+  and `showOnWebsite?` — true or false, **false unless given** (WEBSITE-EXTRAS-1 piece 7a, OWNER-4:
+  registrations the director marks); in standalone both fields are unknown and refused like any other.
   `trackId` must name an installed track (its name is stored with the registration); `capacity` a
   whole number 1–100 (the client sends the track's Players-tab limit); `eventName` at most 100
   characters or null; `closesAt` an instant at least 1 minute from now and at most 30 days away.
@@ -1203,6 +1209,11 @@ id**. A user with no team gets 503. A body with a field not listed is 400 (`unkn
   creation, **only while open**. 200; 400 (not later, too far, under a minute from now); 409 closed; 404.
 - **`POST /api/registrations/:id/raced`** — a race was started with its players (the Setup screen
   sends it); the FIRST time is kept, open or closed alike. No body. 200 with the registration; 404.
+- **`POST /api/registrations/:id/website`** `{ show }` — **website mode only** (WEBSITE-EXTRAS-1
+  piece 7a): "Show on the website" on or off. 200 with the registration; 400 when `show` is not a
+  boolean or the registration was not opened in website mode; 409 `CLOSED` once it is closed; 404
+  for an unknown id or another team's. In standalone it is not a route: the API's own 404
+  (`server/src/routes/registrations.js` → `router.post('/:id/website')`, falling through with `next()`).
 - **`DELETE /api/registrations/:id/entries/:entryId`** — remove one name; its place is free again.
   200 with the registration; 404.
 - **`DELETE /api/registrations/:id`** — delete it and every name in it. 204; 404.
@@ -1235,6 +1246,26 @@ id**. A user with no team gets 503. A body with a field not listed is 400 (`unkn
   From a guest, a `members` registration answers **403 `MEMBERS_ONLY`**; an `anyone` registration
   (or one opened before website mode) takes `{ name }` as above. Capacity, the deadline and the
   duplicate-name rule are unchanged.
+
+### The website's open-rounds list — `server/src/website/openRounds.js`
+
+**Website mode only** (WEBSITE-EXTRAS-1 piece 7a, OWNER-4): mounted at `server/src/app.js` →
+`use('/api/public/open-rounds')` only when `RA_MODE=website`; in standalone the path answers the API's
+own 404. **Public**: on `PUBLIC_PATHS` (`server/src/auth/guards.js`), no session — the website's server
+reads it once a minute.
+
+- **`GET /api/public/open-rounds`** (`<base>/api/public/open-rounds`, e.g. `/games/race/api/public/open-rounds`)
+  — 200 `{ version: 1, rounds: [{ id, title, kind, startsAt, signupClosesAt, players, maxPlayers,
+  joinUrl }] }` with `Cache-Control: public, max-age=30`: the website's open-rounds contract
+  (seasonal-entertainment `docs/OPEN-ROUNDS.md`). Only registrations that are **open now** (not closed
+  early, deadline ahead) **and marked "Show on the website"**, soonest deadline first, at most 20.
+  `id` is the registration's public code (already in its join link); `title` the event name and the
+  track, or the track, at most 80 characters; `kind` `"Seasonal Race"`; `startsAt` null (the director
+  starts the race); `signupClosesAt` the deadline in UTC; `players` / `maxPlayers` the names so far and
+  the places; `joinUrl` the join page — `RA_PUBLIC_ORIGIN` (else `https://<request host>`) + the base
+  path + `/join/<code>`. **Never a player's name, an entry, an external id, the team, who opened it or
+  the registration's id.** 429 over 60 requests a minute from one address (its own `createJoinLimiter`
+  instance, `server/src/auth/rateLimit.js`).
 
 ### The integration seam — `server/src/routes/integrations.js`
 
@@ -1349,12 +1380,14 @@ Read-only facts about the installation for the status box at the top of the Dev 
 | 73 | POST | `/api/registrations/:id/close` | signed-in (own team) |
 | 74 | POST | `/api/registrations/:id/extend` | signed-in (own team) |
 | 75 | POST | `/api/registrations/:id/raced` | signed-in (own team) |
-| 76 | DELETE | `/api/registrations/:id/entries/:entryId` | signed-in (own team) |
-| 77 | DELETE | `/api/registrations/:id` | signed-in (own team) |
-| 78 | GET | `/api/join/:code` | **public** (the join link) |
-| 79 | POST | `/api/join/:code` | **public** (the join link, rate-limited) |
-| 80 | POST | `/api/integrations/registrations/:code/entries` | `RA_INTEGRATION_KEY` holder; 404 while unset |
-| 81 | GET | `<base>/auth/website` | the website proxy only (trusted peer AND secret); mounted only when `RA_MODE=website` |
+| 76 | POST | `/api/registrations/:id/website` | signed-in (own team); website mode only |
+| 77 | DELETE | `/api/registrations/:id/entries/:entryId` | signed-in (own team) |
+| 78 | DELETE | `/api/registrations/:id` | signed-in (own team) |
+| 79 | GET | `/api/join/:code` | **public** (the join link) |
+| 80 | POST | `/api/join/:code` | **public** (the join link, rate-limited) |
+| 81 | GET | `/api/public/open-rounds` | **public** (the website's list); website mode only |
+| 82 | POST | `/api/integrations/registrations/:code/entries` | `RA_INTEGRATION_KEY` holder; 404 while unset |
+| 83 | GET | `<base>/auth/website` | the website proxy only (trusted peer AND secret); mounted only when `RA_MODE=website` |
 ---
 
 ## Planned (Phase 5)
