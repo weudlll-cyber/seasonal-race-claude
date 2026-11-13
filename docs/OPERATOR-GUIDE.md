@@ -201,6 +201,11 @@ screen). **"Source code" is always there**; **"Legal
 notice" and "Privacy policy" appear only once you have filled them in.** Both pages are public — a
 visitor reads them at `/legal-notice` and `/privacy` without signing in.
 
+**In website mode the website's legal pages apply** (the owner's decision of 2026-11-13). Both links
+are always there and open the website's own pages on the same address, `/info/imprint` and
+`/info/privacy`; the race's `/legal-notice` and `/privacy` send the visitor there too. The texts
+below are not shown in website mode.
+
 **Filling them in (admins).** Dev Screen → *Accounts and system* → *Legal pages*. Write each text as
 plain text; line breaks are kept and nothing is read as markup. Each field has an **Insert
 template** button that fills it with a country-neutral template (it asks first when the field

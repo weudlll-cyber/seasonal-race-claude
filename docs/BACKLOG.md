@@ -761,7 +761,9 @@ the rows below:
 - **D2:** the security contact address is `stentertainmentadmin@gmail.com`
   ([SECURITY.md](../SECURITY.md)).
 - **D3:** in website mode the website's legal pages apply; the race links to them instead of to its
-  own.
+  own. *Built 2026-11-13 on `feat/going-online-prep` (piece 2, unmerged): the footer links and the
+  race's `/legal-notice` and `/privacy` lead to the website's `/info/imprint` and `/info/privacy`;
+  standalone unchanged. It had no PART ONE row.*
 - **D4:** the backup copies off the server go to the owner's OneDrive.
 - **D5:** the owner states that his server's SSH is already hardened. It is checked once on the first
   run (`sshd -T | grep -E 'passwordauthentication|permitrootlogin'`), not changed.

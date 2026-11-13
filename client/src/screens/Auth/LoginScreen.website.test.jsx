@@ -6,7 +6,8 @@
 // Description: The sign-in page in website mode: ONE button to <base>/auth/website, no password
 //              form, and no first-admin check (that route answers 404 there). The page reads the
 //              mode from the server's runtime marker at import, so the marker is set before the
-//              module is loaded. Standalone is LoginScreen.test.jsx, unchanged.
+//              module is loaded. Standalone is LoginScreen.test.jsx, unchanged. Since
+//              GOING-ONLINE-PREP-1 (D3): the footer's legal links open the website's pages.
 // ============================================================
 
 import { render, screen } from '@testing-library/react';
@@ -40,6 +41,16 @@ describe('LoginScreen in website mode', () => {
     expect(screen.queryByLabelText(/password/i)).toBeNull();
     expect(screen.queryByLabelText(/username/i)).toBeNull();
     expect(mockAuthValue.getSetupNeeded).not.toHaveBeenCalled();
+  });
+
+  it('its legal footer opens the website’s legal pages (GOING-ONLINE-PREP-1, D3)', async () => {
+    await renderWith({ apiBaseUrl: '/games/race', basePath: '/games/race', mode: 'website' });
+    expect(screen.getByRole('link', { name: 'Legal notice' }).getAttribute('href')).toBe(
+      '/info/imprint'
+    );
+    expect(screen.getByRole('link', { name: 'Privacy policy' }).getAttribute('href')).toBe(
+      '/info/privacy'
+    );
   });
 
   it('★ without the website marker the password form is drawn, as before', async () => {

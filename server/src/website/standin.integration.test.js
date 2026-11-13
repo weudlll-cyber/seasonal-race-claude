@@ -14,6 +14,8 @@
 //              own session endpoint under the base path.
 //              WEBSITE-EXTRAS-1: its open-sign-ups page lists a marked registration and not an
 //              unmarked one (7a), and its /embed/chat placeholder names the room (7b).
+//              GOING-ONLINE-PREP-1 piece 2 (D3): its placeholder legal pages answer at the website's
+//              paths, which the race links to in website mode.
 // ============================================================
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
@@ -208,6 +210,20 @@ describe('the website stand-in in front of a website-mode race', () => {
     const odd = await (await fetch(`${origin}/embed/chat?room=%3Cb%3E`)).text();
     expect(odd).toContain('&lt;b&gt;');
     expect(odd).not.toContain('<b>');
+  });
+
+  it('piece 2 (D3): placeholder legal pages answer at the website’s paths', async () => {
+    for (const [path, title] of [
+      ['/info/imprint', 'Imprint'],
+      ['/info/privacy', 'Privacy'],
+    ]) {
+      const res = await fetch(`${origin}${path}`);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain(`data-legal-placeholder="${path}"`);
+      expect(html).toContain(`>${title}</h1>`);
+    }
+    expect((await fetch(`${origin}/info/other`)).status).toBe(404);
   });
 
   it('outside the base path the stand-in answers 404', async () => {

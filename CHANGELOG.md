@@ -15,6 +15,12 @@ is.
 
 ### Added
 
+- **Website mode: the website's legal pages.** When RaceArena runs under the Seasonal Entertainment
+  website, the "Legal notice" and "Privacy policy" links on the sign-in screen, the setup screen and
+  the join page always show and open the website's own pages (`/info/imprint`, `/info/privacy`);
+  the race's own `/legal-notice` and `/privacy` send the visitor there. Standalone RaceArena keeps
+  its own legal pages exactly as before. *(branch `feat/going-online-prep`)*
+
 - **A security contact e-mail.** [SECURITY.md](SECURITY.md) names `stentertainmentadmin@gmail.com`
   for reporting a security problem; GitHub's private vulnerability reporting stays the second
   channel. *(branch `feat/going-online-prep`)*
