@@ -1924,8 +1924,13 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
-- [x] ★ **WEBSITE-EMBED-1 7a and 7b — CLOSED 2026-11-12, built on branch `feat/website-extras`
-      (WEBSITE-EXTRAS-1), NOT merged:** it merges with the owner's approval after his look.
+- [x] ★ **WEBSITE-EMBED-1 7a and 7b — CLOSED 2026-11-12, MERGED to `master` 2026-11-13**
+      (WEBSITE-EXTRAS-1, branch `feat/website-extras`, merged with a merge commit by the owner's
+      merge approval of 2026-11-13 after his look at `e4ca907e`, then deleted). **It contains:** the
+      open registrations on the website (7a, shown by default), the website chat as a side panel
+      (7b), every raw control in the app styled (follow-up 4: 31 controls), and two cleanups — the
+      five components imported nowhere removed, and the diagnostics route in English
+      (`/diagnose-distribution`, no alias).
       **What closed it:** both pieces built, website mode only, standalone unchanged.
       - **7a — open registrations on the website** (OWNER-4): `GET <base>/api/public/open-rounds` in
         the website's open-rounds contract (its `docs/OPEN-ROUNDS.md`), only registrations open now
