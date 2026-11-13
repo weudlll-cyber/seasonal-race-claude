@@ -68,6 +68,21 @@ added, re-checked: 0 unindexed. (2) `server-suite` — `websiteJoin.integration.
 2026-11-12); re-run alone once: 2 files, 19 tests, green — CI decides. Fingerprints: none moved, none ran
 (no change reaches the engine).
 
+**Standalone installer test** (`deploy/test/e2e-local.sh`, run because `deploy/test/real-site.sh` and
+`real-site-race.sh` changed; nothing the installer itself runs changed): on `de3c194d`, from a fresh clone of
+the URL, **79 passed, 0 failed**.
+
+**For the owner's look** (started hidden on the branch head `de3c194d`, the client built there):
+
+- standalone: **http://localhost:5173/** (API on 4000) — at "/" no checkbox, no chat, unchanged;
+- website mode through the stand-in: **http://127.0.0.1:4790/** (the race on 127.0.0.1:4791 under
+  /games/race) — pick **Hugo Host**, open a registration with **Show on the website** (off by default)
+  and one without; **Open sign-ups, as the website shows them** on the stand-in's page lists the marked one
+  and not the other; the chat frame (the stand-in's placeholder, naming the room) is below the
+  registrations and below the join page, and not on the race screen.
+
+Nothing is merged.
+
 ## 7b — the facts, read BEFORE building
 
 **The website's embed** (seasonal-entertainment `docs/EMBED.md`):
