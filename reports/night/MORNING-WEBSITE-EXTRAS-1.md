@@ -17,7 +17,72 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 | the stand-in's open-rounds page and chat placeholder (the owner's look) | **done** — see below |
 | real-website check (nginx) | **done** — see below; proofs 7 and 8 pass, two NOT DRIVEN |
 
-## 7a — the facts, read BEFORE building
+## The follow-up after the owner's look (2026-11-13)
+
+**The owner's decisions, 2026-11-13**, after his look at `30d6dd7c`:
+1. **"Show on the website" is ON by default.**
+2. **The chat sits behind a "Chat" button, closed until clicked**, as Seasonal Bingo Royale does it
+   (its `apps/web/src/shell/ChatDock.tsx:5-14`), on the same screens as before. A trial: he may ask
+   for a different placement after seeing it.
+
+**What changed (one commit on this branch, nothing merged):**
+
+- **The checkbox.** The size difference he saw had one cause. Both the checkbox and the "Who may join"
+  radios already used `.choice`, but the radios' **0.85rem** comes from the `.durations` fieldset
+  around them (`RegistrationPanel.module.css:29-37`), and the checkbox stood outside it at the page's
+  own size. Now it sits in a `.durations` group with its `.choice` label, so the font, size and spacing
+  are the radios'. The label is shortened to "Show on the website", and its explanation is a `.muted`
+  hint below ("The website's home page and games page list it while it is open."), the place count's
+  style. The form starts **ticked**. The server's default for a website-mode create without the
+  field is now **true** too (`server/src/routes/registrations.js`), so the form and the API agree.
+  Registrations opened before keep their stored value. Standalone is unchanged: no box, and the field
+  is still refused (`registrations.test.js` "standalone: no Show on the website", green as it was).
+- **The chat.** `WebsiteChat` is now a **Chat** button, the race's plain secondary `<button
+  type="button">` (as "Copy link" and "Show QR full screen" are drawn), with `aria-expanded` and
+  `aria-controls`. The frame is **not in the DOM until clicked**, so nothing of the website's chat loads
+  before the click. The same button closes it, which removes the frame. Nothing is stored, so every
+  visit starts closed. The screens are the same: the join page, and the director's registration list
+  and detail, not while the QR stage is up. The source test that limits the importers to those two
+  files stays.
+- **openRounds.js** header: `players` is the COUNT (`reg.taken`), not "names registered so far".
+
+**Forks:**
+- **F-1. The button style on the join page.** The join page's only button style is its full-width
+  primary `.join` ("Join"). I used the race's plain secondary button on both screens, so that "Chat"
+  does not compete with "Join".
+- **F-2. Where this differs from Bingo**, by the owner's words: Bingo remembers open/closed per browser
+  and keeps the frame hidden once opened; here nothing is stored and closing removes the frame. Bingo's
+  side panel or drawer is not copied: the placement stays 7b's.
+- **F-3. `loading="lazy"` dropped.** The frame now exists only after a click, so it loads at once.
+
+**Tests.** Client: WebsiteChat, JoinPage (standalone and website), RegistrationPanel (standalone and
+website): 5 files, 46 tests, green. Server: openRounds.integration, registrationStore, the
+registrations route and standin.integration: 5 files, 57 tests, green.
+
+**Sabotage, each red and then restored:**
+
+| # | mutation | red |
+| --- | --- | --- |
+| S1 | the server default back to off | openRounds "stores it SHOWN unless unticked" |
+| S2 | the form default back to off | 2 panel tests |
+| S3 | the chat open by default | 6 tests across 3 files |
+| S4 | the button opens but never closes | "the same button closes it again" |
+| S5 | the mode guard removed (standalone draws the button) | 3 standalone tests |
+| S6 | the checkbox outside the `.durations` group | "drawn as the Who may join choices" |
+
+**Hygiene.** `WebsiteChat.jsx` 58 → 84; `WebsiteChat.module.css` 31 → 27; `WebsiteChat.test.jsx`
+87 → 117; `RegistrationPanel.jsx` 688 → 701; `RegistrationPanel.website.test.jsx` 187 → 209;
+`RegistrationPanel.test.jsx` 373 → 375; `JoinPage.jsx` 208 → 209; `JoinPage.test.jsx` 165 → 166;
+`JoinPage.website.test.jsx` 120 → 123; `registrations.js` 213 → 213; `openRounds.js` 83 → 84;
+`openRounds.integration.test.js` 258 → 259.
+- **Removed:** `.title` in `WebsiteChat.module.css` (the button names the chat now) and the frame's
+  `loading="lazy"`.
+- **Kept, not dead:** `.choice` is still the radios' class and now the checkbox's too.
+- **Moved out:** nothing.
+- **Noticed but left:** the `docs/BACKLOG.md` row still says "off by default" in its description of
+  piece 7a (`:1932`); the brief said the row stays as it is.
+
+
 
 **The website's contract** (seasonal-entertainment `docs/OPEN-ROUNDS.md`):
 

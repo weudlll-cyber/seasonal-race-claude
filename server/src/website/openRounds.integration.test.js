@@ -10,7 +10,8 @@
 //                · an unmarked, a closed-early and an expired registration do not appear;
 //                · a marked open one appears with EXACTLY the website's eight fields, and no
 //                  name, entry id, external id, team or internal id anywhere in the answer;
-//                · the director's create stores it OFF unless ticked; the toggle works while
+//                · the director's create stores it SHOWN unless unticked (the owner's decision of
+//                  2026-11-13, the form's default too); the toggle works while
 //                  open, is refused when closed, and another team's registration is not found;
 //                · standalone: the endpoint and the toggle answer the API's own 404.
 //              The website's contract: seasonal-entertainment docs/OPEN-ROUNDS.md (the morning
@@ -176,7 +177,7 @@ describe('website mode: "Show on the website"', () => {
     return trackId;
   }
 
-  it("★ the director's create stores it OFF unless ticked", async () => {
+  it("★ the director's create stores it SHOWN unless unticked", async () => {
     const host = await as('host');
     const trackId = await trackIdFor(host);
     const closesAt = new Date(Date.now() + 10 * 60_000).toISOString();
@@ -184,14 +185,14 @@ describe('website mode: "Show on the website"', () => {
       .post(`${BASE}/api/registrations`)
       .send({ trackId, capacity: 4, closesAt });
     expect(plain.status).toBe(201);
-    expect(plain.body.showOnWebsite).toBe(false);
-    const marked = await host
+    expect(plain.body.showOnWebsite).toBe(true);
+    const unticked = await host
       .post(`${BASE}/api/registrations`)
-      .send({ trackId, capacity: 4, closesAt, showOnWebsite: true });
-    expect(marked.body.showOnWebsite).toBe(true);
+      .send({ trackId, capacity: 4, closesAt, showOnWebsite: false });
+    expect(unticked.body.showOnWebsite).toBe(false);
     const listed = codes(await roundsNow());
-    expect(listed).toContain(marked.body.code);
-    expect(listed).not.toContain(plain.body.code);
+    expect(listed).toContain(plain.body.code);
+    expect(listed).not.toContain(unticked.body.code);
     const bad = await host
       .post(`${BASE}/api/registrations`)
       .send({ trackId, capacity: 4, closesAt, showOnWebsite: 'yes' });

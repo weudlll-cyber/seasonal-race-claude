@@ -30,12 +30,16 @@
 // countdown ticks every second from this device's clock, and the server's clock decides.
 //
 // ── WEBSITE MODE ONLY: "SHOW ON THE WEBSITE" (WEBSITE-EXTRAS-1 piece 7a, OWNER-4) ─────────────────
-// A checkbox on the form (off by default) and on an open registration's detail; a marked open
-// registration is listed in the website's open sign-ups (server/src/website/openRounds.js).
-// Standalone draws neither and sends nothing new.
+// A checkbox on the form (ON by default — the owner's decision of 2026-11-13, the server's default
+// too) and on an open registration's detail; a marked open registration is listed in the website's
+// open sign-ups (server/src/website/openRounds.js). It is drawn exactly as the "Who may join"
+// choices: their `.durations` group (which carries their 0.85rem size) around their `.choice`
+// label, its explanation in the `.muted` hint below, as the place count's hint is. Standalone draws
+// neither and sends nothing new.
 //
 // ── WEBSITE MODE ONLY: THE WEBSITE CHAT (WEBSITE-EXTRAS-1 piece 7b, OWNER-5) ────────────────────
-// The website's chat (components/WebsiteChat) below the list and below one registration's detail —
+// The website's chat (components/WebsiteChat, behind its "Chat" button, closed until clicked — the
+// owner's decision of 2026-11-13) below the list and below one registration's detail —
 // last, so it never pushes the controls down — but NOT while the full-screen QR stage is up: that
 // stage is shown to an audience. Standalone renders nothing for it.
 // ============================================================
@@ -244,9 +248,9 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
   const [eventName, setEventName] = useState('');
   // WEBSITE-EMBED-1 piece 4: who may join — asked ONLY in website mode, members by default.
   const [websiteAccess, setWebsiteAccess] = useState('members');
-  // WEBSITE-EXTRAS-1 piece 7a (OWNER-4): listed on the website only when the director MARKS it —
-  // asked ONLY in website mode, off by default.
-  const [showOnWebsite, setShowOnWebsiteChoice] = useState(false);
+  // WEBSITE-EXTRAS-1 piece 7a (OWNER-4): listed on the website while the box is ticked — asked
+  // ONLY in website mode, ON by default (the owner's decision of 2026-11-13).
+  const [showOnWebsite, setShowOnWebsiteChoice] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const track = tracks.find((t) => t.id === trackId) ?? null;
@@ -367,19 +371,28 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
 /**
  * "Show on the website" (WEBSITE-EXTRAS-1 piece 7a, OWNER-4): the registration is listed in the
  * website's open sign-ups (its home page and games page) while it is open. One box for the create
- * form and the open registration's detail; the caller shows it only in website mode.
+ * form and the open registration's detail; the caller shows it only in website mode. Drawn as the
+ * "Who may join" choices are: their `.durations` group and `.choice` label (same font, size and
+ * spacing), the explanation in the `.muted` hint below.
  */
 function ShowOnWebsiteBox({ checked, onChange }) {
   return (
-    <label className={styles.choice}>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        data-testid="registration-show-on-website"
-      />
-      Show on the website (its home page and games page list it while it is open)
-    </label>
+    <>
+      <div className={styles.durations}>
+        <label className={styles.choice}>
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => onChange(e.target.checked)}
+            data-testid="registration-show-on-website"
+          />
+          Show on the website
+        </label>
+      </div>
+      <p className={styles.muted}>
+        {"The website's home page and games page list it while it is open."}
+      </p>
+    </>
   );
 }
 

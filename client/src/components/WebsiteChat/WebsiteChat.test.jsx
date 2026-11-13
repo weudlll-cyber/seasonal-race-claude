@@ -4,10 +4,12 @@
 // Project:     RaceArena — WEBSITE-EXTRAS-1 piece 7b (OWNER-5)
 // Created:     2026-11-12
 // Description: The website chat frame:
-//                · standalone renders NOTHING (no frame, no section);
-//                · website mode renders the website's embed exactly — src
-//                  /embed/chat?room=race&theme=auto at the site root, title "Chat", lazy,
-//                  referrerpolicy strict-origin;
+//                · standalone renders NOTHING (no button, no frame, no section);
+//                · website mode (the owner's decision of 2026-11-13): a "Chat" button, CLOSED by
+//                  default — no iframe in the DOM, aria-expanded false; a click opens the website's
+//                  embed exactly — src /embed/chat?room=race&theme=auto at the site root, title
+//                  "Chat", referrerpolicy strict-origin; the same button closes it again (the frame
+//                  leaves the DOM); a fresh mount starts closed (nothing stored);
 //                · ★ WHERE it can appear, by the source: exactly two files import it — the join page
 //                  and the director's registration panel. The race screen, the result screen, the
 //                  start ceremony and every other screen cannot draw a component they never import.
@@ -15,7 +17,7 @@
 //              imported, so each mode gets a fresh module graph (vi.resetModules).
 // ============================================================
 
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
@@ -43,19 +45,47 @@ describe('WebsiteChat', () => {
     const { container } = render(<WebsiteChat />);
     expect(container.innerHTML).toBe('');
     expect(screen.queryByTestId('website-chat')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Chat' })).toBeNull();
   });
 
-  it("★ website mode renders the website's embed exactly", async () => {
+  it('★ website mode: closed by default — a "Chat" button, and no frame in the DOM', async () => {
     const WebsiteChat = await chatIn('website');
-    render(<WebsiteChat />);
+    const { container } = render(<WebsiteChat />);
+    const button = screen.getByRole('button', { name: 'Chat' });
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('iframe')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Chat' })).toBeTruthy();
+  });
+
+  it("★ a click opens the website's embed exactly; the same button closes it again", async () => {
+    const WebsiteChat = await chatIn('website');
+    const { container } = render(<WebsiteChat />);
+    const button = screen.getByRole('button', { name: 'Chat' });
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
     const frame = screen.getByTestId('website-chat');
     expect(frame.tagName).toBe('IFRAME');
+    expect(button.getAttribute('aria-controls')).toBe(frame.id);
     // A site-root path, NOT under the race's base path: the website's own page.
     expect(frame.getAttribute('src')).toBe('/embed/chat?room=race&theme=auto');
     expect(frame.getAttribute('title')).toBe('Chat');
-    expect(frame.getAttribute('loading')).toBe('lazy');
     expect(frame.getAttribute('referrerpolicy')).toBe('strict-origin');
-    expect(screen.getByRole('region', { name: 'Chat' })).toBeTruthy();
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('iframe')).toBeNull();
+  });
+
+  it('the open state is not stored: a new mount starts closed', async () => {
+    const WebsiteChat = await chatIn('website');
+    const first = render(<WebsiteChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Chat' }));
+    expect(first.container.querySelector('iframe')).not.toBeNull();
+    first.unmount();
+    const second = render(<WebsiteChat />);
+    expect(second.container.querySelector('iframe')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Chat' }).getAttribute('aria-expanded')).toBe(
+      'false'
+    );
   });
 });
 

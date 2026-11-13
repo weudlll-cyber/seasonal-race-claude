@@ -8,10 +8,12 @@
 //              members only" (the default) or "Anyone with the link" — and sends it; the list marks
 //              a member's entry "from the website"; the join link carries the base path; and
 //              (piece 6) "Use these players" hands the entries over, so the race knows its members.
-//              WEBSITE-EXTRAS-1 piece 7a: "Show on the website" — off by default on the form and
-//              sent; on an open registration's detail it toggles; not on a closed one.
-//              WEBSITE-EXTRAS-1 piece 7b: the website chat below the list and below a registration's
-//              detail, and NOT while the full-screen QR stage (shown to an audience) is up.
+//              WEBSITE-EXTRAS-1 piece 7a: "Show on the website" — ON by default on the form and
+//              sent (the owner's decision of 2026-11-13), in the "Who may join" choices' own
+//              group; on an open registration's detail it toggles; not on a closed one.
+//              WEBSITE-EXTRAS-1 piece 7b: the website chat's "Chat" button below the list and below
+//              a registration's detail, closed until clicked, and NOT while the full-screen QR
+//              stage (shown to an audience) is up.
 //              Standalone is RegistrationPanel.test.jsx, which runs unchanged and never sees the
 //              choice.
 // ============================================================
@@ -120,25 +122,38 @@ describe('RegistrationPanel in website mode', () => {
     expect(onUsePlayers.mock.calls[0][0].entries).toEqual(closed.entries);
   });
 
-  it('★ piece 7a: "Show on the website" is OFF by default on the form, and is sent', async () => {
+  it('★ piece 7a: "Show on the website" is ON by default on the form, and is sent', async () => {
     api.createRegistration.mockResolvedValue(registration({ entries: [], taken: 0 }));
     renderPanel();
     await screen.findByText('No registrations yet.');
     const box = screen.getByTestId('registration-show-on-website');
-    expect(box.checked).toBe(false);
+    expect(box.checked).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Open registration' }));
     await screen.findByTestId('registration-view');
-    expect(api.createRegistration.mock.calls[0][0]).toMatchObject({ showOnWebsite: false });
+    expect(api.createRegistration.mock.calls[0][0]).toMatchObject({ showOnWebsite: true });
   });
 
-  it('★ piece 7a: ticked on the form, it is sent as true', async () => {
+  it('★ piece 7a: drawn as the "Who may join" choices — their group, their label class, a hint', async () => {
+    renderPanel();
+    await screen.findByText('No registrations yet.');
+    const label = screen.getByTestId('registration-show-on-website').closest('label');
+    const radio = screen.getByRole('radio', { name: 'Website members only' }).closest('label');
+    expect(label.textContent).toBe('Show on the website');
+    expect(label.className).toBe(radio.className);
+    expect(label.parentElement.className).toBe(radio.parentElement.className);
+    expect(
+      screen.getByText("The website's home page and games page list it while it is open.")
+    ).toBeTruthy();
+  });
+
+  it('★ piece 7a: unticked on the form, it is sent as false', async () => {
     api.createRegistration.mockResolvedValue(registration({ entries: [], taken: 0 }));
     renderPanel();
     await screen.findByText('No registrations yet.');
     fireEvent.click(screen.getByTestId('registration-show-on-website'));
     fireEvent.click(screen.getByRole('button', { name: 'Open registration' }));
     await screen.findByTestId('registration-view');
-    expect(api.createRegistration.mock.calls[0][0]).toMatchObject({ showOnWebsite: true });
+    expect(api.createRegistration.mock.calls[0][0]).toMatchObject({ showOnWebsite: false });
   });
 
   it('★ piece 7a: on an open registration it toggles through the server', async () => {
@@ -166,12 +181,17 @@ describe('RegistrationPanel in website mode', () => {
     expect(screen.queryByTestId('registration-show-on-website')).toBeNull();
   });
 
-  it('★ piece 7b: the website chat is below the list, after the form', async () => {
+  it('★ piece 7b: the "Chat" button is below the list, after the form, closed until clicked', async () => {
     renderPanel();
     await screen.findByText('No registrations yet.');
-    const frame = screen.getByTestId('website-chat');
+    const toggle = screen.getByTestId('website-chat-toggle');
     const form = screen.getByRole('form', { name: 'Open registration' });
-    expect(form.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(form.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId('website-chat')).toBeNull();
+    fireEvent.click(toggle);
+    expect(screen.getByTestId('website-chat').getAttribute('src')).toBe(
+      '/embed/chat?room=race&theme=auto'
+    );
   });
 
   it("★ piece 7b: below a registration's detail — and gone while the QR stage is shown", async () => {
@@ -179,9 +199,11 @@ describe('RegistrationPanel in website mode', () => {
     api.fetchRegistration.mockResolvedValue(registration());
     renderPanel();
     await screen.findByTestId('registration-view');
+    fireEvent.click(screen.getByTestId('website-chat-toggle'));
     expect(screen.getByTestId('website-chat')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Show QR full screen' }));
     await screen.findByTestId('qr-stage');
     expect(screen.queryByTestId('website-chat')).toBeNull();
+    expect(screen.queryByTestId('website-chat-toggle')).toBeNull();
   });
 });

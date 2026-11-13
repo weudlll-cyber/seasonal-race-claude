@@ -2,9 +2,11 @@
    File:        WebsiteChat.module.css
    Path:        client/src/components/WebsiteChat/WebsiteChat.module.css
    Project:     RaceArena — WEBSITE-EXTRAS-1 piece 7b
-   Description: The website chat's section: the app's own panel tokens (surface, radius, muted
-                text), and the frame as the website's snippet sizes it — full width, 32rem high,
-                no border (its docs/EMBED.md:216). The host page may add its own panel class.
+   Description: The website chat's section: the app's own panel tokens (surface, radius), holding
+                the "Chat" button (the race's plain secondary button, no class of its own) and,
+                only while open, the frame as the website's snippet sizes it — full width, 32rem
+                high, no border (its docs/EMBED.md:216). The host page may add its own panel class.
+                The 7b heading (`.title`) went on 2026-11-13: the button names the chat now.
    ============================================================ */
 
 .chat {
@@ -15,12 +17,6 @@
   background: var(--color-surface);
   border-radius: var(--radius);
   padding: 0.75rem;
-}
-
-.title {
-  font-size: 1rem;
-  margin: 0;
-  color: var(--color-muted);
 }
 
 .frame {

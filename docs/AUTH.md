@@ -421,7 +421,7 @@ byte-identical, and answers `GET /api/races/deleted-racers` from the account fee
 
 **Open registrations on the website** (WEBSITE-EXTRAS-1 piece 7a, the owner's decision of 2026-11-11,
 OWNER-4; `server/src/website/openRounds.js`). A director may tick **Show on the website** when opening
-a registration (off by default) or on an open one; while it is open the race lists it at
+a registration (on by default, the owner's decision of 2026-11-13) or on an open one; while it is open the race lists it at
 `GET <base>/api/public/open-rounds` in the website's open-rounds contract (the website's
 `docs/OPEN-ROUNDS.md`), and the website shows it on its home page and games page. That route is
 **public and reads no identity at all** — the website's server asks it once a minute, through its
@@ -432,7 +432,8 @@ the team or who opened it ([API.md](API.md), *The website's open-rounds list*).
 
 **The website chat** (WEBSITE-EXTRAS-1 piece 7b, the owner's decision of 2026-11-11, OWNER-5;
 `client/src/components/WebsiteChat/WebsiteChat.jsx`). In website mode the join page and the director's
-registrations (the list and one registration's detail) frame the website's own chat page,
+registrations (the list and one registration's detail) carry a **Chat** button (the owner's decision
+of 2026-11-13, a trial) that frames, only once clicked, the website's own chat page,
 `/embed/chat?room=race&theme=auto` (the website's `docs/EMBED.md`), below their own content. It signs in
 with the **website's** session cookie, not the race's, so it shows a member the room and a guest what the
 website shows a guest; the race reads nothing from it and sends it nothing. It is **never** on the race

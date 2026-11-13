@@ -1195,8 +1195,8 @@ id**. A user with no team gets 503. A body with a field not listed is 400 (`unkn
 
 - **`POST /api/registrations`** `{ trackId, capacity, eventName?, closesAt }` — open one, now. In
   website mode also `websiteAccess?` — `members` (the default) or `anyone`, who may join (piece 4) —
-  and `showOnWebsite?` — true or false, **false unless given** (WEBSITE-EXTRAS-1 piece 7a, OWNER-4:
-  registrations the director marks); in standalone both fields are unknown and refused like any other.
+  and `showOnWebsite?` — true or false, **true unless given** (WEBSITE-EXTRAS-1 piece 7a, OWNER-4;
+  on by default since the owner's decision of 2026-11-13, the same default as the director's form); in standalone both fields are unknown and refused like any other.
   `trackId` must name an installed track (its name is stored with the registration); `capacity` a
   whole number 1–100 (the client sends the track's Players-tab limit); `eventName` at most 100
   characters or null; `closesAt` an instant at least 1 minute from now and at most 30 days away.

@@ -23,7 +23,8 @@
 // 10 s for places left and the state, and once more when the countdown reaches zero.
 //
 // ── WEBSITE MODE ONLY: THE WEBSITE CHAT (WEBSITE-EXTRAS-1 piece 7b, OWNER-5) ────────────────────
-// The website's chat room `race` below the page's own card (components/WebsiteChat), in the same
+// The website's chat room `race` below the page's own card (components/WebsiteChat — a "Chat"
+// button, the frame only once clicked: the owner's decision of 2026-11-13), in the same
 // column — after the form, so on a phone it never pushes the form down. Members and guests see what
 // the website's embed shows them. Standalone renders nothing for it.
 // ============================================================

@@ -26,7 +26,8 @@
 //   kind            "Seasonal Race", the race's name on the website (its docs/EMBED.md:49).
 //   startsAt        null: a registration has no start time — the director starts the race.
 //   signupClosesAt  the deadline, ISO 8601 UTC ("…Z").
-//   players         names registered so far; maxPlayers its places.
+//   players         the COUNT of names registered so far (`reg.taken`), never the names;
+//                   maxPlayers its places.
 //   joinUrl         the join page: the public origin (RA_PUBLIC_ORIGIN — https://<site> in website
 //                   mode) + the base path + /join/<code>. Without a public origin, https:// and the
 //                   request's own host, as Bingo does (openRounds.ts:81).

@@ -107,9 +107,9 @@ export function createRegistrationsRouter({ store, tracks } = {}) {
         closesAt: body.closesAt,
         // Website mode: 'members' unless the director chose 'anyone'; standalone stores nothing.
         websiteAccess: website ? (body.websiteAccess ?? 'members') : null,
-        // Website mode: off unless the director ticked it (OWNER-4: registrations the director
-        // MARKS); standalone stores nothing.
-        showOnWebsite: website ? (body.showOnWebsite ?? false) : null,
+        // Website mode: shown unless the director unticked it (the owner's decision of 2026-11-13:
+        // on by default, the same default as the form); standalone stores nothing.
+        showOnWebsite: website ? (body.showOnWebsite ?? true) : null,
       });
       return res.status(201).json(created);
     } catch (err) {
