@@ -772,8 +772,47 @@ the rows below:
 - [ ] ★★ **GOING ONLINE — one row. (Four rows until 2026-09-25: this, "VPS deployment",
       "`RA_PUBLIC_ORIGIN` is a placeholder" and "admin auth hardened for public-facing use", all
       folded in here as one subject with one blocker.)**
-      ★★★ **THE CORRECTION HE NEEDS BEFORE HE BUYS ANYTHING: THE PURCHASE IS NECESSARY AND NOT
-      SUFFICIENT.** `docker-compose.yml` has exactly **ONE service** and no TLS-terminating proxy of
+
+      ★★★ **REWRITTEN 2026-11-13 FOR THE OWNER'S DECISIONS D1 AND D6** (GOING-ONLINE-PREP-1 piece 4;
+      the decisions are at the head of this section). **The first run is the website-mode install on
+      the Contabo server where the Seasonal Entertainment website runs** (D1). RaceArena runs there
+      under `/games/race`, behind the website's proxy, with the website's accounts. **It needs no
+      domain and no certificate of its own:** the address and the certificate are the website's. **It
+      comes when everything else is finished** (D6).
+
+      **What that run must do**, in this order:
+      1. **Install** in website mode, on the website's server ([VPS-INSTALL.md](VPS-INSTALL.md),
+         *Inside Seasonal Entertainment*). The website's installer must have enabled the race first
+         (`RACE=yes`). It asks only for the team.
+      2. **Sign in through the website** — `Sign in through Seasonal Entertainment` at
+         `https://<the website>/games/race/` — as a host, and see a race run.
+      3. **The SSH check of D5, once, changing nothing:**
+         `sshd -T | grep -E 'passwordauthentication|permitrootlogin'` must print
+         `passwordauthentication no` and `permitrootlogin no` (the SSH HARDENING row below).
+      4. **The backup copy:** `sudo racearena backup-copy setup`, with the OneDrive authorisation and
+         the crypt password stored safely, then `racearena backup-copy status` (the COPY THE BACKUPS
+         row below).
+      5. **The written pre-exposure bar is still open** and is the one piece of work left before that
+         run: what must hold before the app is reachable (auth item 2 below). The CSP, item 1, has been
+         on since 2026-10-12.
+
+      **Struck by D1, 2026-11-13:**
+      - buying a domain;
+      - the race's own certificate (Caddy and Let's Encrypt on the race's own name);
+      - "his word plus a purchase".
+
+      Nothing is bought, and the race's own Caddy is not started in website mode. **The standalone
+      path stays documented and available, unchanged:** `deploy/install.sh` on a server of its own,
+      with its own domain and Caddy ([VPS-INSTALL.md](VPS-INSTALL.md)), and the plain-`node` path
+      ([DEPLOYMENT.md](DEPLOYMENT.md)). The history below is kept as it was written, with the
+      purchase it assumed.
+
+      **verify:** on the website's server, `racearena status` passes in website mode, a host signed in
+      through the website ran a race, the D5 check printed both `no`s, and `racearena backup-copy
+      status` names a copy newer than 2 days.
+
+      ~~★★★ **THE CORRECTION HE NEEDS BEFORE HE BUYS ANYTHING: THE PURCHASE IS NECESSARY AND NOT
+      SUFFICIENT.**~~ *(struck 2026-11-13 by D1: nothing is bought; kept as written)* `docker-compose.yml` has exactly **ONE service** and no TLS-terminating proxy of
       any kind. [DEPLOY-NOTES.md](DEPLOY-NOTES.md):195-200 lists **four more things that do not exist
       yet** and are still needed after the domain arrives: a compose file that includes the proxy, the
       secrets generated rather than copied from an example, a named volume for `RA_DATA_DIR`, and a
@@ -803,7 +842,7 @@ the rows below:
       PART TWO); **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
-      **His word plus a purchase, and then four build items.**
+      ~~**His word plus a purchase, and then four build items.**~~ *(struck 2026-11-13, D1)*
 
       **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it NEEDS HIS WORD — it is not work.**
       Re-checked at the tree: `racearena.example.com` appears in exactly two places, neither of them
@@ -839,11 +878,13 @@ the rows below:
       - the data in `/var/lib/racearena` on the host;
       - the image built on the server from the checked-out version.
 
-      **Still open:**
-      - the domain itself;
-      - the first run on the VPS with the owner, which tests what a local Docker cannot (system
-        detection, Docker install, ufw, unattended-upgrades, the DNS check, the real certificate,
-        the systemd timers, alert e-mails);
+      **Still open** *(as of 2026-11-13, D1 and D6 — the list at the head of this row replaces this
+      one)*:
+      - ~~the domain itself;~~ *(struck, D1)*
+      - the first run on the server with the owner, which tests what a local Docker cannot. Since D1 it
+        is the website-mode install on the website's Contabo server. It covers the system detection,
+        the Docker install, the systemd timers and the alerts. ~~ufw, the DNS check, the real
+        certificate~~ belong to the standalone install, not this run (D1);
       - the written pre-exposure bar (auth item 2 above; item 1, the CSP, is on since 2026-10-12).
 
       **Observed 2026-10-18 (the end-to-end test, seven runs to 2026-10-19, local Docker on
@@ -906,7 +947,11 @@ the rows below:
       run's (D6); that run cannot be done without his Microsoft account.
       **verify:** `racearena backup-copy status` on the server names a copy on the OneDrive and does
       not warn (a copy newer than 2 days).
-- [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
+- [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).**
+      ★ **2026-11-13, D5:** the owner states that his server's SSH is already hardened. It is
+      **checked once on the first run, not changed**: the verify line below is that check.
+      `racearena harden-ssh` stays available, but D5 does not ask for it to be run. The row stays open
+      until the check has run. `deploy/install.sh`
       deliberately does not change the SSH configuration: a mistake there locks the owner out of his
       own server. ★ **Since 2026-10-09 (AUDIT-1 piece E) it is GUIDED, not manual:**
       `sudo racearena harden-ssh --user <him>` plans it, and a confirmation run from a SECOND session
