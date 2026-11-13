@@ -19,7 +19,7 @@ behaviour is kept and the fork is noted below.
 | 2 — legal pages in website mode (D3) | **done** — `aed70694`, pushed |
 | 3 — backup copies to OneDrive via rclone (D4) | **done** — `94fea1ba`, pushed; the OneDrive authorisation is the first run's |
 | 4 — the GOING ONLINE row (D1, D6) | **done** — see below, pushed |
-| END — verify, rebuild, servers | not started |
+| END — verify, rebuild, servers | **done** — see *The end* below |
 
 ## Piece 1 — SECURITY.md
 
@@ -230,3 +230,48 @@ The row is rewritten at its head:
 ## Noticed, left
 
 Nothing.
+
+## The end
+
+**Verify: one run of the branch diff against master `7dac27be`.** 20 passed, 4 failed, 14 skipped.
+The machine was at 100 % CPU all through it: another project's sessions were running their own
+verify, browser tests and linters.
+
+- **ceremony-counts — a real finding, fixed.** The new `client/src/modules/legal/websiteLegalPages.js`
+  is a `modules/` file outside the hull, so the generated counts in `docs/SHIP-CEREMONY.md` moved:
+  90 → 91, and 33 → 34. They were regenerated (`gen-ceremony-costs --counts`) and committed as
+  `4f0a8ebf`; `--check-counts` agrees, and the hull stays 232.
+- **script-suite** failed on `gen-ceremony-costs.test.mjs`, the same stale count. Alone, after the
+  fix: 7/7.
+- **client-suite:** vitest could not start its workers for two parity files ("Timeout waiting for
+  worker to respond") under the load. Neither file was touched. Alone: 2 files, 6/6.
+- **server-suite:** `src/website/websiteMode.integration.test.js` timed out at 5 s. No server code
+  changed on this branch.
+  - Alone, the first time, still under the other sessions' load: red, the same timeouts.
+  - Alone, once more after the installer test: 12/12.
+
+**Engine-reach:** no changed file is in the hull, so no fingerprint check ran and none moved.
+
+**The standalone installer test** (`deploy/test/e2e-local.sh`): **79 of 79.**
+
+- Run on A = `9c6edaba`, from a fresh clone of the URL in `C:/tmp`; the later commit only regenerates
+  doc counts.
+- B, C and D were throwaway local refs, cherry-picked from the previous run's test commits and never
+  pushed.
+- No container of the stack is left, and the scratch clone is deleted.
+
+**Running, hidden, on the branch head, with the client rebuilt there.** Every badge reads
+**`4f0a8ebf · feat/going-online-prep`**, clean:
+
+- the standalone dev server: http://localhost:5173/, with the API on 4000;
+- the website-mode instance on 127.0.0.1:4791 under `/games/race`, behind the stand-in at
+  **http://127.0.0.1:4790/**.
+
+**Checked in a browser:**
+
+- Through the stand-in, the sign-in page's footer links "Legal notice" to `/info/imprint` and
+  "Privacy policy" to `/info/privacy`, and the stand-in answers both with its placeholder.
+- `/games/race/privacy` lands on `/info/privacy`.
+- At 5173 the footer links the race's own `/legal-notice` and `/privacy`, as before.
+
+Nothing is merged.
