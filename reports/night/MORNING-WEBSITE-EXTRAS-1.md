@@ -35,7 +35,8 @@ text. That is what "the Dev Screen's menus" were: their fields are styled, their
 
 Line numbers are at `72246385`.
 
-**Found: 31 controls.**
+**Found: 31 controls. Styled: 31. Left among them: none.** The controls left by rule or found
+not to be drawn are listed after the table.
 
 | # | Control | file:line | Screen | What was wrong | State |
 | --- | --- | --- | --- | --- | --- |
@@ -50,13 +51,13 @@ Line numbers are at `72246385`.
 | 19 | Camera slider rows | `CameraAdvancedSection.jsx:237` | Dev Screen, camera | raw range | **styled**, group 2 |
 | 20 | Shared slider | `DevScreen/components/RangeSlider.jsx:15` | Dev Screen, branding and surface classes | raw range | **styled**, group 2 |
 | 21–22 | "Export race config", "Refresh" | `ConfigExportSection.jsx:69`, `:82` | Dev Screen | raw buttons | **styled**, group 2 |
-| 23 | Lights style menu | `TrackEditorToolbar.jsx:167` | Track editor | raw menu | group 3 |
-| 24 | Lights speed | `TrackEditorToolbar.jsx:191` | Track editor | raw range | group 3 |
-| 25 | Load menu | `TrackEditorSaveBar.jsx:92` (`.loadSelect`) | Track editor | browser list | group 3 |
-| 26–27 | Effect menus | `EffectConfig.jsx:110`, `:138` (`.select`) | Track editor | browser list | group 3 |
-| 28 | Racer-type menu | `RacerMetadataPanel.jsx:141` (`.select`) | Racer editor | browser list | group 3 |
-| 29–30 | Track and racer-type menus | `DistributionDiagnostics.jsx:263`, `:294` | Distribution diagnostics | browser list | group 3 |
-| 31 | Runtime slider | `DistributionDiagnostics.jsx:320` | Distribution diagnostics | raw range | group 3 |
+| 23 | Lights style menu | `TrackEditorToolbar.jsx:167` | Track editor | raw menu | **styled**, group 3 |
+| 24 | Lights speed | `TrackEditorToolbar.jsx:191` | Track editor | raw range | **styled**, group 3 |
+| 25 | Load menu | `TrackEditorSaveBar.jsx:92` (`.loadSelect`) | Track editor | browser list | **styled**, group 3 |
+| 26–27 | Effect menus | `EffectConfig.jsx:110`, `:138` (`.select`) | Track editor | browser list | **styled**, group 3 |
+| 28 | Racer-type menu | `RacerMetadataPanel.jsx:141` (`.select`) | Racer editor | browser list | **styled**, group 3 |
+| 29–30 | Track and racer-type menus | `DistributionDiagnostics.jsx:263`, `:294` | Distribution diagnostics | browser list | **styled**, group 3 |
+| 31 | Runtime slider | `DistributionDiagnostics.jsx:320` | Distribution diagnostics | raw range | **styled**, group 3 |
 
 **Left, with the reason:**
 - **Checkboxes and radio buttons (37):** native by the owner's rule. The scanner cannot tell
@@ -147,6 +148,43 @@ nothing. Noticed but left: the diagnostics screen's route is `/diagnose-verteilu
 inline paddings of the two export buttons and of the transition menu. Moved out: nothing. Noticed
 but left: `.textarea` has no `color-scheme`; it has no arrow or list, only its scroll bar would
 change.
+
+### Group 3 — the track editor, the racer editor, the diagnostics screen
+
+**Classes reused**, each screen's own:
+- Track editor: the lights' style menu is **`.loadSelect`**, the editor's load menu (its inline
+  font size equalled the class's 0.8rem, so it is gone); the lights' speed is **`.slider`**, keeping
+  its `180` width. `.loadSelect` gains `color-scheme: dark`.
+- The effect list (`components/EffectConfig`, in the track editor): its **`.select`** gains
+  `color-scheme: dark`; its sliders already were `.range`.
+- Racer editor: its **`.select`** gains `color-scheme: dark`.
+- Distribution diagnostics (`/diagnose-verteilung`, direct URL only) has no stylesheet; its looks
+  are inline. Its two menus add **`colorScheme: 'dark'`** and its slider
+  **`accentColor: 'var(--color-primary)'`**, the value every slider class in the app has.
+
+**Tests:** the track editor, effect config, racer editor and diagnostics folders, 19 files, 231
+green.
+- New in `TrackEditor.trackLights.test.jsx`: the style menu carries `.loadSelect`, the speed
+  `.slider`; a sweep finds no menu, slider, number or text field in the editor without an app style.
+- New `TrackEditor/darkMenus.test.js`: the three menu rules say `color-scheme: dark`.
+- New `DistributionDiagnostics.controls.test.jsx`: its menus are dark and its slider the app's
+  red. With no tracks loaded only the racer-type menu is drawn, so the track menu's
+  `colorScheme` is not reached by the test.
+
+**Sabotage, red and then restored:**
+
+| # | Mutation | What went red |
+| --- | --- | --- |
+| T | the lights' style menu without `.loadSelect` | the track editor's new test |
+| R | the racer editor's `.select` without `color-scheme` | the stylesheet test |
+| G | the diagnostics slider without `accentColor` | the diagnostics test |
+
+**Hygiene** (lines before → after): `TrackEditorToolbar.jsx` 234 → 237, `TrackEditor.module.css`
+404 → 414, `EffectConfig.module.css` 128 → 137, `RacerEditor.module.css` 511 → 513,
+`DistributionDiagnostics.jsx` 462 → 470, `TrackEditor.trackLights.test.jsx` 302 → 324;
+`darkMenus.test.js` new, 30; `DistributionDiagnostics.controls.test.jsx` new, 24. Two stylesheets
+had no header comment and now have one (`TrackEditor.module.css`, `EffectConfig.module.css`).
+Removed: the lights menu's inline font size. Moved out: nothing.
 
 ## Follow-up 3 after the owner's approval of `076e5fc2` (2026-11-13)
 

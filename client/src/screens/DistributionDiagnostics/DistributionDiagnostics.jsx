@@ -7,7 +7,10 @@
 //              distribution of "racers side by side" after 4 seconds RACING time.
 //              Part of Phase-1 inventory measurement (feature/priority-system).
 //              Internal diagnose tool — accessible only via direct URL. Not linked
-//              from main UI. Intentionally kept; do not delete.
+//              from main UI. Intentionally kept; do not delete. Its two menus draw their
+//              arrow and opened list dark (`colorScheme`) and its slider is the app's red one
+//              (`accentColor: var(--color-primary)`, as every slider's class has it); it has no
+//              stylesheet of its own (WEBSITE-EXTRAS-1 follow-up 4, the owner's decision of 2026-11-13).
 // ============================================================
 
 import { useState, useRef, useCallback } from 'react';
@@ -278,6 +281,7 @@ export default function DistributionDiagnostics() {
               padding: '0.4rem 0.75rem',
               fontSize: '0.9rem',
               cursor: status === 'running' ? 'not-allowed' : 'pointer',
+              colorScheme: 'dark',
             }}
           >
             {CLOSED_TRACKS.map((t) => (
@@ -303,6 +307,7 @@ export default function DistributionDiagnostics() {
             padding: '0.4rem 0.75rem',
             fontSize: '0.9rem',
             cursor: status === 'running' ? 'not-allowed' : 'pointer',
+            colorScheme: 'dark',
           }}
         >
           {Object.entries(RACER_TYPE_LABELS).map(([id, label]) => (
@@ -325,7 +330,10 @@ export default function DistributionDiagnostics() {
           value={runtimeSeconds}
           onChange={(e) => setRuntimeSeconds(Number(e.target.value))}
           disabled={status === 'running'}
-          style={{ cursor: status === 'running' ? 'not-allowed' : 'pointer' }}
+          style={{
+            cursor: status === 'running' ? 'not-allowed' : 'pointer',
+            accentColor: 'var(--color-primary)',
+          }}
         />
       </div>
 

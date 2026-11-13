@@ -3,7 +3,8 @@
    Path:        client/src/screens/RacerEditor/RacerEditor.module.css
    Project:     RaceArena
    Created:     2026-05-27
-   Description: Styles for the Racer Editor screen and its sub-panels
+   Description: Styles for the Racer Editor screen and its sub-panels. Its menu (`.select`)
+                draws its arrow and opened list dark (WEBSITE-EXTRAS-1 follow-up 4, the owner's decision of 2026-11-13).
    ============================================================ */
 
 /* ── Shell ── */
@@ -234,6 +235,7 @@
   outline: none;
   cursor: pointer;
   width: 100%;
+  color-scheme: dark;
 }
 
 .colorRow {

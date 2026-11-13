@@ -4,7 +4,9 @@
 // Project:     RaceArena
 // Created:     2026-05-25
 // Description: Top toolbar for the track editor — mode toggles, undo/redo,
-//              effects and track-lights config.
+//              effects and track-lights config. The lights' style menu is the editor's
+//              `.loadSelect` and their speed its `.slider`, not browser-drawn controls
+//              (WEBSITE-EXTRAS-1 follow-up 4, the owner's decision of 2026-11-13).
 // ============================================================
 
 import EffectConfig from '../../components/EffectConfig/EffectConfig.jsx';
@@ -169,7 +171,7 @@ export default function TrackEditorToolbar({
             aria-label="Track lights style"
             value={trackLights.style}
             onChange={(e) => onLightsStyleChange(e.target.value)}
-            style={{ fontSize: '0.8rem' }}
+            className={s.loadSelect}
           >
             <option value="steady">Steady</option>
             <option value="sequence">Sequence</option>
@@ -197,6 +199,7 @@ export default function TrackEditorToolbar({
             value={trackLights.speed}
             disabled={trackLights.style === 'steady'}
             onChange={(e) => onLightsChange({ speed: parseFloat(e.target.value) })}
+            className={s.slider}
             style={{ width: 180 }}
             title="Animation speed (disabled for Steady)"
           />

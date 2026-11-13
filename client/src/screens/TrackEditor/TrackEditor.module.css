@@ -1,3 +1,12 @@
+/* ============================================================
+   File:        TrackEditor.module.css
+   Path:        client/src/screens/TrackEditor/TrackEditor.module.css
+   Project:     RaceArena
+   Description: Styles for the track editor. Its menus are `.loadSelect` (drawn dark, its arrow
+                and opened list too) and its sliders `.slider`: no control in the editor is
+                browser-drawn (WEBSITE-EXTRAS-1 follow-up 4, the owner's decision of 2026-11-13).
+   ============================================================ */
+
 .screen {
   --color-danger: #ef5350;
   --color-border: #2a2a35;
@@ -260,6 +269,7 @@
   padding: 0.35rem 0.6rem;
   cursor: pointer;
   box-sizing: border-box;
+  color-scheme: dark;
 }
 
 .saveBtn {
