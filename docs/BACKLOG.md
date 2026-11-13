@@ -753,6 +753,20 @@ owning document was never told. That is backwards, and the owner's rule of 2026-
 list in the same commit, and **this document owns the list**. The three that have since been closed
 are in PART TWO with what closed them; these are the ones still standing.
 
+★★ **THE OWNER'S DECISIONS OF 2026-11-13 (GOING-ONLINE-PREP-1),** recorded here because they set
+the rows below:
+
+- **D1:** RaceArena goes online in **website mode**, inside Seasonal Entertainment, on the same
+  Contabo server as the website. It needs no domain and no certificate of its own.
+- **D2:** the security contact address is `stentertainmentadmin@gmail.com`
+  ([SECURITY.md](../SECURITY.md)).
+- **D3:** in website mode the website's legal pages apply; the race links to them instead of to its
+  own.
+- **D4:** the backup copies off the server go to the owner's OneDrive.
+- **D5:** the owner states that his server's SSH is already hardened. It is checked once on the first
+  run (`sshd -T | grep -E 'passwordauthentication|permitrootlogin'`), not changed.
+- **D6:** the first real install comes when everything else is finished.
+
 - [ ] ★★ **GOING ONLINE — one row. (Four rows until 2026-09-25: this, "VPS deployment",
       "`RA_PUBLIC_ORIGIN` is a placeholder" and "admin auth hardened for public-facing use", all
       folded in here as one subject with one blocker.)**
@@ -1892,10 +1906,8 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Security and access — his word
 
-- [ ] **SECURITY.md contact e-mail (with the domain).** [SECURITY.md](../SECURITY.md) names no
-      e-mail address; it is to get one once the project has its own domain (decided 2026-10-12).
-      Until then it points to GitHub's private vulnerability reporting, which is switched on.
-      *(verify: SECURITY.md names a contact address at the project's domain)*
+*(The SECURITY.md contact e-mail left this list on 2026-11-13: the owner named the address that day
+(D2), so it no longer waits for a domain — PART TWO.)*
 
 ### Records and decisions
 
@@ -1912,6 +1924,16 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **SECURITY.md contact e-mail — CLOSED 2026-11-13** (branch `feat/going-online-prep`,
+      GOING-ONLINE-PREP-1 piece 1). Opened 2026-10-12 by AUDIT-1: SECURITY.md named no e-mail
+      address, and was to get one at the project's own domain. **What closed it:** the owner's
+      decision D2 of 2026-11-13 (recorded with D1-D6 under *Delivering to someone else*): the
+      security contact is `stentertainmentadmin@gmail.com`, and with D1 there is no own domain to
+      wait for. [SECURITY.md](../SECURITY.md) names it as the first channel and keeps GitHub's private
+      vulnerability reporting as the second. The old verify bar ("an address at the project's
+      domain") was written for a domain that D1 made unnecessary; the bar met is "SECURITY.md names a
+      contact address".
 
 - [x] **Unpin ubuntu-24.04 in browser-gate.yml once Playwright supports ubuntu 26.04 — CLOSED
       2026-11-13, merged to `master`** (branch `fix/playwright-ubuntu-26`, the owner's merge approval

@@ -15,6 +15,10 @@ is.
 
 ### Added
 
+- **A security contact e-mail.** [SECURITY.md](SECURITY.md) names `stentertainmentadmin@gmail.com`
+  for reporting a security problem; GitHub's private vulnerability reporting stays the second
+  channel. *(branch `feat/going-online-prep`)*
+
 - **Website mode: open registrations on the website.** When RaceArena runs under the Seasonal
   Entertainment website, a registration that is open and marked *Show on the website* (a checkbox on
   the create form, on by default, and on an open registration) appears on the website's home and
