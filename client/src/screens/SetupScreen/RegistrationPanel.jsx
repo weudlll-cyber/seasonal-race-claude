@@ -42,6 +42,12 @@
 // owner's decision of 2026-11-13) below the list and below one registration's detail —
 // last, so it never pushes the controls down — but NOT while the full-screen QR stage is up: that
 // stage is shown to an audience. Standalone renders nothing for it.
+//
+// ── THE CONTROLS LOOK LIKE THE REST OF THE APP (the owner's look of 2026-11-13) ──────────────────
+// Every button on the list and the detail is one of the Setup screen's own: `.secondary` and
+// `.danger` compose its secondary button (`quickTestBtn`, the outline button beside Start Race),
+// `.primary` was already its red button; the date field is its `playerInput` (DeadlineField.jsx).
+// The full-screen QR stage keeps its own white look (it is drawn for a room, not for this screen).
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -235,7 +241,7 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
         </p>
       )}
       {!anyOpen && listBlock}
-      <WebsiteChat />
+      <WebsiteChat className={styles.chatButton} />
     </div>
   );
 }
@@ -441,7 +447,7 @@ function RegistrationList({ list, now, onShow }) {
               </div>
               <button
                 type="button"
-                className={styles.cardOpenButton}
+                className={`${styles.secondary} ${styles.cardOpenButton}`}
                 aria-label={`Open registration ${i + 1}: ${title}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -514,6 +520,7 @@ function RegistrationView({
           <div className={styles.row}>
             <button
               type="button"
+              className={styles.secondary}
               onClick={() => {
                 navigator.clipboard?.writeText?.(link);
                 setCopied(true);
@@ -526,8 +533,9 @@ function RegistrationView({
               eventName={r.eventName}
               trackName={r.trackName}
               className={styles.row}
+              buttonClassName={styles.secondary}
             />
-            <button type="button" onClick={() => setStage(true)}>
+            <button type="button" className={styles.secondary} onClick={() => setStage(true)}>
               Show QR full screen
             </button>
           </div>
@@ -583,21 +591,25 @@ function RegistrationView({
       {open ? (
         <>
           <div className={styles.row}>
-            <button type="button" onClick={onClose}>
+            <button type="button" className={styles.secondary} onClick={onClose}>
               Close now
             </button>
+          </div>
+          {/* The Extend buttons: one row, wrapping. */}
+          <div className={styles.row}>
             <span className={styles.muted}>Extend:</span>
             {EXTEND_PRESETS.map((p) => (
               <button
                 key={p.key}
                 type="button"
+                className={styles.secondary}
                 onClick={() => onExtend(new Date(Date.parse(r.closesAt) + p.ms).toISOString())}
               >
                 {p.label}
               </button>
             ))}
           </div>
-          <div className={styles.row}>
+          <div className={`${styles.row} ${styles.rowTop}`}>
             <DeadlineField
               label="Extend until"
               value={customExtend}
@@ -608,6 +620,7 @@ function RegistrationView({
             />
             <button
               type="button"
+              className={styles.secondary}
               disabled={extendProblem !== null}
               onClick={() => onExtend(new Date(msFromLocal(customExtend)).toISOString())}
             >
@@ -643,7 +656,11 @@ function RegistrationView({
       </div>
 
       {/* The chat is for the director's page only, never on the stage shown to an audience. */}
-      {stage ? <QrStage registration={r} link={link} onExit={exitStage} /> : <WebsiteChat />}
+      {stage ? (
+        <QrStage registration={r} link={link} onExit={exitStage} />
+      ) : (
+        <WebsiteChat className={styles.chatButton} />
+      )}
     </div>
   );
 }

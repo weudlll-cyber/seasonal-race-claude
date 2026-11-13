@@ -5,6 +5,7 @@
    Description: The public join page, MOBILE FIRST: one column at a phone's width (390 px is the
                 measured size, client/e2e/join-page.spec.js), a field and a button large enough for a
                 thumb, the app's dark background. Wider screens get the same column, centred.
+                The website chat's button sits centred under the card (website mode only).
    ============================================================ */
 
 .screen {
@@ -22,11 +23,10 @@
   padding: 1.25rem 1rem 1.5rem;
 }
 
-/* WEBSITE-EXTRAS-1 piece 7b: the website chat below the card, in the same centred column. */
-.chat {
-  max-width: 480px;
-  margin-left: auto;
-  margin-right: auto;
+/* The website chat's button (components/WebsiteChat), centred under the card. */
+.chatButton {
+  display: block;
+  margin: 1rem auto 0;
 }
 
 .title {

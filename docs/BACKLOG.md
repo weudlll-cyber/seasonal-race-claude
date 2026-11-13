@@ -1929,10 +1929,12 @@ proposal arriving again in six months looking new.
       **What closed it:** both pieces built, website mode only, standalone unchanged.
       - **7a — open registrations on the website** (OWNER-4): `GET <base>/api/public/open-rounds` in
         the website's open-rounds contract (its `docs/OPEN-ROUNDS.md`), only registrations open now
-        and marked **Show on the website** (a checkbox on the create form, off by default, and on an
-        open registration); no player name, entry, team or internal id.
-      - **7b — the website chat** (OWNER-5): `/embed/chat?room=race&theme=auto` framed on the join
-        page and the director's registrations, never on the race screen, the start ceremony, the
+        and marked **Show on the website** (a checkbox on the create form, ON by default since the
+        owner's decision of 2026-11-13, and on an open registration); no player name, entry, team or
+        internal id.
+      - **7b — the website chat** (OWNER-5): `/embed/chat?room=race&theme=auto` on the join
+        page and the director's registrations — since 2026-11-13 behind a "Chat" button, in a side
+        panel at the window's right edge (the owner's decisions that day, a trial) — never on the race screen, the start ceremony, the
         result screen or the QR stage; `frame-src 'self'` in website mode only, standalone's CSP
         byte-identical (pinned by `server/src/csp.test.js`).
       The facts from the website's docs with their lines, the forks, the tests and sabotages are on

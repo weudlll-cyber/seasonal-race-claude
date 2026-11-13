@@ -9,13 +9,18 @@
 //              "Use these players" hands over exactly the registered names, the track, the id and the
 //              event name, a raced registration shows "Raced" and when (follow-up 2) and can still be
 //              used, Delete asks first, and the full-screen QR stage opens and closes. Standalone
-//              draws and sends no "Show on the website" (WEBSITE-EXTRAS-1 piece 7a).
+//              draws and sends no "Show on the website" (WEBSITE-EXTRAS-1 piece 7a). Every button on
+//              the list and the detail is one of the Setup screen's own (the secondary
+//              `quickTestBtn`; Delete with the panel's `.danger`), and the date field its
+//              `playerInput` — the owner's look of 2026-11-13.
 // ============================================================
 
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import { formatDateTime } from '../../modules/registration/timeLeft.js';
+import setupStyles from './SetupScreen.module.css';
+import panelStyles from './RegistrationPanel.module.css';
 
 const api = {
   listRegistrations: vi.fn(),
@@ -157,6 +162,37 @@ describe('one registration', () => {
     expect(screen.getByTestId('registration-time-left').textContent).toMatch(/min \d\d s$/);
     const names = within(screen.getByTestId('registration-names')).getAllByRole('listitem');
     expect(names.map((li) => li.textContent.replace('✕', ''))).toEqual(['Ada', 'Bob']);
+  });
+
+  it("★ every button here is one of the Setup screen's own — none is a raw browser button", async () => {
+    await showOne();
+    const view = screen.getByTestId('registration-view');
+    for (const name of [
+      'Copy link',
+      'Copy QR code',
+      'Download QR',
+      'Show QR full screen',
+      'Close now',
+      '+5 min',
+      '+15 min',
+      '+1 hour',
+      '+1 day',
+      'Extend until',
+      'Delete registration',
+    ]) {
+      const button = within(view).getByRole('button', { name });
+      expect(button.classList.contains(setupStyles.quickTestBtn), name).toBe(true);
+    }
+    const remove = within(view).getByRole('button', { name: 'Delete registration' });
+    // A composed class is several names (its own and quickTestBtn's): every one is there.
+    for (const name of panelStyles.danger.split(' '))
+      expect(remove.classList.contains(name)).toBe(true);
+    const field = view.querySelector('input[type="datetime-local"]');
+    expect(field.classList.contains(setupStyles.playerInput)).toBe(true);
+    // The sweep: no button in the view without a class of its own.
+    for (const button of within(view).getAllByRole('button')) {
+      expect(button.className, button.textContent).not.toBe('');
+    }
   });
 
   it('removes a name, closes now and extends by the chosen amount', async () => {
@@ -346,6 +382,11 @@ describe('item 4 and 5 — the list of registrations', () => {
     );
     renderPanel();
     const cards = await screen.findAllByTestId('registration-card');
+    // Each card's "Open" is the Setup screen's secondary button (the owner's look of 2026-11-13).
+    for (const card of cards) {
+      const open = within(card).getByRole('button', { name: /^Open registration/ });
+      expect(open.classList.contains(setupStyles.quickTestBtn)).toBe(true);
+    }
     fireEvent.click(cards[1]);
     await screen.findByTestId('registration-view');
     expect(api.fetchRegistration).toHaveBeenLastCalledWith('o2');

@@ -261,7 +261,8 @@ director opens a **registration** and the players add their own names from their
    players without starting marks nothing, and changing the roster to other players (another
    registration, a player group, or emptying it) means the next race marks nothing; correcting a
    name keeps the mark coming. *Use these players* stays available on a raced registration.
-6. **Delete registration** when you are done: the names are kept until you do (see
+6. **Delete registration** — the red one among the registration's buttons, which are drawn like the
+   Setup screen's other buttons since 2026-11-13 — when you are done: the names are kept until you do (see
    [PRIVACY-FACTS.md](PRIVACY-FACTS.md)).
 7. **Inside Seasonal Entertainment only** (website mode; since 2026-11-12): **Show on the website**,
    a checkbox on the form and on an open registration, **ticked unless you untick it** (on by default
@@ -275,8 +276,10 @@ director opens a **registration** and the players add their own names from their
 
 **The website chat** (inside Seasonal Entertainment only; since 2026-11-12). Below the registrations
 on your Players tab, and below the join page your players open, is a **Chat** button: it opens the
-website's own chat — its room *Seasonal Race* — and the same button closes it (since 2026-11-13, the
-owner's decision, a trial: the chat stays closed, and loads nothing, until someone clicks; every
+website's own chat — its room *Seasonal Race* — as a panel along the right edge of the window, the
+window's full height (on a phone it covers the whole screen). The page underneath stays where it is.
+Close it with the panel's **×**, with **Escape**, or with the Chat button again (since 2026-11-13, the
+owner's decisions, a trial: the chat stays closed, and loads nothing, until someone clicks; every
 visit starts closed). It is the website's chat, with the website's accounts and rules: members read and
 write there, a guest sees what the website shows a guest. It never appears on the race screen, the
 start ceremony, the result screen or the full-screen QR code, so nothing on the big screen shows it.

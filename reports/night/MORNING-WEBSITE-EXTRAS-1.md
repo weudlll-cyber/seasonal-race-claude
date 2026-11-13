@@ -17,6 +17,111 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 | the stand-in's open-rounds page and chat placeholder (the owner's look) | **done** — see below |
 | real-website check (nginx) | **done** — see below; proofs 7 and 8 pass, two NOT DRIVEN |
 
+## Follow-up 2 after the owner's look at `fb276fc7` (2026-11-13)
+
+**What the owner saw, 2026-11-13:** the "Chat" button was an unstyled browser button in an empty
+box, and opening the chat must keep everything inside the window, without scrolling. The
+registration detail's controls were raw browser buttons and must look like the rest of the app.
+A visual change: he looks before anything is merged.
+
+**The classes reused.** The app has no global button class; each screen styles its own. This
+panel is on the Setup screen, so it takes the Setup screen's own (`SetupScreen.module.css`),
+by CSS-module `composes`:
+
+| Use | Class | From |
+| --- | --- | --- |
+| Every ordinary button: Close now, the four Extend buttons, Extend until, Copy link, Copy QR code, Download QR, Show QR full screen, the list's "Open" on each card, and the Chat button | `quickTestBtn` | the Setup screen's secondary button, the outline button beside Start Race |
+| The panel's × close | `removeBtn` | the Setup screen's remove-a-player × |
+| Delete registration | `quickTestBtn` in the panel's existing `--color-primary`, its hover `#1f0e10` | the Setup screen has no danger button, so this is the brief's fallback, the secondary style in the error colour. It draws the Dev Screen's `btnDanger` red outline without importing the Dev Screen's stylesheet |
+| The date field | `playerInput` | already in use (`DeadlineField.jsx:38`), unchanged |
+| A disabled "Extend until" | the panel's own `.primary:disabled` values (opacity 0.5) | `quickTestBtn` has no disabled state |
+
+No new colour or size.
+
+**The chat as a side panel** (`components/WebsiteChat`):
+- The button sits on its own, with no box: centred under the card on the join page, at its natural
+  width on the registrations.
+- Open: an `<aside>` "Chat", `position: fixed` to the right edge, `100dvh` high,
+  `min(24rem, 100vw)` wide, with a header ("Chat", × "Close chat") and the frame filling the rest.
+  Being fixed, it takes no room, so the page neither moves nor scrolls because of it.
+- Below **768px**, the panel covers the whole window. That width is ResultScreen.css's "Mobile
+  responsiveness", the only width query the app names for phones. The race screen's single-column
+  640px and the Dev Screen's 900px tablet bar were the other candidates.
+- Escape, the × and the Chat button each close it. Focus goes to the × on open and back to the Chat
+  button on close; the button has `aria-expanded` and `aria-controls`.
+- The frame exists only while open, and nothing is stored. The screens are the same, and the
+  importers source test stays.
+
+**The registration controls:**
+- Behaviour, labels, order and test ids are unchanged.
+- "Close now" now stands on its own row, and the "Extend:" buttons form one wrapping row.
+- The "Extend until" row aligns to the top, so the button stands level with the date field, not
+  with the middle of the field and its hint.
+- `QrShareButtons` gains `buttonClassName`.
+- The join page's other controls were already styled (`.join`, `.input`); only its Chat button
+  was raw.
+
+**Tests** (WebsiteChat, QrShareButtons, JoinPage and RegistrationPanel, each in both modes):
+6 files, 54 tests, green. They were run serially with a 20 s per-test limit because the machine was
+loaded. Two tests that time out at 5 s under load passed alone at the default limit.
+- New: the closed button carries `quickTestBtn` and stands alone.
+- New: the panel, its fixed class, the header and the ×, with focus on open; the ×, Escape and the
+  button each close it, with focus back.
+- New: the `.panel` rule, read from the stylesheet: fixed, `100dvh`, `min(24rem, 100vw)`, and
+  `100vw` at 768px.
+- New: every named detail button carries `quickTestBtn`; Delete also carries `.danger`; the date
+  field carries `playerInput`; no button in the view is without a class; each card's "Open"
+  carries `quickTestBtn`.
+
+**Sabotage, each red and then restored:**
+
+| # | Mutation | What went red |
+| --- | --- | --- |
+| A | the panel not fixed | the `.panel` rule test |
+| B | Escape ignored | the Escape test |
+| F | no focus into the panel | the open test |
+| C | Delete without `.danger` | the buttons test |
+| D | "Close now" a raw button | the buttons test |
+| E | `QrShareButtons` ignoring `buttonClassName` | the buttons test |
+
+**Docs** (living sentences found by an uncapped grep of the tree):
+- `docs/BACKLOG.md`: 7a is "ON by default since 2026-11-13", and 7b is behind a button in a side
+  panel.
+- The `registrationStore.js` header: "1 unless the director unticked it".
+- This sheet's look instructions, and the 7a "what was built" lines, which now say "as built" and
+  "since the follow-up".
+- OPERATOR-GUIDE: the chat panel, and Delete as the red one among the restyled buttons.
+- The only other "off by default" hit, in OPEN.md, is about `RA_RACES_WAL`, not this choice.
+- This sheet: the "7a — the facts, read BEFORE building" heading, which follow-up 1's edit
+  replaced and did not put back (my error, in `fb276fc7`), is restored.
+
+**Hygiene** (lines before → after):
+
+| File | Lines |
+| --- | --- |
+| `WebsiteChat.jsx` | 84 → 126 |
+| `WebsiteChat.module.css` | 27 → 66 |
+| `WebsiteChat.test.jsx` | 117 → 183 |
+| `QrShareButtons.jsx` | 46 → 53 |
+| `RegistrationPanel.jsx` | 701 → 718 |
+| `RegistrationPanel.module.css` | 319 → 353 |
+| `RegistrationPanel.test.jsx` | 375 → 416 |
+| `JoinPage.jsx` | 209 → 210 |
+| `JoinPage.module.css` | 130 → 130 |
+| `registrationStore.js` | 673 → 674 |
+
+- **Removed:** the chat's box (`.chat` in `WebsiteChat.module.css`), the join page's `.chat`
+  column rule (now `.chatButton`), and the frame's fixed `32rem` height (it fills the panel).
+- **Moved out:** nothing.
+- **Noticed but left:**
+  - The full-screen QR stage's "Close" (`.stageExit`) and its two QR buttons stay raw on its white
+    page. It is drawn for a room, the brief named the detail's controls, and the stage passes no
+    `buttonClassName`.
+  - The form's track `<select>` and event-name `<input>` are browser-drawn too; the brief named the
+    date field only.
+  - `docs/AUTH.md`'s chat paragraph says "a Chat button that frames, only once clicked"; that is
+    still true and names no placement.
+
 ## The follow-up after the owner's look (2026-11-13)
 
 **The owner's decisions, 2026-11-13**, after his look at `30d6dd7c`:
@@ -80,9 +185,9 @@ registrations route and standin.integration: 5 files, 57 tests, green.
 - **Kept, not dead:** `.choice` is still the radios' class and now the checkbox's too.
 - **Moved out:** nothing.
 - **Noticed but left:** the `docs/BACKLOG.md` row still says "off by default" in its description of
-  piece 7a (`:1932`); the brief said the row stays as it is.
+  piece 7a (`:1932`); the brief said the row stays as it is. (Corrected in follow-up 2, above.)
 
-
+## 7a — the facts, read BEFORE building
 
 **The website's contract** (seasonal-entertainment `docs/OPEN-ROUNDS.md`):
 
@@ -141,8 +246,8 @@ the URL, **79 passed, 0 failed**.
 
 - standalone: **http://localhost:5173/** (API on 4000) — at "/" no checkbox, no chat, unchanged;
 - website mode through the stand-in: **http://127.0.0.1:4790/** (the race on 127.0.0.1:4791 under
-  /games/race) — pick **Hugo Host**, open a registration with **Show on the website** (off by default)
-  and one without; **Open sign-ups, as the website shows them** on the stand-in's page lists the marked one
+  /games/race) — pick **Hugo Host**, open a registration with **Show on the website** (on by default
+  since 2026-11-13) and one with it unticked; **Open sign-ups, as the website shows them** on the stand-in's page lists the marked one
   and not the other; the chat frame (the stand-in's placeholder, naming the room) is below the
   registrations and below the join page, and not on the race screen.
 
@@ -271,11 +376,13 @@ public, max-age=30`, at most 20, soonest deadline first; each round exactly the 
 The registration store gains `show_on_website` (check-then-alter; NULL outside website mode),
 `setShowOnWebsite` (team-scoped, open only, website-mode registrations only) and `openRoundsForWebsite`
 (open now AND marked — never a name, entry, external id, team or internal id). The director's create
-takes `showOnWebsite` in website mode (**false unless given**); `POST /api/registrations/:id/website
+takes `showOnWebsite` in website mode (**false unless given** as built; **true unless given** since
+the follow-up of 2026-11-13); `POST /api/registrations/:id/website
 { show }` toggles it (website mode only; in standalone it falls through to the API's 404). CSRF: the
 global origin guard, as for every write.
 
-**Client.** `RegistrationPanel.jsx`: one `ShowOnWebsiteBox` — on the create form (off by default) and
+**Client.** `RegistrationPanel.jsx`: one `ShowOnWebsiteBox` — on the create form (off by default as built; on since the follow-up of
+2026-11-13) and
 on an OPEN registration's detail — drawn only when `SITE_MODE === 'website'` (the runtime marker);
 `registrationApi.js` sends `showOnWebsite` and gains `setShowOnWebsite`.
 

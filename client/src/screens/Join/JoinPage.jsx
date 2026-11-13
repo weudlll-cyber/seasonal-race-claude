@@ -24,7 +24,8 @@
 //
 // ── WEBSITE MODE ONLY: THE WEBSITE CHAT (WEBSITE-EXTRAS-1 piece 7b, OWNER-5) ────────────────────
 // The website's chat room `race` below the page's own card (components/WebsiteChat — a "Chat"
-// button, the frame only once clicked: the owner's decision of 2026-11-13), in the same
+// button, centred under the card, that opens the chat as a side panel at the window's right edge —
+// the owner's decisions of 2026-11-13), in the same
 // column — after the form, so on a phone it never pushes the form down. Members and guests see what
 // the website's embed shows them. Standalone renders nothing for it.
 // ============================================================
@@ -202,7 +203,7 @@ export default function JoinPage() {
           <p className={styles.muted}>{loadError.text}</p>
         )}
       </main>
-      <WebsiteChat className={styles.chat} />
+      <WebsiteChat className={styles.chatButton} />
       <LegalFooter />
     </div>
   );

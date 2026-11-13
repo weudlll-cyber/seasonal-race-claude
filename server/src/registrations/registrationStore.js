@@ -51,7 +51,8 @@
 // ── WEBSITE-EXTRAS-1 piece 7a: "SHOW ON THE WEBSITE" (OWNER-4) ─────────────────────────────────
 // `show_on_website` (1 | 0) is added the same way, check-then-alter, nullable; the three columns now
 // share one helper (`addColumnIfMissing`). It is set only for a registration opened in website mode
-// (0 unless the director ticked it — the owner's decision says registrations the director MARKS);
+// (1 unless the director unticked it — on by default since the owner's decision of 2026-11-13; the
+// route supplies that default, routes/registrations.js);
 // NULL elsewhere. `openRoundsForWebsite` reads the marked ones that are open now, for the website's
 // open-rounds contract (website/openRounds.js) — never a name, an entry or the internal id.
 // ============================================================
