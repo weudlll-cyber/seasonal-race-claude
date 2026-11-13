@@ -8,6 +8,9 @@
 //              DEVSCREEN-CHAPTERS-1: rendered as PARTS — the camera chapter's sub-groups,
 //              plus the drawing floor, track labels and overlay texts (placed in Look) and the
 //              diagnostics switches and logs (placed in Diagnostics). One config, one setter.
+//              Its sliders are the Dev Screen's `.range`, the transition menu its `.select` and the
+//              overlay duration its `.input` — none browser-drawn (WEBSITE-EXTRAS-1 follow-up 4,
+//              2026-11-13).
 // ============================================================
 
 import {
@@ -242,6 +245,7 @@ function SliderRow({ label, testId, min, max, step, value, onChange, display, co
         step={step}
         value={value}
         onChange={onChange}
+        className={s.range}
         style={{ width: '8rem' }}
       />
       <span style={{ minWidth: '3.5rem', fontVariantNumeric: 'tabular-nums' }}>{display}</span>
@@ -437,7 +441,8 @@ function CameraAdvancedSection({ part }) {
                     config.cameraTransitionGrammar ?? DEFAULT_CAMERA_CONFIG.cameraTransitionGrammar
                   }
                   onChange={(e) => set('cameraTransitionGrammar', e.target.value)}
-                  style={{ padding: '0.2rem 0.4rem' }}
+                  className={s.select}
+                  style={{ width: 'auto' }}
                 >
                   <option value="glide">Glide (smooth)</option>
                   <option value="cut">Cut (crisp)</option>
@@ -2088,6 +2093,7 @@ function CameraAdvancedSection({ part }) {
                   const v = parseInt(e.target.value, 10);
                   if (v >= 500 && v <= 10000) set('stateOverlayDurationMs', v);
                 }}
+                className={s.input}
                 style={{ width: '5rem' }}
               />
               <Info id="CameraAdvancedSection:stateOverlayDurationMs" />

@@ -3,7 +3,9 @@
 // Project:     RaceArena
 // Description: BATTLE-TRIGGER-RANGE-1 — the Pulk Closeness / Isolation sliders expose the fine-grained
 //              sub-1% range (0.1%–2.0% / 0.0%–2.0%, step 0.1%), load persisted in-range values exactly,
-//              and display with one decimal. Presentation-only.
+//              and display with one decimal. Presentation-only. And no control in the section is
+//              browser-drawn: its sliders, menu and number field carry the Dev Screen's own classes
+//              (WEBSITE-EXTRAS-1 follow-up 4, 2026-11-13).
 // ============================================================
 
 import { render, screen } from '@testing-library/react';
@@ -22,6 +24,7 @@ vi.mock('../../../modules/cameraConfig.js', async (importOriginal) => {
 
 import { DEFAULT_CAMERA_CONFIG } from '../../../modules/cameraConfig.js';
 import CameraAdvancedSection from './CameraAdvancedSection.jsx';
+import devStyles from '../DevScreen.module.css';
 
 const renderWith = (cfg) => {
   mockConfig = cfg;
@@ -123,5 +126,26 @@ describe('ENDGAME-COMPLETE-1 — the endgame switches are reachable and correctl
       DEFAULT_CAMERA_CONFIG.contentionWatch
     );
     expect(screen.getByTestId('band-floor').checked).toBe(DEFAULT_CAMERA_CONFIG.bandFloor);
+  });
+});
+
+describe('CameraAdvancedSection — no browser-drawn control (follow-up 4, 2026-11-13)', () => {
+  const carries = (el, cls) => cls.split(' ').every((name) => el.classList.contains(name));
+  it("★ its slider rows, transition menu and overlay duration are the Dev Screen's own", () => {
+    renderWith({});
+    expect(carries(screen.getByTestId('battle-pulk-threshold-t'), devStyles.range)).toBe(true);
+    expect(carries(screen.getByTestId('regie-transition-grammar'), devStyles.select)).toBe(true);
+    expect(carries(screen.getByTestId('state-overlay-duration'), devStyles.input)).toBe(true);
+    // The sweep: every slider, menu, number and text field in the section has an app style.
+    const fields = document.querySelectorAll(
+      'select, input[type="range"], input[type="number"], input[type="text"], textarea'
+    );
+    expect(fields.length).toBeGreaterThan(3);
+    for (const el of fields) {
+      const styled =
+        el.className !== '' ||
+        /background|border|accent-color/.test(el.getAttribute('style') ?? '');
+      expect(styled, el.outerHTML.slice(0, 120)).toBe(true);
+    }
   });
 });

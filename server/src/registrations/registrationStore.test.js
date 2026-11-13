@@ -7,6 +7,7 @@
 //              clock, the bounds on capacity and window, close and extend, the name rules, the
 //              capacity held against concurrent writers on separate connections (worker threads),
 //              a registration surviving a reopen of the file, and team scoping.
+//              WEBSITE-EXTRAS-1 piece 7a: an older file gains show_on_website and lists nothing.
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -18,6 +19,7 @@ import { pathToFileURL } from 'node:url';
 import Database from 'better-sqlite3';
 import {
   addRacedColumn,
+  addShowOnWebsiteColumn,
   createRegistrationStore,
   CAPACITY_MAX,
   MAX_WINDOW_MS,
@@ -279,11 +281,16 @@ describe('marking it raced', () => {
 
     store = createRegistrationStore(file, { now: () => clock });
     expect(store.get('old-1', TEAM)).toMatchObject({ eventName: 'Spring cup', racedAt: null });
+    // WEBSITE-EXTRAS-1 piece 7a: it gains show_on_website too, NULL — never listed for the website,
+    // and the view does not name a setting it never had.
+    expect(store.get('old-1', TEAM)).not.toHaveProperty('showOnWebsite');
+    expect(store.openRoundsForWebsite()).toEqual([]);
     expect(store.markRaced('old-1', TEAM).racedAt).toBe(at(clock));
     // Opening it a second time finds the column and adds nothing.
     store.closeDatabase();
     const again = new Database(file);
     expect(addRacedColumn(again)).toBe(false);
+    expect(addShowOnWebsiteColumn(again)).toBe(false);
     again.close();
     store = createRegistrationStore(file, { now: () => clock });
   });

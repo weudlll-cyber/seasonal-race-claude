@@ -3,13 +3,15 @@
 // Path:        client/src/screens/TrackEditor/TrackEditor.trackLights.test.jsx
 // Project:     RaceArena
 // Description: Component tests for the Track Lights configuration section
-//              in the Track Editor (color, style, speed, save wiring).
+//              in the Track Editor (color, style, speed, save wiring); and that no menu, slider
+//              or field in the editor is browser-drawn (WEBSITE-EXTRAS-1 follow-up 4, 2026-11-13).
 // ============================================================
 
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, act, fireEvent, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TrackEditor from './TrackEditor.jsx';
+import editorStyles from './TrackEditor.module.css';
 
 // ── Canvas stub ───────────────────────────────────────────────────────────────
 const ctxStub = {
@@ -298,5 +300,25 @@ describe('buildTrackFromEditorState — trackLights', () => {
       effects: [],
     });
     expect(result.trackLights).toEqual(DEFAULT_TRACK_LIGHTS);
+  });
+});
+
+describe('TrackEditor — no browser-drawn control (follow-up 4, 2026-11-13)', () => {
+  it("★ the lights' style menu and speed are the editor's own, and every field has an app style", () => {
+    const { container } = renderEditor();
+    const styleSelect = container.querySelector('[data-testid="track-lights-style"]');
+    expect(styleSelect.classList.contains(editorStyles.loadSelect)).toBe(true);
+    const speed = container.querySelector('[data-testid="track-lights-speed"]');
+    expect(speed.classList.contains(editorStyles.slider)).toBe(true);
+    const fields = container.querySelectorAll(
+      'select, input[type="range"], input[type="number"], input[type="text"], textarea'
+    );
+    expect(fields.length).toBeGreaterThan(2);
+    for (const el of fields) {
+      const styled =
+        el.className !== '' ||
+        /background|border|accent-color/.test(el.getAttribute('style') ?? '');
+      expect(styled, el.outerHTML.slice(0, 120)).toBe(true);
+    }
   });
 });

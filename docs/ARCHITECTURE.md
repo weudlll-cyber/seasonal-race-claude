@@ -48,13 +48,9 @@ seasonal-race-claude/
 │       │       ├── useViewport.js          # Zoom/pan viewport hook
 │       │       └── useTrackIO.js           # Server save/delete/background I/O hook
 │       ├── components/             # Reusable UI building blocks
-│       │   ├── Button/
-│       │   ├── Modal/
-│       │   ├── InputField/
-│       │   ├── ColorPicker/
 │       │   ├── EffectConfig/       # Add/remove/configure track effects (F13)
-│       │   ├── LogoUploader/
 │       │   └── PresetThumbnail/    # Rendered track preview card
+│       │   (Button, Modal, InputField, ColorPicker, LogoUploader — never imported — were REMOVED 2026-11-13, WEBSITE-EXTRAS-1)
 │       ├── modules/                # Domain logic, independent of React
 │       │   ├── camera/             # CameraDirector + diagnostics + timing
 │       │   │   ├── CameraDirector.js            # State machine: OVERVIEW/LEADER/BATTLE/COMEBACK/LEAD_CHANGE
@@ -1324,5 +1320,5 @@ verified at the cited source.
 - **`headlessRaceSimulator.js` is a SIMPLIFIED STATISTICAL MODEL, not the game.** It self-declares this
   (its header): it deliberately OMITS `trajectoryMult`, `areaBonusMult`, `governorMult` and the racer
   type's `speedMultiplier`, and uses a circular world approximation. It exists only to measure the
-  "racers side-by-side" distribution for DistributionDiagnostics (route `/diagnose-verteilung`). **Its numbers do not describe the game** and
+  "racers side-by-side" distribution for DistributionDiagnostics (route `/diagnose-distribution`). **Its numbers do not describe the game** and
   its t-update must NOT be unified with the shared formula — it is a different model on purpose.

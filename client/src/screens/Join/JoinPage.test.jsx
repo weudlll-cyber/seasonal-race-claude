@@ -7,7 +7,8 @@
 //              shows the server's refusal sentence (a doubled name, already registered on this
 //              device) with the page asked again afterwards. The server calls are mocked; the real
 //              routes are tested in server/src/routes/joinSecurity.integration.test.js and the page
-//              in a phone-sized browser in client/e2e/join-page.spec.js.
+//              in a phone-sized browser in client/e2e/join-page.spec.js. Standalone frames no
+//              website chat and draws no "Chat" button (WEBSITE-EXTRAS-1 piece 7b).
 // ============================================================
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -73,6 +74,9 @@ describe('the states the server reports', () => {
     expect(screen.getByLabelText('Your name').getAttribute('maxlength')).toBe('32');
     expect(screen.getByRole('button', { name: 'Join' })).toBeTruthy();
     expect(api.fetchJoinInfo).toHaveBeenCalledWith(CODE);
+    // Standalone: no website chat (WEBSITE-EXTRAS-1 piece 7b).
+    expect(screen.queryByTestId('website-chat')).toBeNull();
+    expect(screen.queryByTestId('website-chat-toggle')).toBeNull();
   });
 
   it('registered on this device: the same sentence on a revisit, and no field', async () => {

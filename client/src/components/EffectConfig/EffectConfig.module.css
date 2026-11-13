@@ -1,3 +1,11 @@
+/* ============================================================
+   File:        EffectConfig.module.css
+   Path:        client/src/components/EffectConfig/EffectConfig.module.css
+   Project:     RaceArena
+   Description: Styles for the track editor's effect list. Its menus (`.select`) draw their arrow
+                and opened list dark, and its sliders are `.range` (WEBSITE-EXTRAS-1 follow-up 4, the owner's decision of 2026-11-13).
+   ============================================================ */
+
 .root {
   display: flex;
   flex-direction: column;
@@ -44,6 +52,7 @@
   padding: 0.35rem 0.6rem;
   cursor: pointer;
   box-sizing: border-box;
+  color-scheme: dark;
 }
 
 .select:focus-visible {

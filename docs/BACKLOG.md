@@ -36,16 +36,6 @@ considered separately, and that would not be true.
       **verify:** a Playwright release that lists ubuntu 26.04; then the gate run by hand with
       `runs-on: ubuntu-latest` must pass.
 
-## WEBSITE-EMBED-1, the rest — 7a and 7b (2026-11-12)
-
-- [ ] ★ **WEBSITE-EMBED-1 7a and 7b — what of the race planning stays open after the merge.** The
-      base path, website sign-in, the feed, members joining, "Deleted player" and the installer's
-      website mode are merged (PART TWO, WEBSITE-EMBED-1, closed 2026-11-12). Two pieces are not built:
-      - **7a — open registrations shown on the website** (OWNER-4).
-      - **7b — the website chat** (OWNER-5).
-
-      **verify:** none yet — neither piece is specified; the owner's word on each comes first.
-
 ## NEEDS HIS WORD — decide these first
 
 **ONE section is entirely his and leads PART ONE** — HOW MUCH ACTION, immediately below,
@@ -1933,6 +1923,27 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **WEBSITE-EMBED-1 7a and 7b — CLOSED 2026-11-12, MERGED to `master` 2026-11-13**
+      (WEBSITE-EXTRAS-1, branch `feat/website-extras`, merged with a merge commit by the owner's
+      merge approval of 2026-11-13 after his look at `e4ca907e`, then deleted). **It contains:** the
+      open registrations on the website (7a, shown by default), the website chat as a side panel
+      (7b), every raw control in the app styled (follow-up 4: 31 controls), and two cleanups — the
+      five components imported nowhere removed, and the diagnostics route in English
+      (`/diagnose-distribution`, no alias).
+      **What closed it:** both pieces built, website mode only, standalone unchanged.
+      - **7a — open registrations on the website** (OWNER-4): `GET <base>/api/public/open-rounds` in
+        the website's open-rounds contract (its `docs/OPEN-ROUNDS.md`), only registrations open now
+        and marked **Show on the website** (a checkbox on the create form, ON by default since the
+        owner's decision of 2026-11-13, and on an open registration); no player name, entry, team or
+        internal id.
+      - **7b — the website chat** (OWNER-5): `/embed/chat?room=race&theme=auto` on the join
+        page and the director's registrations — since 2026-11-13 behind a "Chat" button, in a side
+        panel at the window's right edge (the owner's decisions that day, a trial) — never on the race screen, the start ceremony, the
+        result screen or the QR stage; `frame-src 'self'` in website mode only, standalone's CSP
+        byte-identical (pinned by `server/src/csp.test.js`).
+      The facts from the website's docs with their lines, the forks, the tests and sabotages are on
+      `reports/night/MORNING-WEBSITE-EXTRAS-1.md`.
 
 - [x] ★★ **WEBSITE-EMBED-1 — run RaceArena under the website's path, with the website's accounts —
       CLOSED 2026-11-12, merged to `master`** by the owner's merge approval of 2026-11-12 (branch
@@ -4983,7 +4994,7 @@ contract requires.
       - **One switch for the whole installation, stored on the server** (not per browser), flipped by
         admins only, **shipped OFF**.
       - **OFF hides:** items 1, 2, 3, **4 (the red and green hero rings — these are the "dots" of this
-        row)**, 7, **9 (Quick Test)**, 13–25, 26 (`?constSpeed`), 27 (`/diagnose-verteilung`) and the
+        row)**, 7, **9 (Quick Test)**, 13–25, 26 (`?constSpeed`), 27 (`/diagnose-distribution`) and the
         console-only probes. **While OFF, items 13–25 cannot be switched on in the Dev Screen either.**
       - **Admin-only regardless of the switch:** all of item 11 (the seed field, the copy row, the
         run-it-again line, the build-mismatch alert).

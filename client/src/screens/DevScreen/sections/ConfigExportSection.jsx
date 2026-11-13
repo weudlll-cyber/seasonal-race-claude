@@ -5,12 +5,15 @@
 // Description: Stage 0 — "Export race config". Downloads world.json (the browser's ACTUAL race-path
 //              config), shows the content hash, and names any deviation from defaults so the owner
 //              never has to remember whether he changed a setting. Read-only; no race behaviour.
+//              Its two buttons are the Dev Screen's `.btn` (Export the secondary, refresh the
+//              ghost), not browser-drawn ones (WEBSITE-EXTRAS-1 follow-up 4, 2026-11-13).
 // ============================================================
 
 import { useState } from 'react';
 import { buildWorldConfig, worldStatus } from '../../../modules/exportRaceConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { Ctl } from './ControlInfo.jsx';
+import s from '../DevScreen.module.css';
 
 function ConfigExportSection() {
   const [status, setStatus] = useState(() => worldStatus());
@@ -69,7 +72,7 @@ function ConfigExportSection() {
           <button
             data-testid="export-race-config"
             onClick={exportWorld}
-            style={{ padding: '0.4rem 0.9rem', fontSize: '0.9rem' }}
+            className={`${s.btn} ${s.btnSecondary}`}
           >
             Export race config
           </button>
@@ -79,7 +82,7 @@ function ConfigExportSection() {
         </span>
         <InfoTooltip text="Short hash of the exported world config. Two exports with the same hash race the same. Also used to name the pinned golden fixtures." />
         <Ctl id="ConfigExportSection:refresh">
-          <button onClick={refresh} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>
+          <button onClick={refresh} className={`${s.btn} ${s.btnGhost}`}>
             ↻ refresh
           </button>
         </Ctl>

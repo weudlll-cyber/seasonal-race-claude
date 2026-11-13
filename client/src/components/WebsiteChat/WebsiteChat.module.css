@@ -1,0 +1,66 @@
+/* ============================================================
+   File:        WebsiteChat.module.css
+   Path:        client/src/components/WebsiteChat/WebsiteChat.module.css
+   Project:     RaceArena — WEBSITE-EXTRAS-1 piece 7b
+   Description: The website chat's button and side panel (the owner's decisions of 2026-11-13).
+                Nothing new: the button IS the Setup screen's secondary button (`quickTestBtn`,
+                composed), the × IS its remove-a-player button (`removeBtn`, composed), the panel
+                uses the app's tokens (--color-surface, --color-text) and the setup screen's border
+                colour #2a2a35. The panel is fixed to the window's right edge, full height, and
+                covers the whole window below ResultScreen.css's mobile width (768px). The 7b box
+                around the button (`.chat`) went on 2026-11-13: no box around a closed button.
+   ============================================================ */
+
+.toggle {
+  composes: quickTestBtn from '../../screens/SetupScreen/SetupScreen.module.css';
+}
+
+/* Fixed: it takes no room in the page, so nothing underneath moves or scrolls because of it. The
+   stage view's layer (RegistrationPanel.module.css .stage) — the two are never up together. */
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  height: 100dvh;
+  width: min(24rem, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-left: 1px solid #2a2a35;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #2a2a35;
+}
+
+.title {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.close {
+  composes: removeBtn from '../../screens/SetupScreen/SetupScreen.module.css';
+}
+
+/* The rest of the panel; no border (the website's docs/EMBED.md:216). */
+.frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+}
+
+/* A phone: the whole window (ResultScreen.css's "Mobile responsiveness" width). */
+@media (max-width: 768px) {
+  .panel {
+    width: 100vw;
+    border-left: 0;
+  }
+}

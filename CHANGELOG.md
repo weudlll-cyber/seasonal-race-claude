@@ -15,6 +15,15 @@ is.
 
 ### Added
 
+- **Website mode: open registrations on the website.** When RaceArena runs under the Seasonal
+  Entertainment website, a registration that is open and marked *Show on the website* (a checkbox on
+  the create form, on by default, and on an open registration) appears on the website's home and
+  games page, through the website's open-rounds interface. It shows no player name, entry, team or
+  internal id. Standalone RaceArena is unchanged. *(on `master`, 2026-11-13)*
+- **Website mode: the website's chat.** On the join page and the director's registrations, a *Chat*
+  button opens the website's chat in a side panel at the window's right edge. It is never on the race
+  screen, the start ceremony, the result screen or the full-screen QR code. Standalone RaceArena,
+  and its content security policy, are unchanged. *(on `master`, 2026-11-13)*
 - **Player registration** — a second way to fill a race. On the Setup screen's *Players* tab,
   *Player registration* chooses a track, how long registration stays open (1 minute to 7 days, or a
   date and time up to 30 days ahead, with the closing time said in plain words under the field) and
@@ -103,6 +112,12 @@ is.
 
 ### Changed
 
+- Every button, menu, slider and field in the app is drawn in the app's own dark look; none is left
+  as the browser draws it. Menus open their list dark, with a visible arrow. Checkboxes, radio
+  buttons, colour pickers and the inside of the browser's own pickers stay as the browser draws them.
+  *(on `master`, 2026-11-13)*
+- The admin-only distribution diagnostics page moved from `/diagnose-verteilung` to
+  `/diagnose-distribution`; the old address no longer opens it. *(on `master`, 2026-11-13)*
 - The result screen fits a phone held sideways: when the window is too short for the results card,
   the card is held to the window with its title at the top, and what does not fit scrolls inside the
   card. On a window 500 px high or less the card is compact: the title, the brand logo (smaller) and

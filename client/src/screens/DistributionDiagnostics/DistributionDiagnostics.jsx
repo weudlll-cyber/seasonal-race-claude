@@ -2,12 +2,15 @@
 // File:        DistributionDiagnostics.jsx
 // Path:        client/src/screens/DistributionDiagnostics/DistributionDiagnostics.jsx
 // Project:     RaceArena
-// Description: Hidden diagnostic route /diagnose-verteilung.
+// Description: Hidden diagnostic route /diagnose-distribution.
 //              Runs 50 headless race simulations and reports the empirical
 //              distribution of "racers side by side" after 4 seconds RACING time.
 //              Part of Phase-1 inventory measurement (feature/priority-system).
 //              Internal diagnose tool — accessible only via direct URL. Not linked
-//              from main UI. Intentionally kept; do not delete.
+//              from main UI. Intentionally kept; do not delete. Its two menus draw their
+//              arrow and opened list dark (`colorScheme`) and its slider is the app's red one
+//              (`accentColor: var(--color-primary)`, as every slider's class has it); it has no
+//              stylesheet of its own (WEBSITE-EXTRAS-1 follow-up 4, the owner's decision of 2026-11-13).
 // ============================================================
 
 import { useState, useRef, useCallback } from 'react';
@@ -249,7 +252,7 @@ export default function DistributionDiagnostics() {
         Empirical Distribution Measurement
       </h1>
       <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '2rem' }}>
-        /diagnose-verteilung · {N_RACERS} racers · {selectedTrack?.name ?? '—'} · {N_RUNS} races ×{' '}
+        /diagnose-distribution · {N_RACERS} racers · {selectedTrack?.name ?? '—'} · {N_RUNS} races ×{' '}
         {runtimeSeconds}s RACING time
       </p>
 
@@ -278,6 +281,7 @@ export default function DistributionDiagnostics() {
               padding: '0.4rem 0.75rem',
               fontSize: '0.9rem',
               cursor: status === 'running' ? 'not-allowed' : 'pointer',
+              colorScheme: 'dark',
             }}
           >
             {CLOSED_TRACKS.map((t) => (
@@ -303,6 +307,7 @@ export default function DistributionDiagnostics() {
             padding: '0.4rem 0.75rem',
             fontSize: '0.9rem',
             cursor: status === 'running' ? 'not-allowed' : 'pointer',
+            colorScheme: 'dark',
           }}
         >
           {Object.entries(RACER_TYPE_LABELS).map(([id, label]) => (
@@ -325,7 +330,10 @@ export default function DistributionDiagnostics() {
           value={runtimeSeconds}
           onChange={(e) => setRuntimeSeconds(Number(e.target.value))}
           disabled={status === 'running'}
-          style={{ cursor: status === 'running' ? 'not-allowed' : 'pointer' }}
+          style={{
+            cursor: status === 'running' ? 'not-allowed' : 'pointer',
+            accentColor: 'var(--color-primary)',
+          }}
         />
       </div>
 

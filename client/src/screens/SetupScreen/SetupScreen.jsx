@@ -16,6 +16,12 @@
 //   registration carry its event name into the race's (`handleUseRegisteredPlayers`), and the
 //   race that starts with them marks that registration "Raced" (`handleStartRace`). The rules are
 //   modules/registration/raceFromRegistration.js.
+//
+// ★ No browser-drawn menu (the owner's decision of 2026-11-13, WEBSITE-EXTRAS-1 follow-up 4): the
+//   header's branding menu is `.brandingSelect`, this screen's `playerInput` at the header's
+//   compact size; the racer-type menu and Quick Test's two menus keep their inline look and add
+//   `colorScheme: 'dark'` (the date field's own, DeadlineField), so the arrow and the opened list
+//   are drawn dark like the field and not white with light text.
 // ============================================================
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -1229,19 +1235,7 @@ function SetupScreen() {
               const id = e.target.value || null;
               setActiveSession({ activeBrandingProfileId: id });
             }}
-            style={{
-              fontSize: '0.8rem',
-              background: 'var(--color-surface)',
-              color: 'var(--color-text)',
-              border: '1px solid var(--color-muted)',
-              borderRadius: 'var(--radius)',
-              padding: '0.15rem 0.4rem',
-              cursor: 'pointer',
-              marginLeft: 'auto',
-              // A flex item never shrinks below its content by default, and a select's content is
-              // its longest option: at 390 px the header overflowed by 3 px (AUDIT-1 A8-03).
-              minWidth: 0,
-            }}
+            className={styles.brandingSelect}
             aria-label="Active branding profile"
           >
             <option value="">Branding: None</option>
@@ -1417,6 +1411,7 @@ function SetupScreen() {
                         padding: '0.35rem 0.6rem',
                         fontSize: '0.85rem',
                         cursor: 'pointer',
+                        colorScheme: 'dark',
                       }}
                     >
                       {filteredRacerTypeIds.map((id) => (
@@ -1807,6 +1802,7 @@ function SetupScreen() {
                         borderRadius: '3px',
                         color: 'inherit',
                         cursor: 'pointer',
+                        colorScheme: 'dark',
                       }}
                     >
                       {quickCompatibleRacerTypeIds.map((id) => (
@@ -1844,6 +1840,7 @@ function SetupScreen() {
                         borderRadius: '3px',
                         color: 'inherit',
                         cursor: 'pointer',
+                        colorScheme: 'dark',
                       }}
                     >
                       <option value="current">current (default)</option>

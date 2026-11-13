@@ -9,6 +9,8 @@
 //              crossTeamAccess.audit.test.js mount races: a stamped `req.authUser`, an injected store
 //              on a scratch file and injected track records. The guard in front (signed in or 401)
 //              is tested against the real app in registrationsSecurity.integration.test.js.
+//              WEBSITE-EXTRAS-1 piece 7a: standalone has no "Show on the website" (the website-mode
+//              side is website/openRounds.integration.test.js).
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -211,6 +213,27 @@ describe('marking it raced', () => {
 
   it('an unknown id is 404', async () => {
     const res = await request(appAs(userA)).post('/api/registrations/no-such-id/raced');
+    expect(res.status).toBe(404);
+  });
+});
+
+// WEBSITE-EXTRAS-1 piece 7a: "Show on the website" does not exist in standalone (the default mode
+// here): the create refuses the field, the view never names it, and the toggle route falls through
+// to whatever answers an unknown route.
+describe('standalone: no "Show on the website"', () => {
+  it('the create refuses showOnWebsite, and the view has no such key', async () => {
+    const refused = await openAs(userA, { showOnWebsite: true });
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toMatch(/"showOnWebsite"/);
+    const plain = await openAs(userA);
+    expect(plain.body).not.toHaveProperty('showOnWebsite');
+  });
+
+  it('POST /:id/website is not a route there (404)', async () => {
+    const reg = (await openAs(userA)).body;
+    const res = await request(appAs(userA)).post(`/api/registrations/${reg.id}/website`).send({
+      show: true,
+    });
     expect(res.status).toBe(404);
   });
 });

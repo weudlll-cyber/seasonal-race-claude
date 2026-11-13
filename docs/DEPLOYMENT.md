@@ -134,7 +134,7 @@ else's change (`PUT /api/settings/test-aids`, [API.md](API.md)).
 - **Quick Test** on the setup screen;
 - every diagnostic display and log (the Dev Screen's diagnostic and log switches are locked, with a
   line saying why) and the gap re-roll marker;
-- the `?constSpeed=1` address flag (it changes the physics), the `/diagnose-verteilung` page, and the
+- the `?constSpeed=1` address flag (it changes the physics), the `/diagnose-distribution` page, and the
   console probes (`?perfprobe=1`, `?viewerprobe=1`, `racearena:raceInputsProbe`,
   `racearena:holdProbe`).
 

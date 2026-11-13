@@ -141,13 +141,13 @@ function App() {
               }
             />
             {/* INTERNAL: URL-only diagnose route. Not linked in UI — access intentionally only
-              via /diagnose-verteilung in the address bar. Headless simulator for distribution
+              via /diagnose-distribution in the address bar. Headless simulator for distribution
               analysis. Do not delete. TEST-AIDS-1: admins only AND only while the test-aids switch
-              is ON (item 27 of DEV-DISPLAYS-1). The URL keeps its old German spelling ON PURPOSE:
-              a URL is visible and bookmarked, so renaming the component (AUDIT-1 A2-27) did not
-              move it. */}
+              is ON (item 27 of DEV-DISPLAYS-1). The URL was /diagnose-verteilung until 2026-11-13,
+              when the owner had it put into English with no alias for the old path: it is an
+              internal admin page (WEBSITE-EXTRAS-1). */}
             <Route
-              path="/diagnose-verteilung"
+              path="/diagnose-distribution"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <TestAidsOnly>

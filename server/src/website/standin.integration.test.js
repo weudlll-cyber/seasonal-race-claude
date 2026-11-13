@@ -12,6 +12,8 @@
 //              into the app, never into it — CI's server job builds no client, so the page there
 //              answered 404 and the test failed on master f247dafb; the role is asked of the race's
 //              own session endpoint under the base path.
+//              WEBSITE-EXTRAS-1: its open-sign-ups page lists a marked registration and not an
+//              unmarked one (7a), and its /embed/chat placeholder names the room (7b).
 // ============================================================
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
@@ -173,6 +175,39 @@ describe('the website stand-in in front of a website-mode race', () => {
       headers: { 'X-Games-Sync-Token': 'wrong' },
     });
     expect(refused.status).toBe(403);
+  });
+
+  it('★ 7a: its open-sign-ups page lists a marked open registration, not an unmarked one', async () => {
+    const store = feedModules.getDefaultRegistrationStore();
+    const reg = (show, eventName) =>
+      store.create({
+        team: 'Seasonal Entertainment',
+        createdBy: 'website:host',
+        trackId: 'dirt-oval',
+        trackName: 'Dirt Oval',
+        capacity: 6,
+        eventName,
+        closesAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+        websiteAccess: 'members',
+        showOnWebsite: show,
+      });
+    const marked = reg(true, 'Marked Cup');
+    const unmarked = reg(false, 'Hidden Cup');
+    const html = await (await fetch(`${origin}/_standin/open-rounds`)).text();
+    expect(html).toContain(`data-round="${marked.code}"`);
+    expect(html).toContain('Marked Cup — Dirt Oval');
+    expect(html).toContain('0 of 6 signed up');
+    expect(html).not.toContain(unmarked.code);
+    expect(html).not.toContain('Hidden Cup');
+  });
+
+  it('7b: its /embed/chat placeholder names the room, and escapes it', async () => {
+    const ok = await fetch(`${origin}/embed/chat?room=race&theme=auto`);
+    expect(ok.status).toBe(200);
+    expect(await ok.text()).toContain('<strong data-room>race</strong>');
+    const odd = await (await fetch(`${origin}/embed/chat?room=%3Cb%3E`)).text();
+    expect(odd).toContain('&lt;b&gt;');
+    expect(odd).not.toContain('<b>');
   });
 
   it('outside the base path the stand-in answers 404', async () => {

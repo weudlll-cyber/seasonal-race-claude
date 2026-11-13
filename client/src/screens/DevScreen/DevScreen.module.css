@@ -3,7 +3,11 @@
    Path:        client/src/screens/DevScreen/DevScreen.module.css
    Project:     RaceArena
    Created:     2026-04-19
-   Description: Styles for the Dev Screen and all its section components
+   Description: Styles for the Dev Screen and all its section components. Its controls are
+                `.input`, `.textarea`, `.select`, `.btn` with its variants and `.range`: no
+                control on the Dev Screen is browser-drawn (the owner's decision of 2026-11-13,
+                WEBSITE-EXTRAS-1 follow-up 4). `.select` and `.input` (which some menus wear)
+                draw their arrow and opened list dark (`color-scheme: dark`, the date field's own).
    ============================================================ */
 
 /* ── Shell ── */
@@ -282,6 +286,7 @@
   outline: none;
   transition: border-color var(--transition);
   width: 100%;
+  color-scheme: dark;
 }
 
 .input:focus {
@@ -325,6 +330,14 @@
   outline: none;
   cursor: pointer;
   width: 100%;
+  color-scheme: dark;
+}
+
+/* The Dev Screen's slider: the racer modal's own (`.slider`, the app's red thumb and track),
+   without its growth, so a row that sizes it keeps that size. */
+.range {
+  composes: slider from './sections/RacerEditModal.module.css';
+  flex: none;
 }
 
 .colorRow {

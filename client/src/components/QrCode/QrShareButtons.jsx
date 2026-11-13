@@ -7,15 +7,18 @@
 //              be pasted into Telegram or Discord; Download saves the same PNG as
 //              racearena-join-<event or track>.png. When the browser cannot copy an image, Copy says
 //              so and points to Download. Both draw on this device (modules/registration/qrImage.js).
+//              `buttonClassName` styles the two buttons (the registration's view passes the Setup
+//              screen's secondary button, 2026-11-13); without it they are drawn as before.
 // ============================================================
 
 import { useState } from 'react';
 import { copyQrImage, downloadQr, qrFileName } from '../../modules/registration/qrImage.js';
 
 /**
- * @param {{ link: string, eventName?: string|null, trackName?: string, className?: string }} props
+ * @param {{ link: string, eventName?: string|null, trackName?: string, className?: string,
+ *            buttonClassName?: string }} props
  */
-export default function QrShareButtons({ link, eventName, trackName, className }) {
+export default function QrShareButtons({ link, eventName, trackName, className, buttonClassName }) {
   const [note, setNote] = useState('');
 
   async function copy() {
@@ -30,10 +33,14 @@ export default function QrShareButtons({ link, eventName, trackName, className }
 
   return (
     <span className={className}>
-      <button type="button" onClick={copy}>
+      <button type="button" className={buttonClassName} onClick={copy}>
         Copy QR code
       </button>
-      <button type="button" onClick={() => downloadQr(link, qrFileName(eventName, trackName))}>
+      <button
+        type="button"
+        className={buttonClassName}
+        onClick={() => downloadQr(link, qrFileName(eventName, trackName))}
+      >
         Download QR
       </button>
       {note && (

@@ -126,7 +126,9 @@ The brand palette should flow through the existing CSS-variable system rather th
 
 ## 6. Mapping to the 5 Placeholder Components
 
-These components exist in `client/src/components/` and are currently stubs — none of them are imported by production code. Each maps naturally to a branding UI need:
+> **2026-11-13: these five components were removed** (WEBSITE-EXTRAS-1, the owner's decision): none was ever imported. The mapping below is kept as the proposal's record; building any of them now starts from the app's own classes (`quickTestBtn`, `playerInput`), not from these stubs.
+
+These components existed in `client/src/components/` as stubs — none of them was imported by production code. Each maps naturally to a branding UI need:
 
 | Component | Path | Branding use |
 |---|---|---|

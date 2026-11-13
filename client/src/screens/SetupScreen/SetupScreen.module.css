@@ -3,7 +3,11 @@
    Path:        client/src/screens/SetupScreen/SetupScreen.module.css
    Project:     RaceArena
    Created:     2026-04-19
-   Description: Styles for the pre-race Setup Screen and its sub-components
+   Description: Styles for the pre-race Setup Screen and its sub-components. Its secondary button
+                `quickTestBtn` and its input `playerInput` are the app's shared controls on the
+                Setup side: the registration panel, the website chat and the redelivery notice
+                take them (by `composes` or by import); `.brandingSelect` is `playerInput` at
+                the header's size (follow-up 4 of WEBSITE-EXTRAS-1, 2026-11-13).
    ============================================================ */
 
 /* ── Layout ── */
@@ -238,6 +242,21 @@
 
 .playerInput::placeholder {
   color: var(--color-muted);
+}
+
+/* The header's branding menu (follow-up 4, 2026-11-13): the screen's input at the header's compact
+   size, which it already had. It does not grow like playerInput (flex: initial), and may shrink
+   below its longest option: at 390 px the header overflowed by 3 px (AUDIT-1 A8-03). The dark
+   colour scheme draws its arrow and opened list dark. */
+.brandingSelect {
+  composes: playerInput;
+  flex: initial;
+  min-width: 0;
+  margin-left: auto;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color-scheme: dark;
 }
 
 .addBtn {

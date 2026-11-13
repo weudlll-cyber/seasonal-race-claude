@@ -14,7 +14,11 @@
 #              proofs, driven through https://example.org the way Bingo's rehearsal drives the
 #              website (./real-site-race.sh): (1) roles, (2) joining, (3) "may host" removed, locked,
 #              unlocked, (4) deleted, (5) cookie and forged headers, (6) ports, update, backup,
-#              status, uninstall with the website byte-identical. Prints PASS / FAIL / NOT DRIVEN per
+#              status, uninstall with the website byte-identical; and WEBSITE-EXTRAS-1's two: (7) a
+#              registration marked "Show on the website" in the race's open-rounds list and accepted by
+#              the website's own checker, an unmarked one not; (8) the website chat framed on the
+#              join page — the race's CSP allowing it, the website's embed answering a member and
+#              allowing the frame. Prints PASS / FAIL / NOT DRIVEN per
 #              check and the website SHA. Everything it made carries the website harness's label and
 #              is removed at the end. KEEP=1 keeps it; RESUME=1 then reuses that server and its
 #              website for a quicker try of the race part (as Bingo's rehearsal; the final pass is fresh).
@@ -129,6 +133,27 @@ me_status() { ra race "$1" GET /api/auth/me | status; }
 is_signed_out() { [[ "$(me_status "$1")" == 401 ]]; }
 registration_empty() { [[ "$(entry_count "$1")" == 0 ]]; }
 entry_count() { ra race "$HUGO" GET "/api/registrations/$1" | body | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["entries"]))'; }
+# WEBSITE-EXTRAS-1 helpers for proofs 7 and 8.
+lacks() { ! grep -qF -- "$1" <<<"$2"; }                      # lacks NEEDLE TEXT
+has_all() { local t=$1 p; shift; for p; do grep -qF -- "$p" <<<"$t" || return 1; done; }
+accepted_only() { grep -qx -- "$1" <<<"$3" && ! grep -qx -- "$2" <<<"$3"; }   # YES NO LINES
+off_the_list() { [[ $1 == 200 ]] && lacks "$2" "$3"; }      # STATUS CODE LIST
+csp_of() { on_server grep -i '^content-security-policy:' "$1" || true; }   # a saved header file
+embed_allows_frame() { [[ $1 == 200 ]] && grep -qF "frame-ancestors 'self'" <<<"$2"; }
+round_shape_ok() { # PAGE CODE DOMAIN NAME: the eight fields, the join link, the title, no name
+  python3 -I -c '
+import json, sys
+page = json.loads(sys.argv[1])
+keys = {"id", "title", "kind", "startsAt", "signupClosesAt", "players", "maxPlayers", "joinUrl"}
+assert page["version"] == 1 and page["rounds"], page
+for r in page["rounds"]:
+    assert set(r) == keys, r
+m = [r for r in page["rounds"] if r["id"] == sys.argv[2]][0]
+assert m["joinUrl"] == "https://" + sys.argv[3] + "/games/race/join/" + sys.argv[2], m
+assert m["title"].startswith("Rehearsal Cup — ") and m["kind"] == "Seasonal Race", m
+assert sys.argv[4] not in sys.argv[1]
+' "$@"
+}
 
 proofs() {
   # The test accounts. The website allows 5 registrations an hour from one address, so a retry on a
@@ -180,6 +205,32 @@ proofs() {
   ok "2d a guest cannot join it" test "$(ra race guest POST "/api/join/$code" '{"name":"Walk In"}' | status)" = 403
   acode=$(ra race $HUGO POST /api/registrations "{\"trackId\":\"$track\",\"capacity\":4,\"closesAt\":\"$(date -u -d '+2 hour' +%Y-%m-%dT%H:%M:%SZ)\",\"websiteAccess\":\"anyone\"}" | body | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
   ok "2e \"Anyone with the link\" accepts a guest's name" test "$(ra race guest POST "/api/join/$acode" '{"name":"Walk In"}' | status)" = 201
+
+  say "--- proof 7: open registrations on the website (WEBSITE-EXTRAS-1 7a)"
+  local closes mreg mcode ucode rounds accepted st chat_status
+  closes=$(date -u -d '+2 hour' +%Y-%m-%dT%H:%M:%SZ)
+  out=$(ra race $HUGO POST /api/registrations "{\"trackId\":\"$track\",\"capacity\":5,\"eventName\":\"Rehearsal Cup\",\"closesAt\":\"$closes\",\"showOnWebsite\":true}" | body)
+  mreg=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$out")
+  mcode=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])' <<<"$out")
+  ucode=$(ra race $HUGO POST /api/registrations "{\"trackId\":\"$track\",\"capacity\":5,\"closesAt\":\"$closes\"}" | body | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+  ra forget nobody
+  rounds=$(ra race nobody GET /api/public/open-rounds | body)
+  ok "7a the marked registration is in the race's list, read with no session through the website's proxy" grep -qF "\"$mcode\"" <<<"$rounds"
+  ok "7b ... the unmarked one is not" lacks "$ucode" "$rounds"
+  ok "7c ... exactly the website's eight fields, kind Seasonal Race, the join link on https://$DOMAIN, no player name" round_shape_ok "$rounds" "$mcode" "$DOMAIN" "$MIA"
+  accepted=$(ra open-rounds-check)
+  ok "7d the website's OWN checker (its openRoundsContract.js) accepts the marked round and not the unmarked" accepted_only "$mcode" "$ucode" "$accepted"
+  st=$(ra race $HUGO POST "/api/registrations/$mreg/website" '{"show":false}' | status)
+  ok "7e unticking takes it off the list" off_the_list "$st" "$mcode" "$(ra race nobody GET /api/public/open-rounds | body)"
+  not_driven "7f the website's own poll and its home and games page showing it: its guarded fetch takes public addresses only (its server/src/previews/safeFetch.js:59-63, ipPolicy.js:16) and this harness's server is 10.77.0.10 (its deploy/test/run.sh:87); 7a-7d read what that poll reads and judge it with the website's own checker"
+
+  say "--- proof 8: the website chat on the join page (WEBSITE-EXTRAS-1 7b)"
+  ra race $MIA GET "/join/$code" '' -D /root/join-headers.txt >/dev/null
+  ok "8a a signed-in member's join page: the race's CSP has frame-src 'self' and frame-ancestors 'none'" has_all "$(csp_of /root/join-headers.txt)" "frame-src 'self'" "frame-ancestors 'none'"
+  ok "8b the race's built page frames /embed/chat?room=race&theme=auto (in its bundle)" on_server docker exec racearena-app-1 sh -c 'grep -rqF "/embed/chat?room=race&theme=auto" "$RA_CLIENT_DIST"'
+  chat_status=$(ra page $MIA '/embed/chat?room=race&theme=auto' -D /root/chat-headers.txt | status)
+  ok "8c the website's embed answers the member ($chat_status) and lets the same site frame it (frame-ancestors 'self')" embed_allows_frame "$chat_status" "$(csp_of /root/chat-headers.txt)"
+  not_driven "8d a browser drawing the frame inside the join page and the chat showing the room to the member (no browser in this rehearsal; client tests JoinPage.website and WebsiteChat render it)"
 
   say "--- proof 5: the website cookie and forged headers"
   # What really arrives at the race's container: its own traffic, captured in its network namespace.

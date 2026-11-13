@@ -21,11 +21,19 @@
 // ── POLLING, NOT A NEW TRANSPORT ───────────────────────────────────────────────────────────────
 // The countdown ticks every second from this device's clock; the page asks the server again every
 // 10 s for places left and the state, and once more when the countdown reaches zero.
+//
+// ── WEBSITE MODE ONLY: THE WEBSITE CHAT (WEBSITE-EXTRAS-1 piece 7b, OWNER-5) ────────────────────
+// The website's chat room `race` below the page's own card (components/WebsiteChat — a "Chat"
+// button, centred under the card, that opens the chat as a side panel at the window's right edge —
+// the owner's decisions of 2026-11-13), in the same
+// column — after the form, so on a phone it never pushes the form down. Members and guests see what
+// the website's embed shows them. Standalone renders nothing for it.
 // ============================================================
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import LegalFooter from '../../components/LegalFooter/LegalFooter.jsx';
+import WebsiteChat from '../../components/WebsiteChat/WebsiteChat.jsx';
 import { fetchJoinInfo, joinRegistration } from '../../services/registrationApi.js';
 import { formatTimeLeft, msUntil } from '../../modules/registration/timeLeft.js';
 // NAME-LIMIT-1's one home: the field stops at the same length the server refuses beyond.
@@ -195,6 +203,7 @@ export default function JoinPage() {
           <p className={styles.muted}>{loadError.text}</p>
         )}
       </main>
+      <WebsiteChat className={styles.chatButton} />
       <LegalFooter />
     </div>
   );

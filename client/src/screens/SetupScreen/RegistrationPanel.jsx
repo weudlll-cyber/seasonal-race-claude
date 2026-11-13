@@ -28,11 +28,35 @@
 // ── LIVE BY POLLING ────────────────────────────────────────────────────────────────────────────
 // While a registration is shown and open, it is asked for again every 5 s (no new transport); the
 // countdown ticks every second from this device's clock, and the server's clock decides.
+//
+// ── WEBSITE MODE ONLY: "SHOW ON THE WEBSITE" (WEBSITE-EXTRAS-1 piece 7a, OWNER-4) ─────────────────
+// A checkbox on the form (ON by default — the owner's decision of 2026-11-13, the server's default
+// too) and on an open registration's detail; a marked open registration is listed in the website's
+// open sign-ups (server/src/website/openRounds.js). It is drawn exactly as the "Who may join"
+// choices: their `.durations` group (which carries their 0.85rem size) around their `.choice`
+// label, its explanation in the `.muted` hint below, as the place count's hint is. Standalone draws
+// neither and sends nothing new.
+//
+// ── WEBSITE MODE ONLY: THE WEBSITE CHAT (WEBSITE-EXTRAS-1 piece 7b, OWNER-5) ────────────────────
+// The website's chat (components/WebsiteChat, behind its "Chat" button, closed until clicked — the
+// owner's decision of 2026-11-13) below the list and below one registration's detail —
+// last, so it never pushes the controls down — but NOT while the full-screen QR stage is up: that
+// stage is shown to an audience. Standalone renders nothing for it.
+//
+// ── THE CONTROLS LOOK LIKE THE REST OF THE APP (the owner's look of 2026-11-13) ──────────────────
+// Every button on the list and the detail is one of the Setup screen's own: `.secondary` and
+// `.danger` compose its secondary button (`quickTestBtn`, the outline button beside Start Race),
+// `.primary` was already its red button; the date field is its `playerInput` (DeadlineField.jsx).
+// The form's track menu and event-name field are `.fieldInput`, the same `playerInput` (the
+// owner's request after his look at 076e5fc2, 2026-11-13). The full-screen QR stage keeps its white
+// page, so the code stays scannable; its buttons are `.stageButton`, the same `quickTestBtn`
+// drawn in that button's own hover colours, because its resting grey is too faint on white.
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QrCode from '../../components/QrCode/QrCode.jsx';
 import QrShareButtons from '../../components/QrCode/QrShareButtons.jsx';
+import WebsiteChat from '../../components/WebsiteChat/WebsiteChat.jsx';
 import {
   closeRegistration,
   createRegistration,
@@ -41,6 +65,7 @@ import {
   fetchRegistration,
   listRegistrations,
   removeRegistrationEntry,
+  setShowOnWebsite,
 } from '../../services/registrationApi.js';
 import {
   deadlineProblem,
@@ -175,6 +200,7 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
         onClose={() => act(() => closeRegistration(shown.id))}
         onExtend={(closesAt) => act(() => extendRegistration(shown.id, closesAt))}
         onRemove={(entryId) => act(() => removeRegistrationEntry(shown.id, entryId))}
+        onShowOnWebsite={(show) => act(() => setShowOnWebsite(shown.id, show))}
         onDelete={() =>
           act(async () => {
             await deleteRegistration(shown.id);
@@ -218,6 +244,7 @@ export default function RegistrationPanel({ tracks, raceDefaults, selectedTrackI
         </p>
       )}
       {!anyOpen && listBlock}
+      <WebsiteChat className={styles.chatButton} />
     </div>
   );
 }
@@ -230,6 +257,9 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
   const [eventName, setEventName] = useState('');
   // WEBSITE-EMBED-1 piece 4: who may join — asked ONLY in website mode, members by default.
   const [websiteAccess, setWebsiteAccess] = useState('members');
+  // WEBSITE-EXTRAS-1 piece 7a (OWNER-4): listed on the website while the box is ticked — asked
+  // ONLY in website mode, ON by default (the owner's decision of 2026-11-13).
+  const [showOnWebsite, setShowOnWebsiteChoice] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const track = tracks.find((t) => t.id === trackId) ?? null;
@@ -255,7 +285,7 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
         capacity,
         eventName: eventName.trim(),
         closesAt,
-        ...(SITE_MODE === 'website' ? { websiteAccess } : {}),
+        ...(SITE_MODE === 'website' ? { websiteAccess, showOnWebsite } : {}),
       });
     } finally {
       setBusy(false);
@@ -267,7 +297,11 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
       <h3 className={styles.subTitle}>Open a registration</h3>
       <label className={styles.field}>
         <span>Track</span>
-        <select value={trackId} onChange={(e) => setTrackId(e.target.value)}>
+        <select
+          className={styles.fieldInput}
+          value={trackId}
+          onChange={(e) => setTrackId(e.target.value)}
+        >
           {tracks.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -308,6 +342,7 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
         <span>Event name (optional)</span>
         <input
           type="text"
+          className={styles.fieldInput}
           maxLength={100}
           value={eventName}
           onChange={(e) => setEventName(e.target.value)}
@@ -333,6 +368,9 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
           ))}
         </fieldset>
       )}
+      {SITE_MODE === 'website' && (
+        <ShowOnWebsiteBox checked={showOnWebsite} onChange={setShowOnWebsiteChoice} />
+      )}
       <button
         className={styles.primary}
         type="submit"
@@ -341,6 +379,34 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
         Open registration
       </button>
     </form>
+  );
+}
+
+/**
+ * "Show on the website" (WEBSITE-EXTRAS-1 piece 7a, OWNER-4): the registration is listed in the
+ * website's open sign-ups (its home page and games page) while it is open. One box for the create
+ * form and the open registration's detail; the caller shows it only in website mode. Drawn as the
+ * "Who may join" choices are: their `.durations` group and `.choice` label (same font, size and
+ * spacing), the explanation in the `.muted` hint below.
+ */
+function ShowOnWebsiteBox({ checked, onChange }) {
+  return (
+    <>
+      <div className={styles.durations}>
+        <label className={styles.choice}>
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => onChange(e.target.checked)}
+            data-testid="registration-show-on-website"
+          />
+          Show on the website
+        </label>
+      </div>
+      <p className={styles.muted}>
+        {"The website's home page and games page list it while it is open."}
+      </p>
+    </>
   );
 }
 
@@ -389,7 +455,7 @@ function RegistrationList({ list, now, onShow }) {
               </div>
               <button
                 type="button"
-                className={styles.cardOpenButton}
+                className={`${styles.secondary} ${styles.cardOpenButton}`}
                 aria-label={`Open registration ${i + 1}: ${title}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -429,6 +495,7 @@ function RegistrationView({
   onClose,
   onExtend,
   onRemove,
+  onShowOnWebsite,
   onDelete,
   onUsePlayers,
 }) {
@@ -461,6 +528,7 @@ function RegistrationView({
           <div className={styles.row}>
             <button
               type="button"
+              className={styles.secondary}
               onClick={() => {
                 navigator.clipboard?.writeText?.(link);
                 setCopied(true);
@@ -473,8 +541,9 @@ function RegistrationView({
               eventName={r.eventName}
               trackName={r.trackName}
               className={styles.row}
+              buttonClassName={styles.secondary}
             />
-            <button type="button" onClick={() => setStage(true)}>
+            <button type="button" className={styles.secondary} onClick={() => setStage(true)}>
               Show QR full screen
             </button>
           </div>
@@ -493,6 +562,11 @@ function RegistrationView({
           <dd data-testid="registration-time-left">{formatTimeLeft(open ? timeLeft : 0)}</dd>
         </div>
       </dl>
+      {/* Piece 7a: changeable while open, and only for a registration opened in website mode
+          (the server names the setting only for those). */}
+      {SITE_MODE === 'website' && open && typeof r.showOnWebsite === 'boolean' && (
+        <ShowOnWebsiteBox checked={r.showOnWebsite} onChange={onShowOnWebsite} />
+      )}
 
       {error && (
         <p role="alert" className={styles.error} data-testid="registration-error">
@@ -525,21 +599,25 @@ function RegistrationView({
       {open ? (
         <>
           <div className={styles.row}>
-            <button type="button" onClick={onClose}>
+            <button type="button" className={styles.secondary} onClick={onClose}>
               Close now
             </button>
+          </div>
+          {/* The Extend buttons: one row, wrapping. */}
+          <div className={styles.row}>
             <span className={styles.muted}>Extend:</span>
             {EXTEND_PRESETS.map((p) => (
               <button
                 key={p.key}
                 type="button"
+                className={styles.secondary}
                 onClick={() => onExtend(new Date(Date.parse(r.closesAt) + p.ms).toISOString())}
               >
                 {p.label}
               </button>
             ))}
           </div>
-          <div className={styles.row}>
+          <div className={`${styles.row} ${styles.rowTop}`}>
             <DeadlineField
               label="Extend until"
               value={customExtend}
@@ -550,6 +628,7 @@ function RegistrationView({
             />
             <button
               type="button"
+              className={styles.secondary}
               disabled={extendProblem !== null}
               onClick={() => onExtend(new Date(msFromLocal(customExtend)).toISOString())}
             >
@@ -584,7 +663,12 @@ function RegistrationView({
         </button>
       </div>
 
-      {stage && <QrStage registration={r} link={link} onExit={exitStage} />}
+      {/* The chat is for the director's page only, never on the stage shown to an audience. */}
+      {stage ? (
+        <QrStage registration={r} link={link} onExit={exitStage} />
+      ) : (
+        <WebsiteChat className={styles.chatButton} />
+      )}
     </div>
   );
 }
@@ -633,8 +717,13 @@ function QrStage({ registration: r, link, onExit }) {
         eventName={r.eventName}
         trackName={r.trackName}
         className={styles.stageShare}
+        buttonClassName={styles.stageButton}
       />
-      <button type="button" className={styles.stageExit} onClick={onExit}>
+      <button
+        type="button"
+        className={`${styles.stageButton} ${styles.stageExit}`}
+        onClick={onExit}
+      >
         Close
       </button>
     </div>

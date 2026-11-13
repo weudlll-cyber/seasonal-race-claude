@@ -6,8 +6,12 @@
 //              and the <input type="range"> are shared; the display cell is
 //              passed as children so callers can preserve their own span
 //              styling verbatim. Extraction of a pattern that was inlined in
-//              BrandingProfiles (twice) and SurfaceClassManager (once).
+//              BrandingProfiles (twice) and SurfaceClassManager (once). The input is the Dev
+//              Screen's `.range`, not a browser-drawn slider (WEBSITE-EXTRAS-1 follow-up 4,
+//              2026-11-13); it still grows to fill the row.
 // ============================================================
+
+import s from '../DevScreen.module.css';
 
 export function RangeSlider({ min, max, step, value, onChange, ariaLabel, children }) {
   return (
@@ -20,6 +24,7 @@ export function RangeSlider({ min, max, step, value, onChange, ariaLabel, childr
         value={value}
         onChange={onChange}
         aria-label={ariaLabel}
+        className={s.range}
         style={{ flex: 1 }}
       />
       {children}

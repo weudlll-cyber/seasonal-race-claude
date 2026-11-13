@@ -6,7 +6,10 @@
 // Description: The join page in website mode (the server's runtime marker says so): a signed-in
 //              member sees "Join as <name>" and joins without typing; a guest on a members-only
 //              registration sees it read-only with a sign-in link that comes back to this page;
-//              a guest on "Anyone with the link" gets today's name form. Standalone is
+//              a guest on "Anyone with the link" gets today's name form. WEBSITE-EXTRAS-1 piece 7b:
+//              the website chat (room race) is below the page's card behind its "Chat" button,
+//              closed until clicked (the owner's decision of 2026-11-13), for a member and a
+//              guest alike, after the form. Standalone is
 //              JoinPage.test.jsx, unchanged.
 // ============================================================
 
@@ -103,5 +106,18 @@ describe('JoinPage in website mode', () => {
     await renderPage();
     expect(await screen.findByLabelText('Your name')).toBeTruthy();
     expect(screen.queryByRole('link', { name: /Seasonal Entertainment/ })).toBeNull();
+  });
+
+  it('★ piece 7b: the "Chat" button is below the card — for a guest too; the frame only after a click', async () => {
+    api.fetchJoinInfo.mockResolvedValue(info({ websiteAccess: 'anyone' }));
+    await renderPage();
+    const field = await screen.findByLabelText('Your name');
+    expect(screen.queryByTestId('website-chat')).toBeNull();
+    fireEvent.click(screen.getByTestId('website-chat-toggle'));
+    const frame = screen.getByTestId('website-chat');
+    expect(frame.getAttribute('src')).toBe('/embed/chat?room=race&theme=auto');
+    // Below the page's own content: the form comes first in the document.
+    expect(field.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(frame.closest('main')).toBeNull();
   });
 });

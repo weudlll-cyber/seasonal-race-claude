@@ -5,7 +5,8 @@
 // Description: Player registration on the server. Two halves:
 //                · the PUBLIC join link (`server/src/routes/join.js`) — read by the join page before
 //                  anyone signs in, so a 401 never redirects (`_skipAuthRedirect`);
-//                · the DIRECTOR's routes (`server/src/routes/registrations.js`) — signed in.
+//                · the DIRECTOR's routes (`server/src/routes/registrations.js`) — signed in;
+//                  in website mode also "Show on the website" (WEBSITE-EXTRAS-1 piece 7a).
 //              A refusal throws with the server's own sentence and its status (`apiCall`,
 //              services/apiClient.js).
 // ============================================================
@@ -58,8 +59,10 @@ export async function createRegistration({
   eventName,
   closesAt,
   websiteAccess,
+  showOnWebsite,
 }) {
-  // `websiteAccess` only in website mode (piece 4); without it the body is exactly the old one.
+  // `websiteAccess` and `showOnWebsite` only in website mode (pieces 4 and 7a); without them the
+  // body is exactly the old one.
   const res = await apiCall(REGISTRATIONS, {
     method: 'POST',
     ...json({
@@ -68,6 +71,7 @@ export async function createRegistration({
       eventName: eventName || null,
       closesAt,
       ...(websiteAccess ? { websiteAccess } : {}),
+      ...(typeof showOnWebsite === 'boolean' ? { showOnWebsite } : {}),
     }),
   });
   return res.json();
@@ -103,6 +107,15 @@ export async function extendRegistration(id, closesAt) {
   const res = await apiCall(`${REGISTRATIONS}/${encodeURIComponent(id)}/extend`, {
     method: 'POST',
     ...json({ closesAt }),
+  });
+  return res.json();
+}
+
+/** Website mode: "Show on the website" on or off, while it is open (piece 7a). */
+export async function setShowOnWebsite(id, show) {
+  const res = await apiCall(`${REGISTRATIONS}/${encodeURIComponent(id)}/website`, {
+    method: 'POST',
+    ...json({ show }),
   });
   return res.json();
 }

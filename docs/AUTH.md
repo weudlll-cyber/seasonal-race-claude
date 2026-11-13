@@ -245,7 +245,7 @@ entries admit nothing else.
 **Client — every screen except the two gates and the two legal pages.** `/login`, `/setup-admin`,
 `/legal-notice` and `/privacy` are open. Everything else
 is wrapped in `ProtectedRoute`: `/setup`, **`/race`**, `/results`, `/dev`, `/track-editor`,
-`/racer-editor`, and `/diagnose-verteilung` (admin only).
+`/racer-editor`, and `/diagnose-distribution` (admin only).
 
 > **`/race` IS BEHIND `ProtectedRoute`, and this has bitten tooling twice.** Any harness, screenshot
 > script or e2e spec that navigates straight to `/race` without a session lands on `/login` and
@@ -418,6 +418,29 @@ as *Deleted player* on the result screen and in the race history. A race whose p
 registration carries, BESIDE the race, which racer was which website member
 (`websiteRacers`); the server keeps it in its own table and never in the stored race, which stays
 byte-identical, and answers `GET /api/races/deleted-racers` from the account feed's deleted list.
+
+**Open registrations on the website** (WEBSITE-EXTRAS-1 piece 7a, the owner's decision of 2026-11-11,
+OWNER-4; `server/src/website/openRounds.js`). A director may tick **Show on the website** when opening
+a registration (on by default, the owner's decision of 2026-11-13) or on an open one; while it is open the race lists it at
+`GET <base>/api/public/open-rounds` in the website's open-rounds contract (the website's
+`docs/OPEN-ROUNDS.md`), and the website shows it on its home page and games page. That route is
+**public and reads no identity at all** — the website's server asks it once a minute, through its
+own proxy, and an admin enters its address once, Admin → Games → "Sign-up status URL"
+(`https://<site>/games/race/api/public/open-rounds`). It names a registration only by its public
+code, the event and track, the counts, the deadline and the join link: never a player, an entry,
+the team or who opened it ([API.md](API.md), *The website's open-rounds list*).
+
+**The website chat** (WEBSITE-EXTRAS-1 piece 7b, the owner's decision of 2026-11-11, OWNER-5;
+`client/src/components/WebsiteChat/WebsiteChat.jsx`). In website mode the join page and the director's
+registrations (the list and one registration's detail) carry a **Chat** button (the owner's decision
+of 2026-11-13, a trial) that frames, only once clicked, the website's own chat page,
+`/embed/chat?room=race&theme=auto` (the website's `docs/EMBED.md`), below their own content. It signs in
+with the **website's** session cookie, not the race's, so it shows a member the room and a guest what the
+website shows a guest; the race reads nothing from it and sends it nothing. It is **never** on the race
+screen, the start ceremony, the result screen or the full-screen QR stage — nothing an audience sees.
+The race's Content-Security-Policy gains `frame-src 'self'` in website mode only (`server/src/csp.js`;
+the race is on the website's origin, so that is exactly the chat); `frame-ancestors 'none'` stays, and
+standalone's policy is unchanged byte for byte.
 The stored name, the coat, the colours and a replay are unchanged; the race screen of a repeat
 still draws the stored names (the sheet says why). Details: API.md, *Races*.
 

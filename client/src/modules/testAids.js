@@ -11,7 +11,7 @@
 // are not shown or not active, whatever a browser has stored: the build, settings and race-plan
 // badges (1–3), the hero rings (4), the M-key camera marker (7), Quick Test (9), every diagnostic and
 // log HUD and the gap re-roll marker (13–25, forced off here and locked in the Dev Screen),
-// `?constSpeed=1` (26), `/diagnose-verteilung` (27) and the console-only probes. While ON, everything
+// `?constSpeed=1` (26), `/diagnose-distribution` (27) and the console-only probes. While ON, everything
 // behaves exactly as it did before the switch existed.
 //
 // ── OFF IS THE ANSWER TO EVERY DOUBT ────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ export const TEST_AID_DYNAMICS_KEYS = Object.freeze(['gapRerollDevMarker']);
 
 /**
  * `unknown` until the server has answered for this sign-in; `on` or `off` after. Every gate treats
- * `unknown` as OFF. Only a page that a test aid IS — `/diagnose-verteilung` — waits for the answer
+ * `unknown` as OFF. Only a page that a test aid IS — `/diagnose-distribution` — waits for the answer
  * rather than turning an admin away while it is on its way.
  * @type {'unknown' | 'off' | 'on'}
  */
