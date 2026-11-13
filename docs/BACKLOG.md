@@ -25,17 +25,6 @@ considered separately, and that would not be true.
 
 ---
 
-## The Browser gate's pinned runner (2026-11-12)
-
-- [ ] **Unpin ubuntu-24.04 in browser-gate.yml once Playwright supports ubuntu 26.04.** On
-      2026-11-12 `ubuntu-latest` became ubuntu-26.04 and the gate's install step failed: "Playwright
-      does not support chromium on ubuntu26.04-x64" (Playwright 1.59.1) — the scheduled run on
-      691f7429 and the push of f247dafb. `fix/ci-2026-11-12` pinned the job to `ubuntu-24.04`;
-      Playwright was not upgraded there. `ci.yml` installs no browser and stays on `ubuntu-latest`.
-
-      **verify:** a Playwright release that lists ubuntu 26.04; then the gate run by hand with
-      `runs-on: ubuntu-latest` must pass.
-
 ## NEEDS HIS WORD — decide these first
 
 **ONE section is entirely his and leads PART ONE** — HOW MUCH ACTION, immediately below,
@@ -1923,6 +1912,17 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **Unpin ubuntu-24.04 in browser-gate.yml once Playwright supports ubuntu 26.04 — CLOSED
+      2026-11-13, merged to `master`** (branch `fix/playwright-ubuntu-26`, the owner's merge approval
+      of 2026-11-13). On 2026-11-12 `ubuntu-latest` became ubuntu-26.04 and the gate's install step
+      failed: "Playwright does not support chromium on ubuntu26.04-x64" (Playwright 1.59.1) — the
+      scheduled run on 691f7429 and the push of f247dafb; `fix/ci-2026-11-12` pinned the job to
+      `ubuntu-24.04`. **What closed it:** Playwright 1.61.0's release notes say "Playwright now
+      supports Ubuntu 26.04"; the client moved to Playwright **1.65.0** (only `@playwright/test`,
+      `playwright` and `playwright-core` moved in the lockfile) and `runs-on` is `ubuntu-latest`
+      again. The gate dispatched on the branch ran on `Image: ubuntu-26.04` and passed, 127 of 127
+      (run 43466631108). `ci.yml` installs no browser and was never pinned.
 
 - [x] ★ **WEBSITE-EMBED-1 7a and 7b — CLOSED 2026-11-12, MERGED to `master` 2026-11-13**
       (WEBSITE-EXTRAS-1, branch `feat/website-extras`, merged with a merge commit by the owner's
