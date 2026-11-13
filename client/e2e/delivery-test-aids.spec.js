@@ -96,7 +96,7 @@ test('a fresh installation shows no test aid; an admin turns them on and they ar
   await page.getByRole('tab', { name: 'Settings' }).click();
   await expect(page.getByTestId('race-seed-input'), 'item 11 stays for an admin').toBeVisible();
 
-  await page.goto('/diagnose-verteilung');
+  await page.goto('/diagnose-distribution');
   await expect(page, 'item 27').toHaveURL(/\/setup/);
 
   const offRace = await startRace(page);
@@ -121,9 +121,9 @@ test('a fresh installation shows no test aid; an admin turns them on and they ar
   await page.goto('/setup');
   await expect(page.getByRole('button', { name: /Quick Test/ }), 'item 9').toBeVisible();
 
-  await page.goto('/diagnose-verteilung');
+  await page.goto('/diagnose-distribution');
   await page.waitForTimeout(500);
-  await expect(page, 'item 27').toHaveURL(/\/diagnose-verteilung/);
+  await expect(page, 'item 27').toHaveURL(/\/diagnose-distribution/);
 
   await page.evaluate(() => (window.__raTexts.length = 0));
   const onRace = await startRace(page);

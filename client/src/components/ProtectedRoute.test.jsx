@@ -158,11 +158,11 @@ describe('ProtectedRoute — security invariants', () => {
     expect(screen.queryByText('CONTENT')).toBeNull();
   });
 
-  it('/diagnose-verteilung equivalent (requiredRole=admin) does NOT render in offline-hint → /login', () => {
+  it('/diagnose-distribution equivalent (requiredRole=admin) does NOT render in offline-hint → /login', () => {
     mockAuthValue.authState = 'offline-hint';
     mockAuthValue.offlineUser = { name: 'Alice', role: 'admin' };
     mockAuthValue.user = null;
-    renderProtected({ requiredRole: 'admin' }); // models /diagnose-verteilung
+    renderProtected({ requiredRole: 'admin' }); // models /diagnose-distribution
     expect(screen.getByText('LOGIN')).toBeTruthy();
     expect(screen.queryByText('CONTENT')).toBeNull();
   });

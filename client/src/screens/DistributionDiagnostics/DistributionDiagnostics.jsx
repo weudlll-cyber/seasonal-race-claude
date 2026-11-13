@@ -2,7 +2,7 @@
 // File:        DistributionDiagnostics.jsx
 // Path:        client/src/screens/DistributionDiagnostics/DistributionDiagnostics.jsx
 // Project:     RaceArena
-// Description: Hidden diagnostic route /diagnose-verteilung.
+// Description: Hidden diagnostic route /diagnose-distribution.
 //              Runs 50 headless race simulations and reports the empirical
 //              distribution of "racers side by side" after 4 seconds RACING time.
 //              Part of Phase-1 inventory measurement (feature/priority-system).
@@ -252,7 +252,7 @@ export default function DistributionDiagnostics() {
         Empirical Distribution Measurement
       </h1>
       <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '2rem' }}>
-        /diagnose-verteilung · {N_RACERS} racers · {selectedTrack?.name ?? '—'} · {N_RUNS} races ×{' '}
+        /diagnose-distribution · {N_RACERS} racers · {selectedTrack?.name ?? '—'} · {N_RUNS} races ×{' '}
         {runtimeSeconds}s RACING time
       </p>
 

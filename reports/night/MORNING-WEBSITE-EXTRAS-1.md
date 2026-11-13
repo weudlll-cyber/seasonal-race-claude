@@ -1,6 +1,7 @@
 # MORNING-WEBSITE-EXTRAS-1 — open registrations on the website (7a) and the website chat (7b)
 
-**Branch:** `feat/website-extras`, from master `dcc9a250` (2026-11-12). **Nothing is merged.**
+**Branch:** `feat/website-extras`, from master `dcc9a250` (2026-11-12). The owner approved the merge
+on 2026-11-13 after his look at `e4ca907e`, with two cleanups first (below).
 **What the owner decided (2026-11-11):** OWNER-4: open race registrations appear on the website's
 home and games page, for registrations the director marks "show on the website". OWNER-5: the
 website chat appears on the join page and the director's registration list, NOT on the race screen.
@@ -16,6 +17,40 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 | 7b — the website chat (OWNER-5) | **done** — `1feefcce`, pushed |
 | the stand-in's open-rounds page and chat placeholder (the owner's look) | **done** — see below |
 | real-website check (nginx) | **done** — see below; proofs 7 and 8 pass, two NOT DRIVEN |
+
+## The two cleanups before the merge (the owner's decision of 2026-11-13)
+
+**a) The five components imported nowhere are removed** (`a624a1e6`): `components/Button` (18
+lines), `ColorPicker` (37), `InputField` (31), `Modal` (27), `LogoUploader` (47), 160 lines, one
+`index.js` each, with no test or stylesheet of their own. Each file said "H-03 branding placeholder
+— intentional stub … Keep (not dead code)"; the owner's decision today overrides that. Proven unused
+first by an uncapped search of the whole tree (client, server, scripts, e2e, docs): no static,
+dynamic (`import()`), `require` or barrel import, no `import.meta.glob` over `components/`, no
+Dockerfile or config naming them. Their BEM classes had no stylesheet; ResultScreen's own
+`btn btn--primary` is its own CSS and unrelated. `docs/ARCHITECTURE.md`'s tree and the branding
+proposal (`reports/proposals/branding-concept.md` §6, which planned to wire them in) say they were
+removed; the audit reports that name them are records and stay as written.
+
+**b) The diagnostics route is `/diagnose-distribution`**, no alias for the old path. Renamed in
+the router (`App.jsx`, its comment that the German URL was kept on purpose now says why it moved),
+the screen's header and on-screen caption, `testAids.js`, the route and ProtectedRoute tests, the
+e2e spec, and `docs/ARCHITECTURE.md`, `AUTH.md`, `BACKLOG.md`, `DEPLOYMENT.md`. The server and
+scripts never named it. `docs/archive/` and `reports/` keep the old path as records. The
+component and file names were already English (AUDIT-1 renamed `DiagnoseVerteilung`).
+- New tests in `testAidsRoute.test.jsx`: the old path with the switch ON reaches no page; no file
+  under client, server or scripts links the old path as a quoted, back-ticked or regex string
+  (`git grep`; prose may mention it).
+- Sabotage: the e2e spec's first `goto` back on the old path → that test red, naming the spec;
+  restored.
+
+**The search for other German** (client and server, file and folder names, routes, strings,
+camelCase identifiers): no German route, file or folder name, and no German identifier. German
+prose that is left, all already allowed by `scripts/check-language-closed.mjs`: the
+grandfathered owner quotations (`defaults.js`, `zoomUnit.js`, `framingRule.js` and its test);
+`client/e2e/vre-2-ux-verification.spec.js:5`, a German file description; and
+`client/scripts/sweep-bufferPct-driver.mjs`, German summary strings in a one-off sweep driver.
+Outside client and server the guard also allows `scripts/sim/observers/report.mjs` and
+`.claude/skills/dev-start/SKILL.md`. None is a route or a file name, so none is changed here.
 
 ## Follow-up 4: no browser-drawn control left (the owner's decision of 2026-11-13)
 
@@ -71,7 +106,8 @@ not to be drawn are listed after the table.
   `hidden`; each is opened by a styled button, so nothing of them is drawn.
 - **Never rendered (5):** `components/Button`, `ColorPicker`, `InputField`, `Modal` and
   `LogoUploader` are imported by no file. Their BEM classes (`btn`, `modal__close`, …) have no
-  stylesheet. They are dead code, not a drawn control; left for a cleanup of its own.
+  stylesheet. They are dead code, not a drawn control; left for a cleanup of its own — removed before the
+  merge, cleanup a.
 - **The race canvas:** no control is drawn on it. The race screen's DOM overlays (camera log, perf
   log) already carry inline looks.
 - **engine-reach:** none of the files touched or considered reaches the race engine, so none was
@@ -108,8 +144,8 @@ not to be drawn are listed after the table.
 **Hygiene** (lines before → after): `SetupScreen.jsx` 1999 → 1996, `SetupScreen.module.css` 724 → 743,
 `SeedRedeliveryNotice.jsx` 98 → 107, `SetupScreen.test.jsx` 753 → 790,
 `SeedRedeliveryNotice.test.jsx` 69 → 75. Removed: the branding menu's inline style. Moved out:
-nothing. Noticed but left: the diagnostics screen's route is `/diagnose-verteilung`, a German path
-(`App.jsx:150`); changing a URL is not styling.
+nothing. Noticed but left: the diagnostics screen's route was `/diagnose-verteilung`, a German path
+(`App.jsx:150`); changing a URL is not styling — renamed before the merge, cleanup b.
 
 ### Group 2 — the Dev Screen
 

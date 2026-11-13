@@ -245,7 +245,7 @@ entries admit nothing else.
 **Client — every screen except the two gates and the two legal pages.** `/login`, `/setup-admin`,
 `/legal-notice` and `/privacy` are open. Everything else
 is wrapped in `ProtectedRoute`: `/setup`, **`/race`**, `/results`, `/dev`, `/track-editor`,
-`/racer-editor`, and `/diagnose-verteilung` (admin only).
+`/racer-editor`, and `/diagnose-distribution` (admin only).
 
 > **`/race` IS BEHIND `ProtectedRoute`, and this has bitten tooling twice.** Any harness, screenshot
 > script or e2e spec that navigates straight to `/race` without a session lands on `/login` and

@@ -4989,7 +4989,7 @@ contract requires.
       - **One switch for the whole installation, stored on the server** (not per browser), flipped by
         admins only, **shipped OFF**.
       - **OFF hides:** items 1, 2, 3, **4 (the red and green hero rings — these are the "dots" of this
-        row)**, 7, **9 (Quick Test)**, 13–25, 26 (`?constSpeed`), 27 (`/diagnose-verteilung`) and the
+        row)**, 7, **9 (Quick Test)**, 13–25, 26 (`?constSpeed`), 27 (`/diagnose-distribution`) and the
         console-only probes. **While OFF, items 13–25 cannot be switched on in the Dev Screen either.**
       - **Admin-only regardless of the switch:** all of item 11 (the seed field, the copy row, the
         run-it-again line, the build-mismatch alert).
