@@ -48,13 +48,9 @@ seasonal-race-claude/
 │       │       ├── useViewport.js          # Zoom/pan viewport hook
 │       │       └── useTrackIO.js           # Server save/delete/background I/O hook
 │       ├── components/             # Reusable UI building blocks
-│       │   ├── Button/
-│       │   ├── Modal/
-│       │   ├── InputField/
-│       │   ├── ColorPicker/
 │       │   ├── EffectConfig/       # Add/remove/configure track effects (F13)
-│       │   ├── LogoUploader/
 │       │   └── PresetThumbnail/    # Rendered track preview card
+│       │   (Button, Modal, InputField, ColorPicker, LogoUploader — never imported — were REMOVED 2026-11-13, WEBSITE-EXTRAS-1)
 │       ├── modules/                # Domain logic, independent of React
 │       │   ├── camera/             # CameraDirector + diagnostics + timing
 │       │   │   ├── CameraDirector.js            # State machine: OVERVIEW/LEADER/BATTLE/COMEBACK/LEAD_CHANGE
