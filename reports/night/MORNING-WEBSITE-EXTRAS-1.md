@@ -43,13 +43,13 @@ Line numbers are at `72246385`.
 | 2 | Racer-type menu | `SetupScreen.jsx:1397` | Setup, Track tab | browser list | **styled**, group 1 |
 | 3–4 | Quick Test's racer and name-set menus | `SetupScreen.jsx:1787`, `:1835` | Setup, Quick Test (test aids) | see-through field, browser list | **styled**, group 1 |
 | 5 | "Dismiss" | `components/SeedRedeliveryNotice.jsx:93` | Setup, the redelivery banner | raw button | **styled**, group 1 |
-| 6–13 | Eight menus on `.select` | `RaceHistory.jsx:385`, `SurfaceClassManager.jsx:159`, `:469`, `TrackManager.jsx:498`, `UserManagementSection.jsx:281`, `:298`, `:412`, `:430` | Dev Screen | browser list | group 2 |
-| 14–16 | Three menus on `.input` | `CameraAdvancedSection.jsx:754`, `DynamicsTuningSection.jsx:821`, `:1384` | Dev Screen | browser list | group 2 |
-| 17 | Transition-grammar menu | `CameraAdvancedSection.jsx:434` | Dev Screen, camera | raw menu | group 2 |
-| 18 | State-overlay duration | `CameraAdvancedSection.jsx:2078` | Dev Screen, camera | raw number field | group 2 |
-| 19 | Camera slider rows | `CameraAdvancedSection.jsx:237` | Dev Screen, camera | raw range | group 2 |
-| 20 | Shared slider | `DevScreen/components/RangeSlider.jsx:15` | Dev Screen, branding and surface classes | raw range | group 2 |
-| 21–22 | "Export race config", "Refresh" | `ConfigExportSection.jsx:69`, `:82` | Dev Screen | raw buttons | group 2 |
+| 6–13 | Eight menus on `.select` | `RaceHistory.jsx:385`, `SurfaceClassManager.jsx:159`, `:469`, `TrackManager.jsx:498`, `UserManagementSection.jsx:281`, `:298`, `:412`, `:430` | Dev Screen | browser list | **styled**, group 2 |
+| 14–16 | Three menus on `.input` | `CameraAdvancedSection.jsx:754`, `DynamicsTuningSection.jsx:821`, `:1384` | Dev Screen | browser list | **styled**, group 2 |
+| 17 | Transition-grammar menu | `CameraAdvancedSection.jsx:434` | Dev Screen, camera | raw menu | **styled**, group 2 |
+| 18 | State-overlay duration | `CameraAdvancedSection.jsx:2078` | Dev Screen, camera | raw number field | **styled**, group 2 |
+| 19 | Camera slider rows | `CameraAdvancedSection.jsx:237` | Dev Screen, camera | raw range | **styled**, group 2 |
+| 20 | Shared slider | `DevScreen/components/RangeSlider.jsx:15` | Dev Screen, branding and surface classes | raw range | **styled**, group 2 |
+| 21–22 | "Export race config", "Refresh" | `ConfigExportSection.jsx:69`, `:82` | Dev Screen | raw buttons | **styled**, group 2 |
 | 23 | Lights style menu | `TrackEditorToolbar.jsx:167` | Track editor | raw menu | group 3 |
 | 24 | Lights speed | `TrackEditorToolbar.jsx:191` | Track editor | raw range | group 3 |
 | 25 | Load menu | `TrackEditorSaveBar.jsx:92` (`.loadSelect`) | Track editor | browser list | group 3 |
@@ -109,6 +109,44 @@ Line numbers are at `72246385`.
 `SeedRedeliveryNotice.test.jsx` 69 → 75. Removed: the branding menu's inline style. Moved out:
 nothing. Noticed but left: the diagnostics screen's route is `/diagnose-verteilung`, a German path
 (`App.jsx:150`); changing a URL is not styling.
+
+### Group 2 — the Dev Screen
+
+**Classes reused** (`DevScreen.module.css`, the Dev Screen's own):
+- **`.select` and `.input` gain `color-scheme: dark`**, the date field's own property. That is the
+  whole fix for the eleven menus that already wore them (rows 6–16): the fields were styled, their
+  arrow and opened list were the browser's.
+- The transition menu is **`.select`**, at its own width (`width: auto`, as it sits in a row); its
+  inline padding is gone, so it is the height of the Dev Screen's other menus.
+- The overlay duration is **`.input`**, keeping its `5rem` width.
+- The sliders are a new name for an existing look: **`.range` = `slider`** from
+  `sections/RacerEditModal.module.css` (the Dev Screen's racer modal: `accent-color:
+  var(--color-primary)`), by `composes`, with `flex: none` so a row that sizes it keeps that size.
+  The camera rows keep their `8rem`; the shared `RangeSlider` keeps `flex: 1` inline.
+- "Export race config" is **`.btn .btnSecondary`** and "refresh" **`.btn .btnGhost`**; their inline
+  paddings are gone.
+
+**Tests:** the Dev Screen folder, 33 files, 388 green.
+- New `devControls.styled.test.jsx`: the export's buttons carry `.btn` and their variants, with no
+  button there without a class; the shared slider carries `.range` and still fills its row; the
+  `.select` and `.input` rules say `color-scheme: dark`.
+- New in `CameraAdvancedSection.test.jsx`: a slider, the transition menu and the overlay duration
+  carry `.range`, `.select` and `.input`; a sweep finds no slider, menu, number or text field in the
+  section without an app style.
+
+**Sabotage, red and then restored:**
+
+| # | Mutation | What went red |
+| --- | --- | --- |
+| D | the transition menu without `.select` | the camera section's new test |
+| E | `.select` without `color-scheme: dark` | the stylesheet test |
+
+**Hygiene** (lines before → after): `DevScreen.module.css` 776 → 789, `RangeSlider.jsx` 28 → 33,
+`ConfigExportSection.jsx` 127 → 130, `CameraAdvancedSection.jsx` 2147 → 2153,
+`CameraAdvancedSection.test.jsx` 127 → 151, `devControls.styled.test.jsx` new, 56. Removed: the
+inline paddings of the two export buttons and of the transition menu. Moved out: nothing. Noticed
+but left: `.textarea` has no `color-scheme`; it has no arrow or list, only its scroll bar would
+change.
 
 ## Follow-up 3 after the owner's approval of `076e5fc2` (2026-11-13)
 
