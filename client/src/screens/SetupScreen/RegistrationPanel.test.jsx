@@ -12,7 +12,9 @@
 //              draws and sends no "Show on the website" (WEBSITE-EXTRAS-1 piece 7a). Every button on
 //              the list and the detail is one of the Setup screen's own (the secondary
 //              `quickTestBtn`; Delete with the panel's `.danger`), and the date field its
-//              `playerInput` — the owner's look of 2026-11-13.
+//              `playerInput` — the owner's look of 2026-11-13. After his look at 076e5fc2 the same
+//              day: the form's track menu and event-name field are `playerInput` too, and the QR
+//              stage's three buttons `quickTestBtn` (`.stageButton`).
 // ============================================================
 
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
@@ -112,6 +114,12 @@ describe('opening a registration', () => {
     api.createRegistration.mockResolvedValue(registration({ entries: [], taken: 0 }));
     renderPanel({ raceDefaults: { maxPlayersClosed: 12 } });
     fireEvent.click(screen.getByLabelText('1 hour'));
+    // The track menu and the event-name field are the Setup screen's input, as the date field is.
+    for (const label of ['Track', 'Event name (optional)']) {
+      expect(screen.getByLabelText(label).classList.contains(setupStyles.playerInput), label).toBe(
+        true
+      );
+    }
     fireEvent.change(screen.getByLabelText('Event name (optional)'), {
       target: { value: ' Friday cup ' },
     });
@@ -254,6 +262,13 @@ describe('one registration', () => {
     expect(within(stage).getByText('Friday cup')).toBeTruthy();
     expect(within(stage).getByRole('button', { name: 'Copy QR code' })).toBeTruthy();
     expect(within(stage).getByRole('button', { name: 'Download QR' })).toBeTruthy();
+    // Its three buttons are the Setup screen's secondary button, drawn for the white page.
+    for (const name of ['Copy QR code', 'Download QR', 'Close']) {
+      const button = within(stage).getByRole('button', { name });
+      for (const cls of panelStyles.stageButton.split(' '))
+        expect(button.classList.contains(cls), name).toBe(true);
+      expect(button.classList.contains(setupStyles.quickTestBtn), name).toBe(true);
+    }
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByTestId('qr-stage')).toBeNull();
   });

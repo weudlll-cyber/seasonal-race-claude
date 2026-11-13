@@ -47,7 +47,10 @@
 // Every button on the list and the detail is one of the Setup screen's own: `.secondary` and
 // `.danger` compose its secondary button (`quickTestBtn`, the outline button beside Start Race),
 // `.primary` was already its red button; the date field is its `playerInput` (DeadlineField.jsx).
-// The full-screen QR stage keeps its own white look (it is drawn for a room, not for this screen).
+// The form's track menu and event-name field are `.fieldInput`, the same `playerInput` (the
+// owner's request after his look at 076e5fc2, 2026-11-13). The full-screen QR stage keeps its white
+// page, so the code stays scannable; its buttons are `.stageButton`, the same `quickTestBtn`
+// drawn in that button's own hover colours, because its resting grey is too faint on white.
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -294,7 +297,11 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
       <h3 className={styles.subTitle}>Open a registration</h3>
       <label className={styles.field}>
         <span>Track</span>
-        <select value={trackId} onChange={(e) => setTrackId(e.target.value)}>
+        <select
+          className={styles.fieldInput}
+          value={trackId}
+          onChange={(e) => setTrackId(e.target.value)}
+        >
           {tracks.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -335,6 +342,7 @@ function OpenForm({ tracks, raceDefaults, selectedTrackId, now, onOpen }) {
         <span>Event name (optional)</span>
         <input
           type="text"
+          className={styles.fieldInput}
           maxLength={100}
           value={eventName}
           onChange={(e) => setEventName(e.target.value)}
@@ -709,8 +717,13 @@ function QrStage({ registration: r, link, onExit }) {
         eventName={r.eventName}
         trackName={r.trackName}
         className={styles.stageShare}
+        buttonClassName={styles.stageButton}
       />
-      <button type="button" className={styles.stageExit} onClick={onExit}>
+      <button
+        type="button"
+        className={`${styles.stageButton} ${styles.stageExit}`}
+        onClick={onExit}
+      >
         Close
       </button>
     </div>

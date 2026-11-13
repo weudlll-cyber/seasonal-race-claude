@@ -17,6 +17,41 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 | the stand-in's open-rounds page and chat placeholder (the owner's look) | **done** — see below |
 | real-website check (nginx) | **done** — see below; proofs 7 and 8 pass, two NOT DRIVEN |
 
+## Follow-up 3 after the owner's approval of `076e5fc2` (2026-11-13)
+
+**The owner, 2026-11-13:** the look of `076e5fc2` is approved. He asked that the two raw spots
+noted under follow-up 2 ("noticed but left") be styled too, before the merge. A visual change only,
+in both modes; he looks before anything is merged.
+
+**The classes reused** (`SetupScreen.module.css`, by CSS-module `composes`):
+
+| Spot | Class | Notes |
+| --- | --- | --- |
+| The form's track menu and event-name field | `.fieldInput` = `playerInput` | the date field's input; same padding, font and border, so the same height. The date field's own `color-scheme: dark` keeps the menu's arrow visible and its list dark |
+| The full-screen QR stage's Close, Copy QR code and Download QR | `.stageButton` = `quickTestBtn` in its own hover colours | `quickTestBtn` at rest is `--color-muted` (#888) on the stage's white, 3.5:1, below 4.5:1. The app has no dark-on-light variant, so the closest existing style is the same button as it looks under the pointer: `--color-surface` background, `--color-text`, the `#444` edge |
+
+No new colour or size. The stage's white page is unchanged, so the code stays scannable.
+
+**Tests:** `RegistrationPanel.test.jsx` and `RegistrationPanel.website.test.jsx` 29/29 green.
+- New: the track menu and the event-name field carry `playerInput`.
+- New: the stage's three buttons carry every name of `.stageButton` and `quickTestBtn`.
+
+**Sabotage, each red and then restored:**
+
+| # | Mutation | What went red |
+| --- | --- | --- |
+| G | the track menu without `.fieldInput` | the form test ("sends the track…") |
+| H | the stage's QR buttons without `buttonClassName` | the stage test |
+
+**engine-reach --check:** none of the 4 paths can reach the engine; no fingerprint.
+**OPERATOR-GUIDE:** unchanged; it names these controls but not how they look.
+
+**Hygiene** (lines before → after): `RegistrationPanel.jsx` 718 → 731,
+`RegistrationPanel.module.css` 353 → 374, `RegistrationPanel.test.jsx` 416 → 431.
+Removed: nothing was made dead (`.stageExit` still places the Close). Moved out: nothing.
+Noticed but left: the app's other raw `<select>`s (Dev Screen, Setup screen's branding menu) are
+outside this panel.
+
 ## Follow-up 2 after the owner's look at `fb276fc7` (2026-11-13)
 
 **What the owner saw, 2026-11-13:** the "Chat" button was an unstyled browser button in an empty

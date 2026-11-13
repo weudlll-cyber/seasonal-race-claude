@@ -8,6 +8,9 @@
                 look of 2026-11-13): `.secondary` and `.danger` compose its secondary button
                 (`quickTestBtn`, SetupScreen.module.css); no colour or size of their own beyond
                 the panel's existing ones (--color-primary, #1f0e10, the 0.5 disabled opacity).
+                The form's track menu and event-name field compose its `playerInput`
+                (`.fieldInput`); the QR stage's buttons compose `quickTestBtn` in that button's
+                own hover colours (`.stageButton`), readable on the stage's white page.
    ============================================================ */
 
 .panel {
@@ -93,6 +96,14 @@
   color: var(--color-primary);
   border-color: var(--color-primary);
   background: #1f0e10;
+}
+
+/* The form's track menu and event-name field: the Setup screen's input, as the date field is
+   (DeadlineField.jsx). The dark colour scheme, the date field's own, keeps the menu's arrow and its
+   list light-on-dark. */
+.fieldInput {
+  composes: playerInput from './SetupScreen.module.css';
+  color-scheme: dark;
 }
 
 /* A row whose first item carries a hint below it (the date field): the button stands level with
@@ -344,6 +355,16 @@
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* The stage's buttons: the Setup screen's secondary button on the white page. Its resting grey
+   (--color-muted on white, 3.5:1) is too faint there, so it is drawn in its own hover colours
+   (SetupScreen.module.css .quickTestBtn:hover): the dark surface, the light text, the #444 edge. */
+.stageButton {
+  composes: quickTestBtn from './SetupScreen.module.css';
+  background: var(--color-surface);
+  border-color: #444;
+  color: var(--color-text);
 }
 
 .stageExit {
