@@ -112,6 +112,9 @@ is.
 
 ### Changed
 
+- The automatic browser check runs on GitHub's current Ubuntu (26.04) again, with Playwright 1.65.0;
+  it had been held on Ubuntu 24.04 since 2026-11-12, when the older Playwright could not run its
+  browser there. Nothing in the game changes. *(on `master`, 2026-11-13)*
 - Every button, menu, slider and field in the app is drawn in the app's own dark look; none is left
   as the browser draws it. Menus open their list dark, with a visible arrow. Checkboxes, radio
   buttons, colour pickers and the inside of the browser's own pickers stay as the browser draws them.
