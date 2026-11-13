@@ -99,8 +99,10 @@ because nobody looked.**
 
 **VPS-INSTALL-1 (on `master` since 2026-11-11):**
 
-2. ★ **Copy the backups off the server** — daily backups stay on the same disk until they are copied
-   elsewhere; where to is the owner's choice.
+2. ★ **Copy the backups off the server** — to the owner's OneDrive (decided 2026-11-13). ★ **Built
+   2026-11-13 on `feat/going-online-prep`, unmerged:** `racearena backup-copy setup` copies every
+   backup there, encrypted, and keeps 14 days. Open: the OneDrive authorisation and a real copy, on the
+   first real run.
 3. ★ **SSH hardening, with the owner on the VPS** — guided since 2026-10-09: `sudo racearena harden-ssh`
    proves a key sign-in from a second session before switching passwords and root sign-in off.
 

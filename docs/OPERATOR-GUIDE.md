@@ -173,8 +173,15 @@ scp '<user>@<server>:/var/backups/racearena/racearena-backup-*' <local folder>/
 ```
 
 Then, in the folder that holds both files: `sha256sum -c racearena-backup-<UTC time>.tar.sha256`
-prints `OK` when the copy is intact. Neither path ships an automatic off-server copy; on the VPS
-install it is an open item ([BACKLOG.md](BACKLOG.md) PART ONE), not a feature.
+prints `OK` when the copy is intact. The Node and Docker paths ship no automatic off-server copy.
+
+**The VPS install has one** (since 2026-11-13): `sudo racearena backup-copy setup`, run once on the
+server, copies every backup from then on to a OneDrive, encrypted, and keeps 14 days there. Its
+encryption password is shown once, on your terminal; store it safely, because without it the copies
+cannot be opened. `racearena backup-copy status` shows the newest copy and its age, and fails once that
+copy is more than 2 days old. The steps, and how to get a copy back on a new server
+(`setup --existing`, `fetch`, `restore`): [VPS-INSTALL.md](VPS-INSTALL.md), *The copy off the server
+— on the first run*.
 
 ### Restore
 

@@ -15,6 +15,13 @@ is.
 
 ### Added
 
+- **The backups copied off the server, encrypted (VPS install).** `sudo racearena backup-copy setup`,
+  run once on the server, connects a OneDrive, makes an encryption password that is shown once on
+  your terminal, and from then on copies every backup there and keeps 14 days.
+  `racearena backup-copy status` shows the newest copy and its age, and `racearena status` fails when
+  it is more than 2 days old. Nothing changes until the setup is run. *(branch
+  `feat/going-online-prep`)*
+
 - **Website mode: the website's legal pages.** When RaceArena runs under the Seasonal Entertainment
   website, the "Legal notice" and "Privacy policy" links on the sign-in screen, the setup screen and
   the join page always show and open the website's own pages (`/info/imprint`, `/info/privacy`);

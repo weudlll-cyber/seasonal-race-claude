@@ -882,7 +882,30 @@ the rows below:
       run each time. On 2026-10-22, after player registration (master `6470e2e6`), with three new
       checks — a registration through Caddy, and back after the restore: 74 of 74 on the first run.
       What it cannot show is the copy itself to another machine.
-      **verify:** a backup archive exists somewhere other than the server, newer than 2 days.
+      ★ **2026-11-13 — THE COPY IS BUILT** (GOING-ONLINE-PREP-1 piece 3, branch
+      `feat/going-online-prep`, unmerged), for the owner's decision D4 that day: the copies go to his
+      OneDrive. `racearena backup-copy setup` (once, by the owner, on the server, in either mode)
+      does four things:
+      - installs rclone from the distribution's package repository;
+      - connects the OneDrive: he runs `rclone authorize "onedrive"` on his PC and pastes the token;
+      - adds an rclone **crypt** layer, whose password is generated, stored root-only (0600) and shown
+        **once** on his terminal, never in a log;
+      - writes a test copy and reads it back.
+
+      From then on `racearena backup` — the daily timer's command — copies each new archive and its
+      checksum there, and the copy keeps 14 days by the date in the name. `backup-copy status`,
+      `test` and `fetch` exist too, and `racearena status` fails once the newest copy is older than
+      2 days. Without the setup nothing changes.
+
+      Tested in a Debian 12 container (`deploy/test/backup-copy-check.sh`), with the real rclone and a
+      local directory standing in for the OneDrive: 39 of 39 — copied encrypted (not readable as a
+      tar), read back and restored, pruned, stale warned. Two sabotages went red where they should.
+      [VPS-INSTALL.md](VPS-INSTALL.md), *The copy off the server — on the first run*.
+
+      **Still open: the OneDrive authorisation itself and a real copy.** Both are the first real
+      run's (D6); that run cannot be done without his Microsoft account.
+      **verify:** `racearena backup-copy status` on the server names a copy on the OneDrive and does
+      not warn (a copy newer than 2 days).
 - [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
       deliberately does not change the SSH configuration: a mistake there locks the owner out of his
       own server. ★ **Since 2026-10-09 (AUDIT-1 piece E) it is GUIDED, not manual:**
