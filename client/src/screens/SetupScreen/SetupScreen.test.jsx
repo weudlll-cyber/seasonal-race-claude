@@ -4,7 +4,8 @@
 // Project:     RaceArena
 // Created:     2026-04-19
 // Description: Integration tests for the SetupScreen — guards on the
-//              Start Race button, tab navigation, and Quick Test autofill
+//              Start Race button, tab navigation, and Quick Test autofill; and that no menu
+//              or button on it is browser-drawn (WEBSITE-EXTRAS-1 follow-up 4, 2026-11-13)
 // ============================================================
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -16,6 +17,7 @@ import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 import { CACHE_KEY } from '../../modules/storage/trackLoader.js';
 import { forbidNetwork } from '../../test/mockServerTracks.js';
 import { _setTestAidsForTests } from '../../modules/testAids.js';
+import styles from './SetupScreen.module.css';
 
 // TEST-AIDS-1: these tests describe the setup screen an ADMIN sees with the test-aids switch ON —
 // the screen exactly as it was before the switch. The switch's own OFF/ON and role cases are in
@@ -749,5 +751,40 @@ describe('SetupScreen — a track whose geometry is MISSING is refused, not gues
     const btn = screen.getAllByRole('button').find((b) => b.textContent.includes('Quick Test'));
     expect(btn).toBeEnabled();
     expect(btn.getAttribute('title')).toMatch(/Auto-fill to \d+ test players/i);
+  });
+});
+
+describe('SetupScreen — no browser-drawn control (follow-up 4, 2026-11-13)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it("★ the branding menu is the screen's own input, and every menu is drawn dark", () => {
+    const tracks = SAMPLE_TRACKS.map((t, i) =>
+      i === 0 ? { ...t, geometryId: 'geom-controls', surfaceClasses: [] } : t
+    );
+    storageSet(CACHE_KEY, tracks);
+    seedGeometry('geom-controls', { closed: true });
+    storageSet(KEYS.BRANDING, [{ id: 'bp-c', name: 'Spring Brand' }]);
+    renderSetupScreen();
+    const branding = screen.getByLabelText('Active branding profile');
+    // A composed class is several names (its own and playerInput's): every one is there.
+    for (const name of styles.brandingSelect.split(' '))
+      expect(branding.classList.contains(name)).toBe(true);
+    expect(branding.classList.contains(styles.playerInput)).toBe(true);
+    // The Track tab's racer-type menu, once a track is chosen.
+    fireEvent.click(screen.getAllByRole('tab')[1]);
+    fireEvent.click(
+      screen.getAllByRole('button').find((b) => b.textContent.includes('Dirt Oval') && !b.disabled)
+    );
+    for (const id of ['racer-type-select', 'quick-test-racer-select', 'quick-test-nameset-select'])
+      expect(screen.getByTestId(id).style.colorScheme, id).toBe('dark');
+    // The sweep: every menu and button here has an app style — a class, or an inline look.
+    for (const el of document.querySelectorAll('select, button')) {
+      const styled =
+        el.className !== '' || /background|border/.test(el.getAttribute('style') ?? '');
+      expect(styled, el.outerHTML.slice(0, 120)).toBe(true);
+    }
   });
 });

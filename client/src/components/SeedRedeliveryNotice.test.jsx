@@ -3,13 +3,15 @@
 // Path:        client/src/components/SeedRedeliveryNotice.test.jsx
 // Project:     RaceArena — SEED-REDELIVERY-1
 // Description: The banner's three obligations: say nothing when nothing is owed, NAME the record
-//              when something is, and clear only through the server.
+//              when something is, and clear only through the server. Its Dismiss is the Setup
+//              screen's `quickTestBtn` (WEBSITE-EXTRAS-1 follow-up 4, 2026-11-13).
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import SeedRedeliveryNotice from './SeedRedeliveryNotice.jsx';
 import { fetchSeedNotices, dismissSeedNotices } from '../services/seedNoticeApi.js';
+import setupStyles from '../screens/SetupScreen/SetupScreen.module.css';
 
 vi.mock('../services/seedNoticeApi.js', () => ({
   fetchSeedNotices: vi.fn(),
@@ -44,6 +46,10 @@ describe('SeedRedeliveryNotice', () => {
     dismissSeedNotices.mockResolvedValue(1);
     render(<SeedRedeliveryNotice />);
     await screen.findByText('Garden Path');
+    // Dismiss is the Setup screen's secondary button, not a browser-drawn one (2026-11-13).
+    expect(
+      screen.getByRole('button', { name: /dismiss/i }).classList.contains(setupStyles.quickTestBtn)
+    ).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
     await waitFor(() => expect(dismissSeedNotices).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.queryByText('Garden Path')).not.toBeInTheDocument());

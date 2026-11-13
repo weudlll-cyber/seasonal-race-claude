@@ -17,6 +17,99 @@ Everything is website mode only; standalone at "/" stays exactly as today, its C
 | the stand-in's open-rounds page and chat placeholder (the owner's look) | **done** — see below |
 | real-website check (nginx) | **done** — see below; proofs 7 and 8 pass, two NOT DRIVEN |
 
+## Follow-up 4: no browser-drawn control left (the owner's decision of 2026-11-13)
+
+**The owner, 2026-11-13:** style every remaining browser-drawn control in the app, starting with
+the ones noted under follow-up 3 (the Dev Screen's menus, the Setup screen's branding menu); further
+raw controls found may be fixed too. A visual change only, in both modes; he looks before anything
+is merged.
+
+**How the inventory was made.** A scanner read every `<button>`, `<select>`, `<input>` and
+`<textarea>` in `client/src` (402 tags, tests excluded, uncapped). For each it resolved the
+class against the stylesheet the file imports, and kept the ones with neither a class that sets a
+background, border, `appearance`, `accent-color` or `composes`, nor an inline look. Each hit was
+then read by hand. The app has no global control style (`styles/main.css` resets margins only), so
+an unstyled control is drawn by the browser. A dark menu with no `color-scheme: dark` counts as
+browser-drawn too: its arrow and its opened list are the browser's, white with the field's light
+text. That is what "the Dev Screen's menus" were: their fields are styled, their lists are not.
+
+Line numbers are at `72246385`.
+
+**Found: 31 controls.**
+
+| # | Control | file:line | Screen | What was wrong | State |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Branding menu | `SetupScreen.jsx:1226` | Setup, header on every tab | its own inline look, browser list | **styled**, group 1 |
+| 2 | Racer-type menu | `SetupScreen.jsx:1397` | Setup, Track tab | browser list | **styled**, group 1 |
+| 3–4 | Quick Test's racer and name-set menus | `SetupScreen.jsx:1787`, `:1835` | Setup, Quick Test (test aids) | see-through field, browser list | **styled**, group 1 |
+| 5 | "Dismiss" | `components/SeedRedeliveryNotice.jsx:93` | Setup, the redelivery banner | raw button | **styled**, group 1 |
+| 6–13 | Eight menus on `.select` | `RaceHistory.jsx:385`, `SurfaceClassManager.jsx:159`, `:469`, `TrackManager.jsx:498`, `UserManagementSection.jsx:281`, `:298`, `:412`, `:430` | Dev Screen | browser list | group 2 |
+| 14–16 | Three menus on `.input` | `CameraAdvancedSection.jsx:754`, `DynamicsTuningSection.jsx:821`, `:1384` | Dev Screen | browser list | group 2 |
+| 17 | Transition-grammar menu | `CameraAdvancedSection.jsx:434` | Dev Screen, camera | raw menu | group 2 |
+| 18 | State-overlay duration | `CameraAdvancedSection.jsx:2078` | Dev Screen, camera | raw number field | group 2 |
+| 19 | Camera slider rows | `CameraAdvancedSection.jsx:237` | Dev Screen, camera | raw range | group 2 |
+| 20 | Shared slider | `DevScreen/components/RangeSlider.jsx:15` | Dev Screen, branding and surface classes | raw range | group 2 |
+| 21–22 | "Export race config", "Refresh" | `ConfigExportSection.jsx:69`, `:82` | Dev Screen | raw buttons | group 2 |
+| 23 | Lights style menu | `TrackEditorToolbar.jsx:167` | Track editor | raw menu | group 3 |
+| 24 | Lights speed | `TrackEditorToolbar.jsx:191` | Track editor | raw range | group 3 |
+| 25 | Load menu | `TrackEditorSaveBar.jsx:92` (`.loadSelect`) | Track editor | browser list | group 3 |
+| 26–27 | Effect menus | `EffectConfig.jsx:110`, `:138` (`.select`) | Track editor | browser list | group 3 |
+| 28 | Racer-type menu | `RacerMetadataPanel.jsx:141` (`.select`) | Racer editor | browser list | group 3 |
+| 29–30 | Track and racer-type menus | `DistributionDiagnostics.jsx:263`, `:294` | Distribution diagnostics | browser list | group 3 |
+| 31 | Runtime slider | `DistributionDiagnostics.jsx:320` | Distribution diagnostics | raw range | group 3 |
+
+**Left, with the reason:**
+- **Checkboxes and radio buttons (37):** native by the owner's rule. The scanner cannot tell
+  whether one sits beside text in a font of its own, as "Show on the website" did, and I did not
+  read all 37 for it; none of the ones read for this follow-up does.
+- **Colour pickers (6):** `BrandingProfiles.jsx:423`, `:452`, `SurfaceClassManager.jsx:113`,
+  `TrackManager.jsx:372`, `RacerMetadataPanel.jsx:77`, `TrackEditorToolbar.jsx:143`. Their frames
+  already carry an inline app look; the picker inside is the browser's, by the rule.
+- **Hidden file inputs (4):** `BrandingProfiles.jsx:496`, `SystemSettings.jsx:127`,
+  `TrackEditorSaveBar.jsx:52`, `SpriteGeneratorPanel.jsx:302`. They are `display: none` or
+  `hidden`; each is opened by a styled button, so nothing of them is drawn.
+- **Never rendered (5):** `components/Button`, `ColorPicker`, `InputField`, `Modal` and
+  `LogoUploader` are imported by no file. Their BEM classes (`btn`, `modal__close`, …) have no
+  stylesheet. They are dead code, not a drawn control; left for a cleanup of its own.
+- **The race canvas:** no control is drawn on it. The race screen's DOM overlays (camera log, perf
+  log) already carry inline looks.
+- **engine-reach:** none of the files touched or considered reaches the race engine, so none was
+  left for that reason.
+- **Read and found styled** (false hits of the scanner): `LegalPagesSection.jsx` (its fields and
+  buttons take `s.textarea` and `s.btn` by spread props), `ErrorBoundary.jsx` (a style object),
+  `SubCard.jsx`'s Reset (a text button by design), a comment in `RangeSlider.jsx`.
+
+### Group 1 — the Setup screen
+
+**Classes reused** (`SetupScreen.module.css`):
+- The branding menu is **`.brandingSelect` = `playerInput`** by `composes`. It keeps the header's
+  compact size it had inline (0.8rem, 0.15rem 0.4rem), its `min-width: 0` (AUDIT-1 A8-03) and
+  `margin-left: auto`, and does not grow (`flex: initial`). Its border becomes `playerInput`'s
+  `#2a2a35` and its focus edge the screen's red.
+- The racer-type menu and Quick Test's two menus keep their inline look and add
+  **`colorScheme: 'dark'`**, the date field's own property.
+- "Dismiss" is **`quickTestBtn`**, by import. On the banner's dark amber tint its #888 text is about
+  4.9:1.
+
+**Tests:** the Setup screen folder and the notice, 19 files, 217 green.
+- New in `SetupScreen.test.jsx`: the branding menu carries `.brandingSelect` and `playerInput`;
+  the three menus are `colorScheme: dark`; a sweep finds no menu or button on the screen without a
+  class or an inline look.
+- New in `SeedRedeliveryNotice.test.jsx`: Dismiss carries `quickTestBtn`.
+
+**Sabotage, red and then restored:**
+
+| # | Mutation | What went red |
+| --- | --- | --- |
+| S | the branding menu without its class | the new Setup test |
+| N | Dismiss without `quickTestBtn` | the notice's dismiss test |
+
+**Hygiene** (lines before → after): `SetupScreen.jsx` 1999 → 1996, `SetupScreen.module.css` 724 → 743,
+`SeedRedeliveryNotice.jsx` 98 → 107, `SetupScreen.test.jsx` 753 → 790,
+`SeedRedeliveryNotice.test.jsx` 69 → 75. Removed: the branding menu's inline style. Moved out:
+nothing. Noticed but left: the diagnostics screen's route is `/diagnose-verteilung`, a German path
+(`App.jsx:150`); changing a URL is not styling.
+
 ## Follow-up 3 after the owner's approval of `076e5fc2` (2026-11-13)
 
 **The owner, 2026-11-13:** the look of `076e5fc2` is approved. He asked that the two raw spots

@@ -20,9 +20,13 @@
 //              It renders NOTHING when there is nothing pending, and it fails silent: a warning
 //              store that cannot be read must not put an error in front of an operator who is
 //              trying to start a race.
+//
+//              Its Dismiss is the Setup screen's secondary button (`quickTestBtn`), not a
+//              browser-drawn one (the owner's decision of 2026-11-13, WEBSITE-EXTRAS-1 follow-up 4).
 // ============================================================
 
 import { useEffect, useState } from 'react';
+import setupStyles from '../screens/SetupScreen/SetupScreen.module.css';
 import { fetchSeedNotices, dismissSeedNotices } from '../services/seedNoticeApi.js';
 
 export default function SeedRedeliveryNotice() {
@@ -90,7 +94,12 @@ export default function SeedRedeliveryNotice() {
           ))}
         </ul>
       </div>
-      <button type="button" onClick={handleDismiss} disabled={busy}>
+      <button
+        type="button"
+        className={setupStyles.quickTestBtn}
+        onClick={handleDismiss}
+        disabled={busy}
+      >
         {busy ? 'Dismissing…' : 'Dismiss'}
       </button>
     </div>
