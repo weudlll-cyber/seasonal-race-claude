@@ -428,8 +428,8 @@ summary() {
   Address:   https://$DOMAIN   (sign in as $ADMIN)
   Data:      $RA_DATA
   Backups:   $RA_BACKUPS — one every day, the last 14 days kept.
-             ★ Copy them OFF this server too (another machine, or storage you rent): a backup on
-               the same disk is lost with the disk.
+             ★ Copy them OFF this server too: a backup on the same disk is lost with the disk.
+               Once: sudo racearena backup-copy setup  (encrypted, to your OneDrive; VPS-INSTALL.md)
   Alerts:    the status check runs every 10 minutes; when it fails, alerts are $alerts.
 
   racearena status              is it healthy?
@@ -721,7 +721,8 @@ website_summary() {
   Team:      $TEAM
   Route:     $ROUTES_DIR/$ROUTE_FILE in the website's $PROXY (the race writes only this file)
   Data:      $RA_DATA
-  Backups:   $RA_BACKUPS — one every day, the last 14 days kept. Copy them OFF this server too.
+  Backups:   $RA_BACKUPS — one every day, the last 14 days kept. Copy them OFF this server too,
+             once: sudo racearena backup-copy setup  (encrypted, to your OneDrive; VPS-INSTALL.md)
 
   racearena status              is it healthy? (the mode and the route file too)
   racearena logs app            the app's log

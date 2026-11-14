@@ -15,6 +15,23 @@ is.
 
 ### Added
 
+- **The backups copied off the server, encrypted (VPS install).** `sudo racearena backup-copy setup`,
+  run once on the server, connects a OneDrive, makes an encryption password that is shown once on
+  your terminal, and from then on copies every backup there and keeps 14 days.
+  `racearena backup-copy status` shows the newest copy and its age, and `racearena status` fails when
+  it is more than 2 days old. Nothing changes until the setup is run. *(branch
+  `feat/going-online-prep`)*
+
+- **Website mode: the website's legal pages.** When RaceArena runs under the Seasonal Entertainment
+  website, the "Legal notice" and "Privacy policy" links on the sign-in screen, the setup screen and
+  the join page always show and open the website's own pages (`/info/imprint`, `/info/privacy`);
+  the race's own `/legal-notice` and `/privacy` send the visitor there. Standalone RaceArena keeps
+  its own legal pages exactly as before. *(branch `feat/going-online-prep`)*
+
+- **A security contact e-mail.** [SECURITY.md](SECURITY.md) names `stentertainmentadmin@gmail.com`
+  for reporting a security problem; GitHub's private vulnerability reporting stays the second
+  channel. *(branch `feat/going-online-prep`)*
+
 - **Website mode: open registrations on the website.** When RaceArena runs under the Seasonal
   Entertainment website, a registration that is open and marked *Show on the website* (a checkbox on
   the create form, on by default, and on an open registration) appears on the website's home and

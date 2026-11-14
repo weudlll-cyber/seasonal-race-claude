@@ -78,14 +78,47 @@ moved to another version only by `racearena update`.
 | `racearena rollback` | back to the version before the last update and to the backup taken just before it (the newer data is moved aside, not deleted) |
 | `racearena version` | what runs here, the version before it, and where things are |
 | `racearena harden-ssh --user <name>` | switches off SSH passwords and root sign-in, **proving first** that `<name>` (a non-root user who can use sudo) signs in with a key: it prints the plan and a one-time code; you sign in as `<name>` with your key in a **second** terminal and run `sudo racearena harden-ssh --confirm <code>` there. It refuses when that session did not use a key, and checks the result with `sshd -t` and the effective settings before reloading SSH. `--dry-run` stops after the checks |
+| `racearena backup-copy setup\|status\|test\|fetch` | **the copy off the server**, encrypted, to your OneDrive (below). Off until you run `setup` once; from then on every backup is copied and the copy keeps 14 days. `status` shows the newest copy and its age and fails when it is older than 2 days; `test` writes a small file there and reads it back; `fetch <archive>` brings one back for `racearena restore` |
 | `racearena uninstall [--purge-data]` | removes RaceArena: **a final backup first** (if it fails, nothing is removed), then you type the domain to confirm. The containers, the timers, the fail2ban jail, the program and the settings go; **the data and the backups are kept**. `--purge-data` deletes them too, after asking a second time |
 
 `racearena <command> --help` explains each one. Backups, restores, migrations and the status check
 are the project's own tools ([DEPLOYMENT.md](DEPLOYMENT.md)), run inside the app's container — the
-server needs no other software.
+server needs no other software, except rclone for the copy off the server, which its setup installs.
 
-★ **Copy the backups off the server too** — to another machine, or to storage you rent. A backup on the
-same disk is lost together with the disk.
+### The copy off the server — on the first run
+
+*(GOING-ONLINE-PREP-1, the owner's decision of 2026-11-13: the copies go to his OneDrive.)* A backup on
+the same disk is lost together with the disk, so once, after the install, run on the server:
+
+```sh
+sudo racearena backup-copy setup
+```
+
+It works the same in both modes. It goes through four steps:
+
+1. **rclone** is installed from the distribution's package repository, if it is not there yet.
+2. **Your OneDrive.** A server has no browser, so your PC does the sign-in: install rclone on the PC
+   ([rclone.org/downloads](https://rclone.org/downloads/)), run `rclone authorize "onedrive"`, sign in
+   to the Microsoft account in the browser that opens, and paste the token rclone prints (from `{` to
+   `}`) into the server's prompt. The token is not shown.
+3. **The encryption.** A new password is made and shown **once, on your terminal only**. ★ **Store it
+   safely before you go on** — a password manager, or on paper. **Without it the copies cannot be
+   opened, not even by you**, and losing the server loses the copy kept on it
+   (`/etc/racearena/backup-copy/crypt-password`, readable by root only). Type `saved` to go on. It is
+   never written to a log.
+4. **A test copy** is written to the OneDrive and read back.
+
+From then on every backup — the daily one, and the one before each update — is copied to the folder
+`RaceArena-backups` on the OneDrive, encrypted (names too), and the copy keeps the same 14 days. A copy
+that fails never stops the backup or an update; it is written to the system journal, and
+`racearena status` fails once the newest copy is more than 2 days old. `racearena backup-copy status`
+asks the OneDrive itself.
+
+**Getting a copy back** — on this server, or on a new one after losing this one: on a new install run
+`sudo racearena backup-copy setup --existing` and type the stored password instead of making a new
+one, then `sudo racearena backup-copy fetch --newest` (checked against its checksum) and
+`sudo racearena restore <archive>`. `racearena uninstall` removes the settings, and with them the
+server's copy of the password; the copies on the OneDrive stay.
 
 **Running the server day to day** — health, backups, updates, accounts, security, what to do when
 something goes wrong — is in the [operator guide](OPERATOR-GUIDE.md).

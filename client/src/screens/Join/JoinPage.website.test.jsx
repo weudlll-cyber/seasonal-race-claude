@@ -9,8 +9,8 @@
 //              a guest on "Anyone with the link" gets today's name form. WEBSITE-EXTRAS-1 piece 7b:
 //              the website chat (room race) is below the page's card behind its "Chat" button,
 //              closed until clicked (the owner's decision of 2026-11-13), for a member and a
-//              guest alike, after the form. Standalone is
-//              JoinPage.test.jsx, unchanged.
+//              guest alike, after the form. GOING-ONLINE-PREP-1 (D3): the footer's legal links
+//              open the website's pages. Standalone is JoinPage.test.jsx, unchanged.
 // ============================================================
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -99,6 +99,18 @@ describe('JoinPage in website mode', () => {
     );
     expect(screen.queryByLabelText('Your name')).toBeNull();
     expect(screen.getByText('Dirt Oval')).toBeTruthy();
+  });
+
+  it('its legal footer opens the website’s legal pages (GOING-ONLINE-PREP-1, D3)', async () => {
+    api.fetchJoinInfo.mockResolvedValue(info());
+    await renderPage();
+    await screen.findByText('Dirt Oval');
+    expect(screen.getByRole('link', { name: 'Legal notice' }).getAttribute('href')).toBe(
+      '/info/imprint'
+    );
+    expect(screen.getByRole('link', { name: 'Privacy policy' }).getAttribute('href')).toBe(
+      '/info/privacy'
+    );
   });
 
   it('a guest on "Anyone with the link" gets today\'s name form', async () => {

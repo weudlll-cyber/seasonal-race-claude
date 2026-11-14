@@ -4,8 +4,8 @@
 # Path:        deploy/racearena   (installed to /usr/local/bin/racearena by deploy/install.sh)
 # Project:     RaceArena — VPS-INSTALL-1 (2026-10-07)
 # Description: The one command an operator of a single-server install uses: status, logs, backup,
-#              restore, update, rollback, version, harden-ssh, uninstall. Every command explains
-#              itself with --help.
+#              restore, update, rollback, version, harden-ssh, backup-copy, uninstall. Every command
+#              explains itself with --help.
 #
 # ★ THE TOOLS ARE THE PROJECT'S OWN, run in a one-off container of the app image (the host has no
 #   Node): scripts/backup.mjs (backup and restore), scripts/migrate.mjs (migrations),
@@ -27,6 +27,10 @@
 #   /games/race, behind the website's proxy and its route file (deploy/website-route.sh). Its
 #   settings are $RA_ETC/website.conf (no secret) and the generated compose overlay
 #   $RA_ETC/compose.website.yml; every command below takes the mode from there, so an update keeps it.
+#
+# ★ THE COPY OFF THE SERVER (GOING-ONLINE-PREP-1 piece 3, 2026-11-13): `racearena backup-copy setup`
+#   switches on an encrypted copy of every backup to the owner's OneDrive (rclone). OFF until then,
+#   in both modes; its section below says how.
 # ============================================================
 set -euo pipefail
 
@@ -243,6 +247,22 @@ cmd_status() {
     say "── https"
     ra_admin health --https || rc=1
   fi
+  # The copy off the server (piece 3), only once it is set up. From this server's own record, not from
+  # the OneDrive: the 10-minute alert timer runs this, and a short network outage is not a stale copy
+  # (`racearena backup-copy status` reads the copy itself).
+  if copy_configured; then
+    say "── the copy off the server"
+    local last
+    last="$(state_get last-copy)"
+    if [[ -z "$last" ]]; then
+      say "WARNING: nothing has been copied off the server yet"; rc=1
+    else
+      say "last copied: $last — $(copy_age_hours "$last") hours old"
+      if [[ "$(archive_stamp "$last")" < "$(backup_cutoff "$COPY_STALE_DAYS")" ]]; then
+        say "WARNING: the newest copy off the server is older than $COPY_STALE_DAYS days"; rc=1
+      fi
+    fi
+  fi
   # The SSH jail (install.sh step 4b). Shown, not judged: a missing jail is a hardening gap, not an
   # unhealthy app, so it never fails the status check.
   if command -v fail2ban-client >/dev/null 2>&1; then
@@ -285,22 +305,289 @@ cmd_backup() {
   state_set last-backup "$name"
   prune_backups
   say "backup: $RA_BACKUPS/$name"
+  # Off the server too, once `racearena backup-copy setup` has run; nothing at all before that.
+  copy_after_backup "$name"
 }
+
+# The UTC stamp in an archive's name ("racearena-backup-<stamp>.tar"), and the stamp N days ago.
+# Shared by this disk's retention and the copy's (copy_archive), so both age a backup the same way.
+archive_stamp() {
+  local b
+  b="$(basename "$1" .tar)"
+  printf '%s\n' "${b#racearena-backup-}"
+}
+backup_cutoff() { date -u -d "-$1 days" +%Y%m%dT%H%M%SZ; }
 
 prune_backups() {
   # The age comes from the NAME, as scripts/status.mjs reads it, never from the file's mtime: a copy
   # resets the mtime and would make a stale backup look fresh (status.mjs header).
-  local cutoff f stamp
-  cutoff="$(date -u -d "-$BACKUP_KEEP_DAYS days" +%Y%m%dT%H%M%SZ)"
+  local cutoff f
+  cutoff="$(backup_cutoff "$BACKUP_KEEP_DAYS")"
   for f in "$RA_BACKUPS"/racearena-backup-*.tar; do
     [[ -e "$f" ]] || continue
-    stamp="$(basename "$f" .tar)"
-    stamp="${stamp#racearena-backup-}"
-    if [[ "$stamp" < "$cutoff" ]]; then
+    if [[ "$(archive_stamp "$f")" < "$cutoff" ]]; then
       rm -f -- "$f" "$f.sha256"
       say "removed (older than $BACKUP_KEEP_DAYS days): $(basename "$f")"
     fi
   done
+}
+
+# ── the copy OFF the server (GOING-ONLINE-PREP-1 piece 3, the owner's decision D4 of 2026-11-13) ──
+# After each backup the new archive and its .sha256 are copied to an rclone remote — the owner's
+# OneDrive — through an rclone CRYPT layer, so what is stored there is encrypted, names included,
+# and the copy keeps the same 14 days as this disk, by the date in the name (backup_cutoff).
+# It is OFF until `racearena backup-copy setup` has run: without $COPY_DIR/rclone.conf nothing below
+# runs, rclone is not even looked for, and every command behaves exactly as before.
+#
+# ★ THE CRYPT PASSWORD is generated at setup, stored root-only (0600) in $COPY_DIR/crypt-password,
+#   and shown ONCE — on the operator's own terminal (/dev/tty) only, never on standard output, so it
+#   reaches no log, no journal and no test output. Without it the copies cannot be opened. rclone
+#   holds it in rclone.conf in its reversible "obscured" form, so that file is 0600 too.
+# ★ RA_RCLONE names the rclone binary (default: rclone, which setup installs from the distribution's
+#   signed package repository). Like RA_HOME and the others it exists for a test; a server sets none.
+COPY_DIR="$RA_ETC/backup-copy"
+COPY_CONF="$COPY_DIR/rclone.conf"   # setup points this at a temporary file while it builds it
+COPY_REMOTE=racearena-copy          # the crypt remote in rclone.conf
+COPY_BASE_REMOTE=onedrive           # what it encrypts onto: the owner's OneDrive
+COPY_FOLDER=RaceArena-backups       # the folder on the OneDrive
+COPY_STALE_DAYS=2                   # status warns when the newest copy is older (BACKLOG's verify bar)
+
+copy_configured() { [[ -f "$COPY_DIR/rclone.conf" ]]; }
+rclone_run() { "${RA_RCLONE:-rclone}" --config "$COPY_CONF" "$@"; }
+
+# The archives in the copy, oldest first: rclone shows the decrypted names, and name order is date order.
+copy_list() { rclone_run lsf --files-only --include 'racearena-backup-*.tar' "$COPY_REMOTE:" | sort; }
+
+# Copy one archive and its checksum, then prune the copy the way prune_backups prunes this disk.
+copy_archive() {
+  local name="$1" f cutoff
+  rclone_run copyto "$RA_BACKUPS/$name" "$COPY_REMOTE:$name" || return 1
+  if [[ -f "$RA_BACKUPS/$name.sha256" ]]; then
+    rclone_run copyto "$RA_BACKUPS/$name.sha256" "$COPY_REMOTE:$name.sha256" || return 1
+  fi
+  state_set last-copy "$name"
+  say "copied off the server: $name"
+  cutoff="$(backup_cutoff "$BACKUP_KEEP_DAYS")"
+  while IFS= read -r f; do
+    [[ -n "$f" && "$(archive_stamp "$f")" < "$cutoff" ]] || continue
+    rclone_run deletefile "$COPY_REMOTE:$f" || return 1
+    rclone_run deletefile "$COPY_REMOTE:$f.sha256" 2>/dev/null || true
+    say "removed from the copy (older than $BACKUP_KEEP_DAYS days): $f"
+  done < <(copy_list)
+}
+
+# After a backup. A failed copy never fails the backup (an update or an uninstall must not stop on
+# the network): it is said, written to the journal, and `status` turns red after 2 days.
+copy_after_backup() {
+  copy_configured || return 0
+  copy_archive "$1" && return 0
+  say "WARNING: the backup was NOT copied off the server — see: racearena backup-copy status" >&2
+  if command -v logger >/dev/null 2>&1; then
+    logger -t racearena-alert -p user.err "the backup $1 was not copied off the server" || true
+  fi
+  return 0
+}
+
+# The age of an archive, from the date in its name, in whole hours.
+copy_age_hours() {
+  local s
+  s="$(archive_stamp "$1")"
+  s="${s:0:4}-${s:4:2}-${s:6:2} ${s:9:2}:${s:11:2}:${s:13:2} UTC"
+  printf '%s\n' "$((($(date -u +%s) - $(date -u -d "$s" +%s)) / 3600))"
+}
+
+# The newest copy and its age. Returns 1 when there is none, it cannot be read, or it is too old.
+copy_status() {
+  local list newest
+  if ! list="$(copy_list)"; then
+    say "WARNING: the copy cannot be read — check the network, then: racearena backup-copy test"
+    return 1
+  fi
+  newest="$(tail -n 1 <<<"$list")"
+  if [[ -z "$newest" ]]; then
+    say "WARNING: there is no archive in the copy yet"
+    return 1
+  fi
+  say "newest copy: $newest — $(copy_age_hours "$newest") hours old ($(grep -c . <<<"$list") archive(s) in the copy)"
+  if [[ "$(archive_stamp "$newest")" < "$(backup_cutoff "$COPY_STALE_DAYS")" ]]; then
+    say "WARNING: the newest copy off the server is older than $COPY_STALE_DAYS days"
+    return 1
+  fi
+}
+
+# One small file written to the copy, read back, compared and removed.
+copy_roundtrip() {
+  local probe got
+  probe="racearena-copy-test $(date -u +%Y%m%dT%H%M%SZ) $(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  printf '%s\n' "$probe" | rclone_run rcat "$COPY_REMOTE:racearena-copy-test.txt" || return 1
+  got="$(rclone_run cat "$COPY_REMOTE:racearena-copy-test.txt")" || return 1
+  rclone_run deletefile "$COPY_REMOTE:racearena-copy-test.txt" || return 1
+  [[ "$got" == "$probe" ]] || { say "the file read back is not the file written"; return 1; }
+  say "test copy: written, read back identical, removed"
+}
+
+# rclone from the distribution's package repository (signed by the distribution), when absent.
+copy_install_rclone() {
+  command -v "${RA_RCLONE:-rclone}" >/dev/null 2>&1 && return 0
+  command -v apt-get >/dev/null 2>&1 ||
+    die "rclone is not installed and this system has no apt-get — install rclone, then run this again"
+  say "installing rclone from the distribution's package repository"
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -q rclone >/dev/null ||
+    die "apt-get could not install rclone (try: apt-get update, then this again)"
+}
+
+# The OneDrive remote on a server without a browser: the token comes from `rclone authorize` on the
+# owner's own PC — rclone's documented way for a headless machine.
+copy_onedrive_remote() {
+  [[ -t 0 ]] || die "the OneDrive authorisation needs your terminal: run this on the server yourself"
+  say "
+OneDrive authorisation (a server has no browser, so your PC does this part):
+  1. On your PC install rclone (https://rclone.org/downloads/) and run:
+         rclone authorize \"onedrive\"
+     A browser opens: sign in to the Microsoft account whose OneDrive is to hold the copies.
+  2. rclone then prints a token between two lines of arrows. Copy all of it, from { to }.
+  3. Paste it here on one line and press Enter (it is not shown):"
+  local token
+  read -r -s -p "token: " token </dev/tty
+  printf '\n' >/dev/tty
+  [[ "$token" == "{"*"}" ]] || die "that is not the token rclone prints ({...}); nothing was set up"
+  # rclone stores the token in the 0600 config file; it is never printed.
+  rclone_run config create "$COPY_BASE_REMOTE" onedrive token "$token" config_type onedrive >/dev/null ||
+    die "rclone could not create the OneDrive remote with that token; nothing was set up"
+  rclone_run lsd "$COPY_BASE_REMOTE:" >/dev/null || die "the OneDrive cannot be read with that token; nothing was set up"
+  say "the OneDrive answers"
+}
+
+# Show the password ONCE, on the operator's own terminal only — never on standard output.
+copy_show_password() {
+  local pw="$1" answer
+  if ! { [[ -t 0 ]] && : >/dev/tty; } 2>/dev/null; then
+    say "no terminal: the crypt password was NOT shown. Read it once, on your own terminal:
+    sudo cat $COPY_DIR/crypt-password
+and store it safely — without it the copies cannot be opened."
+    return 0
+  fi
+  {
+    printf '\n★ THE CRYPT PASSWORD of the copies — shown once, here only:\n\n    %s\n\n' "$pw"
+    printf 'Store it safely NOW (a password manager, or on paper) — not only on this server.\n'
+    printf 'Without it the copies on the OneDrive cannot be opened, not even by you.\n'
+  } >/dev/tty
+  until [[ "${answer:-}" == saved ]]; do
+    read -r -p "type: saved — once you have stored it: " answer </dev/tty
+  done
+  printf '\033[2J\033[H' >/dev/tty # clear the screen, so the password does not stay on it
+}
+
+help_backup_copy() { say "racearena backup-copy setup|status|test|fetch — copy the backups OFF this server, encrypted.
+  setup [--existing] [--local <dir>]
+           once, by you, on the server: installs rclone, connects your OneDrive (you run
+           rclone authorize \"onedrive\" on your PC and paste its token here), adds the encryption
+           with a NEW password shown ONCE on your terminal, then writes a test copy and reads it back.
+           From then on every backup — the daily one too — is copied to $COPY_FOLDER on the
+           OneDrive, encrypted, and the copy keeps $BACKUP_KEEP_DAYS days as this disk does.
+           --existing    type in the password of an earlier install instead (a new server that is
+                         to read the old copies);
+           --local <dir> a directory instead of the OneDrive (a second disk, or a test).
+  status   the newest copy and its age; exit 1 when it is older than $COPY_STALE_DAYS days or cannot be read.
+  test     a small file written to the copy, read back, removed.
+  fetch <archive>|--newest
+           an archive brought back from the copy into $RA_BACKUPS, checked against its
+           checksum; then: racearena restore <archive>."; }
+cmd_backup_copy() {
+  local sub="${1:-}"
+  [[ $# -gt 0 ]] && shift
+  case "$sub" in
+    setup) copy_setup "$@" ;;
+    status)
+      copy_configured || { say "the copy off the server is not set up — racearena backup-copy setup"; return 1; }
+      copy_status
+      ;;
+    test)
+      copy_configured || die "the copy off the server is not set up — racearena backup-copy setup"
+      copy_roundtrip
+      ;;
+    fetch) copy_fetch "$@" ;;
+    *) help_backup_copy; return 2 ;;
+  esac
+}
+
+copy_setup() {
+  local local_dir="" existing=0 pw target
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --local) local_dir="${2:-}"; [[ -n "$local_dir" ]] || die "--local needs a directory"; shift 2 ;;
+      --existing) existing=1; shift ;;
+      *) die "unknown argument: $1 (see: racearena backup-copy --help)" ;;
+    esac
+  done
+  require_installed
+  [[ "$(id -u)" == 0 ]] || die "run it as root: sudo racearena backup-copy setup"
+  copy_configured && die "the copy is already set up ($COPY_DIR). To start again, move that folder aside first."
+  say "── 1/4 rclone"
+  copy_install_rclone
+  "${RA_RCLONE:-rclone}" version 2>/dev/null | head -n 1
+  # Built in a temporary file: a setup that stops half-way leaves nothing that counts as set up.
+  mkdir -p "$COPY_DIR"
+  chmod 700 "$COPY_DIR"
+  COPY_CONF="$COPY_DIR/rclone.conf.new"
+  (umask 077 && : >"$COPY_CONF")
+  say "── 2/4 where the copies go"
+  if [[ -n "$local_dir" ]]; then
+    mkdir -p "$local_dir"
+    target="$local_dir"
+    say "a directory: $target"
+  else
+    copy_onedrive_remote
+    target="$COPY_BASE_REMOTE:$COPY_FOLDER"
+  fi
+  say "── 3/4 the encryption"
+  if ((existing)); then
+    [[ -t 0 ]] || die "--existing needs your terminal, to type the password in"
+    read -r -s -p "the crypt password of the earlier install: " pw </dev/tty
+    printf '\n' >/dev/tty
+    [[ -n "$pw" ]] || die "no password typed; nothing was set up"
+  else
+    pw="$(head -c 24 /dev/urandom | base64 | tr -d '/+=\n')"
+  fi
+  (umask 077 && printf '%s\n' "$pw" >"$COPY_DIR/crypt-password")
+  # The obscured form goes in on standard input and straight into the file: the password is never
+  # on a command line, where any user could read it in the process list.
+  {
+    printf '\n[%s]\ntype = crypt\nremote = %s\nfilename_encryption = standard\ndirectory_name_encryption = true\n' \
+      "$COPY_REMOTE" "$target"
+    printf 'password = %s\n' "$(printf '%s' "$pw" | rclone_run obscure -)"
+  } >>"$COPY_CONF"
+  ((existing)) || copy_show_password "$pw"
+  pw=""
+  mv -f "$COPY_CONF" "$COPY_DIR/rclone.conf"
+  COPY_CONF="$COPY_DIR/rclone.conf"
+  say "encrypted remote $COPY_REMOTE over $target; its password in $COPY_DIR/crypt-password (root only)"
+  say "── 4/4 a test copy, read back"
+  if ! copy_roundtrip; then
+    mv -f "$COPY_CONF" "$COPY_DIR/rclone.conf.failed"
+    die "the test copy failed; the copy is NOT switched on ($COPY_DIR/rclone.conf.failed is kept to look at)"
+  fi
+  state_set backup-copy-setup "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  say "the copy off the server is ON: every backup from now on is copied, encrypted, and kept $BACKUP_KEEP_DAYS days.
+Check it any time with: racearena backup-copy status"
+}
+
+copy_fetch() {
+  copy_configured || die "the copy off the server is not set up — racearena backup-copy setup"
+  local name="${1:-}"
+  [[ -n "$name" ]] || die "usage: racearena backup-copy fetch <archive>|--newest"
+  [[ "$name" == --newest ]] && name="$(copy_list | tail -n 1)"
+  name="$(basename "$name")"
+  [[ "$name" == racearena-backup-*.tar ]] || die "not an archive name: $name"
+  mkdir -p "$RA_BACKUPS"
+  rclone_run copyto "$COPY_REMOTE:$name" "$RA_BACKUPS/$name" || die "could not fetch $name from the copy"
+  if rclone_run copyto "$COPY_REMOTE:$name.sha256" "$RA_BACKUPS/$name.sha256" 2>/dev/null; then
+    (cd "$RA_BACKUPS" && sha256sum -c --quiet "$name.sha256") || die "the fetched archive does not match its checksum: $name"
+    say "fetched and checked against its checksum: $RA_BACKUPS/$name"
+  else
+    say "fetched (the copy holds no checksum for it): $RA_BACKUPS/$name"
+  fi
+  say "to put it back: racearena restore $name"
 }
 
 help_restore() { say "racearena restore <archive> — put the data back from a backup.
@@ -705,6 +992,7 @@ usage() { say "racearena — run this RaceArena server.
   racearena version             what runs here, and where things are
   racearena harden-ssh          switch off SSH passwords and root sign-in, after proving a key login
   racearena route               website mode: the race's route file in the website's proxy
+  racearena backup-copy         copy the backups off this server to OneDrive, encrypted (setup|status|test|fetch)
   racearena uninstall           remove RaceArena (a final backup first; the data is kept)
 
   racearena <command> --help    explains one command"; }

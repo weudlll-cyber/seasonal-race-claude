@@ -44,6 +44,12 @@
 //                  asked for, so the frame the race draws on its join page and registrations is
 //                  visible. It is not the website's chat and carries nothing of it.
 //
+//              GOING-ONLINE-PREP-1 piece 2 (the owner's decision D3 of 2026-11-13), for the owner's
+//              click-through: PLACEHOLDER legal pages at the website's own paths (/info/imprint,
+//              /info/privacy — the one home of those paths is client/src/modules/legal/
+//              websiteLegalPages.js, imported here), so the race's legal links in website mode land
+//              on a page that says where they are. They carry no legal text of the website's.
+//
 // Usage:
 //   node scripts/website-standin.mjs --port=4790 --target=http://127.0.0.1:4791 \
 //        --base=/games/race --secret-file=<path> --token-file=<path>
@@ -53,6 +59,7 @@
 import { createServer, request as httpRequest } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { WEBSITE_LEGAL_PATHS } from '../client/src/modules/legal/websiteLegalPages.js';
 
 const arg = (name, fallback) => {
   const hit = process.argv.slice(2).find((a) => a.startsWith(`--${name}=`));
@@ -210,6 +217,21 @@ function chatPlaceholder(room) {
 </body>`;
 }
 
+/** The website's legal pages by path, with the heading each placeholder shows (piece 2, D3). */
+const LEGAL_PLACEHOLDERS = new Map([
+  [WEBSITE_LEGAL_PATHS.legalNotice, 'Imprint'],
+  [WEBSITE_LEGAL_PATHS.privacyPolicy, 'Privacy'],
+]);
+
+/** A placeholder for one of the website's legal pages: it says which page it stands in for. */
+function legalPlaceholder(title, path) {
+  return `<!doctype html><meta charset="utf-8"><title>${esc(title)} — stand-in</title>
+<h1 data-legal-placeholder="${esc(path)}">${esc(title)}</h1>
+<p>Website legal page — stand-in placeholder for <code>${esc(path)}</code>. The real website serves
+its own text here; in website mode the race links to it instead of to its own legal pages.</p>
+<p><a href="/">Back to the stand-in</a></p>`;
+}
+
 /**
  * Start the stand-in. Exported so a test can run it in-process.
  * @returns {Promise<import('node:http').Server>}
@@ -235,6 +257,12 @@ export function startStandin({
     if (url.pathname === '/embed/chat') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       return res.end(chatPlaceholder(url.searchParams.get('room') ?? ''));
+    }
+    // Piece 2 (D3): the website's legal pages, as placeholders, in both modes.
+    const legalTitle = LEGAL_PLACEHOLDERS.get(url.pathname);
+    if (legalTitle) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      return res.end(legalPlaceholder(legalTitle, url.pathname));
     }
     // 7a: the race's open rounds, read as the website's server reads them, shown as it would.
     if (url.pathname === '/_standin/open-rounds' && !site) {

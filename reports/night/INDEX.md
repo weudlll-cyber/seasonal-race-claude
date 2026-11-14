@@ -8,6 +8,11 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [MORNING-GOING-ONLINE-PREP-1.md](MORNING-GOING-ONLINE-PREP-1.md) — the morning sheet for
+  GOING-ONLINE-PREP-1 (2026-11-13): the owner's decisions D1-D6 for the first online install (website
+  mode); the security contact, the legal pages in website mode, the backup copies to OneDrive, and the
+  GOING ONLINE row rewritten.
+
 - [MORNING-WEBSITE-EXTRAS-1.md](MORNING-WEBSITE-EXTRAS-1.md) — the morning sheet for WEBSITE-EXTRAS-1
   (2026-11-12/13): open registrations on the website (7a, OWNER-4) and the website chat (7b, OWNER-5),
   the website's facts with lines, the forks, the tests, the real-website check.

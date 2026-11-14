@@ -8,6 +8,10 @@
 //                  source of the running version (where it points: modules/legal/sourceCodeUrl.js).
 //                · "Legal notice" and "Privacy policy" — only when the operator has filled them in
 //                  on the Dev Screen; they open the public pages /legal-notice and /privacy.
+//                · IN WEBSITE MODE (GOING-ONLINE-PREP-1, the owner's decision D3 of 2026-11-13) the
+//                  website's legal pages apply instead: both links ALWAYS show and open the
+//                  website's own pages on the same origin (modules/legal/websiteLegalPages.js).
+//                  The race's own texts are not offered there. Standalone is unchanged.
 //
 // The build identity comes from `virtual:ra-build`, the stamp the build badge reads; the operator's
 // texts and `RA_SOURCE_URL` from the public `GET /api/settings/legal-pages` (useLegalPages.js).
@@ -23,6 +27,8 @@ import { Link } from 'react-router-dom';
 import RA_BUILD from 'virtual:ra-build';
 import { sourceCodeUrl } from '../../modules/legal/sourceCodeUrl.js';
 import { useLegalPages } from '../../modules/legal/useLegalPages.js';
+import { WEBSITE_LEGAL_PATHS } from '../../modules/legal/websiteLegalPages.js';
+import { SITE_MODE } from '../../modules/runtimeMarker.js';
 import styles from './LegalFooter.module.css';
 
 /** Said on the link when it cannot name the running commit (an unknown or a dirty build). */
@@ -48,15 +54,30 @@ export default function LegalFooter() {
         >
           Source code
         </a>
-        {hasText(pages?.legalNotice) && (
-          <Link className={styles.link} to="/legal-notice">
-            Legal notice
-          </Link>
-        )}
-        {hasText(pages?.privacyPolicy) && (
-          <Link className={styles.link} to="/privacy">
-            Privacy policy
-          </Link>
+        {SITE_MODE === 'website' ? (
+          // The website's pages: plain links to ROOT paths on the same origin. A router link would
+          // put the race's base path ("/games/race") in front of them.
+          <>
+            <a className={styles.link} href={WEBSITE_LEGAL_PATHS.legalNotice}>
+              Legal notice
+            </a>
+            <a className={styles.link} href={WEBSITE_LEGAL_PATHS.privacyPolicy}>
+              Privacy policy
+            </a>
+          </>
+        ) : (
+          <>
+            {hasText(pages?.legalNotice) && (
+              <Link className={styles.link} to="/legal-notice">
+                Legal notice
+              </Link>
+            )}
+            {hasText(pages?.privacyPolicy) && (
+              <Link className={styles.link} to="/privacy">
+                Privacy policy
+              </Link>
+            )}
+          </>
         )}
       </footer>
     </>

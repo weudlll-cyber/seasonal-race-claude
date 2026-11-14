@@ -166,7 +166,9 @@ function App() {
               }
             />
             {/* LEGAL-PAGES-1: PUBLIC — no ProtectedRoute. The operator's legal notice and privacy
-                policy are read before anyone signs in (footer: components/LegalFooter). */}
+                policy are read before anyone signs in (footer: components/LegalFooter). In website
+                mode both send the visitor to the website's own legal pages (GOING-ONLINE-PREP-1,
+                D3; screens/Legal/LegalPage.jsx). */}
             <Route path="/legal-notice" element={<LegalPage kind="legalNotice" />} />
             <Route path="/privacy" element={<LegalPage kind="privacyPolicy" />} />
             {/* REGISTRATION-1: PUBLIC — no ProtectedRoute. A player registers through the join

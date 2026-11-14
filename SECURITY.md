@@ -6,15 +6,16 @@ fixes. How the app protects itself is [docs/AUTH.md](docs/AUTH.md)'s; how to run
 
 ## Reporting a vulnerability
 
-**Please do not open a public issue for a security problem.** Report it privately through GitHub:
-open the repository's **Security** tab and choose **Report a vulnerability** (GitHub's private
-vulnerability reporting). Only the maintainer sees the report.
+**Please do not open a public issue for a security problem.** Report it privately, through either
+of two channels:
+
+1. **E-mail:** [stentertainmentadmin@gmail.com](mailto:stentertainmentadmin@gmail.com) — the
+   security contact.
+2. **GitHub:** open the repository's **Security** tab and choose **Report a vulnerability**
+   (GitHub's private vulnerability reporting). Only the maintainer sees the report.
 
 Helpful in a report: what an attacker can do, the steps or a request that shows it, the version or
 commit, and the install path (Node, Docker or the VPS install).
-
-A contact e-mail address for reports will be added here once the project has its own domain. Until
-then, GitHub's private reporting is the only channel.
 
 ## What is in scope
 
